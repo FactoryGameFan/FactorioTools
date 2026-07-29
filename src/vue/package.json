@@ -16,7 +16,7 @@
     "test:watch": "vitest"
   },
   "dependencies": {
-    "bootstrap": "^5.2.3",
+    "bootstrap": "^5.3.8",
     "vue": "^3.2.45"
   },
   "devDependencies": {
@@ -24,7 +24,6 @@
     "@vitejs/plugin-vue": "^6.0.7",
     "@vue/eslint-config-prettier": "^10.2.0",
     "@vue/eslint-config-typescript": "^14.9.0",
-    "bootstrap": "^5.3.2",
     "clipboardy": "^5.3.1",
     "eslint": "^10.5.0",
     "eslint-plugin-vue": "^10.9.2",
@@ -40,8 +39,5 @@
     "vitest": "^4.1.9",
     "vue-router": "^5.1.0",
     "vue-tsc": "^3.3.5"
-  },
-  "overrides": {
-    "esbuild": "0.27.2"
   }
 }

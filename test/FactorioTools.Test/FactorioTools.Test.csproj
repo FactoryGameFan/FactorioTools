@@ -27,7 +27,32 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.7.0" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.8.1" />
+    <!--
+      Verify.DiffPlex is pinned to 3.1.2 on purpose; do NOT bump it. It is coupled to
+      Verify.Xunit through the Verify core package, and the two must stay aligned.
+
+      Verify.Xunit is the xunit *v2* integration and its last release is 31.12.5, which
+      depends on Verify 31.12.5 with include="All". Verify core has since moved on to
+      31.27.0, and every Verify.DiffPlex above 3.1.2 requires a newer core than
+      Verify.Xunit can consume:
+
+        Verify.DiffPlex 3.1.2  requires Verify >= 27.0.0    -> resolves to 31.12.5, OK
+        Verify.DiffPlex 3.2.0  requires Verify >= 31.18.0   -> too new
+        Verify.DiffPlex 3.3.0  requires Verify >= 31.20.0   -> too new
+        Verify.DiffPlex 3.3.1  requires Verify >= 31.24.1   -> too new
+
+      Bumping to 3.3.1 restores a build with 0 warnings but drags Verify core to 31.24.1
+      while Verify.Xunit stays at 31.12.5. The mismatch is not caught at compile time -
+      it fails at runtime, and loudly: 2748 of 4261 tests fail with
+      "System.MethodAccessException : Attempt by method 'VerifyXunit.Verifier.Verify(...)'
+      to access method 'Guards.AgainstBadSourceFile(System.String)' failed."
+
+      Unlock path (a real migration, not a version bump): Verify's maintained integration
+      is now Verify.XunitV3 (31.27.0, tracking core), which requires xunit v3. This project
+      is on xunit 2.9.3. Moving the test project to xunit v3 + Verify.XunitV3 would free
+      the whole Verify family to move together. Revisit only if that migration is wanted.
+    -->
     <PackageReference Include="Verify.DiffPlex" Version="3.1.2" />
     <PackageReference Include="Verify.Xunit" Version="31.12.5" />
     <PackageReference Include="xunit" Version="2.9.3" />

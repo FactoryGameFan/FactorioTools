@@ -1,0 +1,127 @@
+{
+  $schema: "https://docs.renovatebot.com/renovate-schema.json",
+
+  extends: ["config:recommended"],
+
+  // One dashboard issue is the cheapest way to see everything Renovate is holding
+  // back and why - the `description` on each rule below shows up there.
+  dependencyDashboard: true,
+  dependencyDashboardTitle: "Dependency dashboard",
+
+  // Let a release sit for a few days before proposing it. Cheap protection against
+  // a compromised or immediately-yanked publish, which matters most for the npm
+  // build tooling here.
+  minimumReleaseAge: "3 days",
+
+  // Cap concurrent noise; this is a small repo with one maintainer.
+  prConcurrentLimit: 5,
+  prHourlyLimit: 2,
+
+  // Keep package-lock.json fresh (transitive security fixes) without waiting for a
+  // direct dependency to move. This is what closed the fast-uri / dompurify /
+  // brace-expansion advisories, none of which had a direct-dependency bump.
+  lockFileMaintenance: {
+    enabled: true,
+    schedule: ["before 5am on monday"],
+  },
+
+  // The submodules (FluteSharp, delaunator-sharp, CSharp.lua) are pinned to specific
+  // commits and are upstream repos, not ours to bump. Renovate disables this manager
+  // by default; stated explicitly so nobody "fixes" it later.
+  "git-submodules": {
+    enabled: false,
+  },
+
+  packageRules: [
+    // ---------------------------------------------------------------------------
+    // Grouping
+    // ---------------------------------------------------------------------------
+    {
+      description: "Group all GitHub Actions bumps into one PR - they share a single CI gate.",
+      matchManagers: ["github-actions"],
+      groupName: "github actions",
+    },
+    {
+      description: "Group the Vue/Vite front-end toolchain; these move together in practice.",
+      matchManagers: ["npm"],
+      matchPackageNames: ["vite", "vitest", "@vitejs/plugin-vue", "vue-tsc"],
+      groupName: "vue build toolchain",
+    },
+    {
+      description: "Group lint/format tooling - low risk, one review is enough.",
+      matchManagers: ["npm"],
+      matchPackageNames: [
+        "eslint",
+        "eslint-plugin-vue",
+        "prettier",
+        "@vue/eslint-config-prettier",
+        "@vue/eslint-config-typescript",
+      ],
+      groupName: "lint and format tooling",
+    },
+
+    // ---------------------------------------------------------------------------
+    // Documented holds. Each mirrors a comment in the code; keep the two in sync.
+    // allowedVersions is used rather than `enabled: false` so patches within the
+    // held line still flow.
+    // ---------------------------------------------------------------------------
+    {
+      description:
+        "HOLD typescript on 6.x. TypeScript 7 is the Go rewrite and does not ship the programmatic compiler API that vue-tsc/Volar embeds, so Vue template type-checking breaks. Note vue-tsc's peer range is an open '>=5.0.0' and would happily install TS 7 - the peer range is not permission. Unlock when TS 7.1 ships the API and vue-tsc announces support.",
+      matchManagers: ["npm"],
+      matchPackageNames: ["typescript"],
+      allowedVersions: "<7.0.0",
+    },
+    {
+      description:
+        "HOLD @types/node on 24.x to match the Node 24 used by CI and the Cloudflare deploy. It should track the runtime, not the registry. Raise this and the workflows' node-version together.",
+      matchManagers: ["npm"],
+      matchPackageNames: ["@types/node"],
+      allowedVersions: "<25.0.0",
+    },
+    {
+      description:
+        "HOLD SixLabors.ImageSharp on 3.x. ImageSharp 4.x adds build-time license enforcement and fails the build without a Six Labors license key. See the comment in src/FactorioTools/FactorioTools.csproj. Debug-visualizer-only, never ships. Unlock only if someone registers a key (free for OSS qualifies).",
+      matchManagers: ["nuget"],
+      matchPackageNames: ["SixLabors.ImageSharp"],
+      allowedVersions: "<4.0.0",
+    },
+    {
+      description:
+        "HOLD SixLabors.ImageSharp.Drawing on 2.x - same license enforcement as ImageSharp 4.x. Must move together with ImageSharp.",
+      matchManagers: ["nuget"],
+      matchPackageNames: ["SixLabors.ImageSharp.Drawing"],
+      allowedVersions: "<3.0.0",
+    },
+    {
+      description:
+        "HOLD Microsoft.AspNetCore.OpenApi + Swashbuckle.AspNetCore, and keep them in one PR - they must move together or not at all. OpenApi 9.0+ pulls Microsoft.OpenApi 2.x, whose schema model Swashbuckle 6.x cannot consume; Swashbuckle 10.x adopts 2.x as well, so OpenApi 10.x + Swashbuckle 10.x is the compatible set. Getting there is a real migration (rewrite of OilFieldPlanRequestDefaultsSchemaFilter.cs, edits to RequireNonNullablePropertiesSchemaFilter.cs, regenerated swagger.json and Vue client), deferred because WebApp is not deployed. See the comment in src/WebApp/WebApp.csproj.",
+      matchManagers: ["nuget"],
+      matchPackageNames: ["Microsoft.AspNetCore.OpenApi", "Swashbuckle.AspNetCore"],
+      groupName: "WebApp OpenAPI stack",
+      allowedVersions: "<9.0.0",
+    },
+    {
+      description:
+        "HOLD Verify.DiffPlex at 3.1.x. It is coupled to Verify.Xunit through the Verify core package. Verify.Xunit is the xunit v2 integration and its final release is 31.12.5, depending on Verify 31.12.5 with include='All'. Every DiffPlex above 3.1.2 requires a newer core (3.2.0 needs >=31.18.0, 3.3.0 needs >=31.20.0, 3.3.1 needs >=31.24.1), which builds cleanly and then fails at runtime with MethodAccessException on Guards.AgainstBadSourceFile - 2748 of 4261 tests. Unlock path is migrating the test project to xunit v3 + Verify.XunitV3. See the comment in test/FactorioTools.Test/FactorioTools.Test.csproj.",
+      matchManagers: ["nuget"],
+      matchPackageNames: ["Verify.DiffPlex"],
+      allowedVersions: "<3.2.0",
+    },
+    {
+      description:
+        "Keep the whole Verify family in one PR. Verify.Xunit cannot advance past 31.12.5 while the project is on xunit v2, and the family breaks at runtime when its halves drift apart.",
+      matchManagers: ["nuget"],
+      matchPackageNames: ["Verify.Xunit", "Verify.DiffPlex", "Verify"],
+      groupName: "Verify test snapshot stack",
+    },
+    {
+      description:
+        "SKIP major bumps of Microsoft.ApplicationInsights.AspNetCore. WebApp is no longer deployed, so telemetry majors are not worth the review. Patches still flow. Re-enable if the API is ever hosted again.",
+      matchManagers: ["nuget"],
+      matchPackageNames: ["Microsoft.ApplicationInsights.AspNetCore"],
+      matchUpdateTypes: ["major"],
+      enabled: false,
+    },
+  ],
+}

@@ -1,29 +1,155 @@
+// Dependency automation for this repo. Renovate, not Dependabot: this project has
+// six deliberate HOLDS whose reasoning lives in prose - in .csproj comments and
+// CLAUDE.md - and Dependabot's `ignore` entries cannot express any of them. The
+// point of everything below is to stop a bot cheerfully re-proposing, every week,
+// the exact bump this project has already considered and rejected; and, where a
+// bump IS wanted, to make the reason travel attached to the proposal.
+//
+// THIS FILE IS INERT UNTIL THE RENOVATE GITHUB APP IS INSTALLED. Adding it starts
+// no automation by itself (see https://github.com/apps/renovate). As of this
+// writing the app has never run here: no bot PRs, no bot commits, and no
+// Dependency Dashboard issue despite `dependencyDashboard: true` below.
+//
+// The app is intended to be installed with "Automated PRs", "Require config file"
+// and "Create onboarding PRs". Two consequences worth knowing:
+//   - "Require config file" means Renovate does NOTHING, SILENTLY, if this file is
+//     absent or unparseable ON THE DEFAULT BRANCH. That is indistinguishable from
+//     "no updates available". A config that fails to parse is not a noisy error,
+//     it is a bot that appears to be working and is not. Validate every edit:
+//       npx --yes --package renovate -- renovate-config-validator
+//   - Onboarding PRs are moot while this file exists; onboarding only fires when
+//     there is no config at all.
+//
+// `dependencyDashboardApproval` is deliberately NOT set. It would require ticking
+// a box per update before any PR appears, which re-imposes scan-only behaviour at
+// the config layer and quietly defeats the app's "Automated PRs" setting. PRs are
+// wanted; what is not wanted is anything MERGING unread - see `automerge` below.
+//
+// This file lives in .github/ rather than the repo root (it was moved there, so
+// `git log --follow` reaches its history). Renovate reads either location, but
+// only one may exist: a second copy at the root is a config error, not an override.
 {
   $schema: "https://docs.renovatebot.com/renovate-schema.json",
 
-  extends: ["config:recommended"],
+  extends: [
+    "config:recommended",
+    // Pin every GitHub Action to a commit SHA rather than a moving tag, and keep
+    // the trailing `# vX.Y.Z` comment beside it updated. Today all four actions in
+    // this repo are on moving tags - actions/checkout@v7, actions/setup-node@v7,
+    // actions/setup-dotnet@v6, cloudflare/wrangler-action@v4 - so the FIRST run
+    // after enabling the app will open a PR converting all of them to SHAs. That
+    // PR is expected; it is the preset doing its job. Adopting the preset makes
+    // pinned-vs-tag the rule for anything added later, so the choice cannot drift
+    // action by action.
+    "helpers:pinGitHubActionDigests",
+  ],
+
+  // Let a release sit before proposing it - cheap protection against a compromised
+  // or immediately-yanked publish, which matters most for the npm build tooling.
+  //
+  // This value is a JUDGEMENT CALL, not a constraint inherited from a package
+  // manager. This repo is npm (src/vue/package-lock.json, lockfileVersion 3) plus
+  // NuGet; there is no pnpm anywhere, so none of pnpm 11's `minimum-release-age`
+  // cooldown behaviour - and its habit of writing a `minimumReleaseAgeExclude:`
+  // bypass when asked to install something younger - is in play here. If this repo
+  // ever moves to pnpm, revisit this line and the `vulnerabilityAlerts` one below
+  // together, and treat any `minimumReleaseAgeExclude:` appearing in a bot PR's
+  // diff as proof the PR is wrong.
+  minimumReleaseAge: "3 days",
+
+  // NOTHING MERGES UNREAD. There are no exceptions below, including GitHub Action
+  // digest re-pins, and this is a decision on record rather than an omission.
+  //
+  // A green CI run proves this repo is CONSISTENT, not that a bump is CORRECT. The
+  // counterexample on record is from a sibling project: pako 3.0.0 flipped a hash
+  // default in a way that passes a green suite while silently breaking a
+  // byte-exactness invariant, and the resulting wrong belief survived about a year.
+  // The same shape of failure is available here - the planner's correctness lives
+  // in Verify snapshots, and a dependency that changed planner output subtly would
+  // show up as a snapshot diff to be accepted rather than as an obvious failure.
+  //
+  // IF THIS IS EVER REVISITED, automerge has two prerequisites that are easy to
+  // miss and neither is satisfied today:
+  //   1. Branch protection on `main` with a CI check REQUIRED, `bypass_actors`
+  //      empty, and `strict_required_status_checks_policy: true`. Without all
+  //      three a PR can merge red, or merge having been tested against a different
+  //      `main` than the one it lands on. Note this repo's CI is three separate
+  //      checks ("Build front-end", "Test .NET with Lua settings", "Test .NET with
+  //      default settings"), so all three have to be required, not just one.
+  //   2. Repo-level "Allow auto-merge" enabled (`allow_auto_merge` in the repo
+  //      settings API). Renovate's `platformAutomerge` cannot do anything without
+  //      it, and when it is off Renovate silently falls back to polling and merging
+  //      the PR itself - the weaker path, because GitHub is no longer the thing
+  //      gating the merge. The symptom is a PR sitting unmerged while its body
+  //      cheerfully reads "Automerge: Enabled".
+  automerge: false,
 
   // One dashboard issue is the cheapest way to see everything Renovate is holding
   // back and why - the `description` on each rule below shows up there.
   dependencyDashboard: true,
   dependencyDashboardTitle: "Dependency dashboard",
 
-  // Let a release sit for a few days before proposing it. Cheap protection against
-  // a compromised or immediately-yanked publish, which matters most for the npm
-  // build tooling here.
-  minimumReleaseAge: "3 days",
+  // Without this the schedule below is UTC, so "before 6am Monday" fires around
+  // midnight Sunday local and reads as a bot running at random times.
+  timezone: "America/Los_Angeles",
 
-  // Cap concurrent noise; this is a small repo with one maintainer.
-  prConcurrentLimit: 5,
+  // One weekly batch instead of a trickle. To pull a run forward without editing
+  // this file, tick the "Check this box to trigger a request for Renovate to run
+  // again" checkbox on the dependency dashboard issue.
+  schedule: ["before 6am on monday"],
+
+  // Cap the burst. The first run after enabling the app sees every pending update
+  // at once; without limits that is a dozen PRs in one morning, each triggering
+  // three CI jobs that take ~6 minutes.
+  prConcurrentLimit: 3,
   prHourlyLimit: 2,
 
-  // Keep package-lock.json fresh (transitive security fixes) without waiting for a
-  // direct dependency to move. This is what closed the fast-uri / dompurify /
-  // brace-expansion advisories, none of which had a direct-dependency bump.
+  // DELIBERATELY ENABLED, and this is the one place this config departs from the
+  // sibling project's, so the reasoning for both sides is recorded here.
+  //
+  // Against: `lockFileMaintenance` is an automated whole-lockfile re-resolve. In
+  // the sibling pnpm repo that is the single dependency operation measured to cause
+  // breakage - re-resolving ~22 surrounding transitive packages triggered a type
+  // error that installing the same target versions directly did not - so it is
+  // pinned off there.
+  //
+  // For, and why it wins here: that measurement is pnpm-specific and does not
+  // transfer to this repo, which is npm and has recorded the opposite. This is the
+  // mechanism that closed the fast-uri / dompurify / brace-expansion advisories
+  // (PR #30), none of which had a direct-dependency bump available - they needed
+  // transitive lockfile updates and nothing else would have produced them. Turning
+  // it off would leave transitive-only advisories with no automated route to
+  // closing.
+  //
+  // So: enabled, but not unattended - `automerge: false` above covers this too, and
+  // a re-resolve PR is exactly the kind whose diff deserves reading. If one of
+  // these ever breaks the build in a way a targeted bump would not have, that is
+  // the evidence to flip it, and this comment is where to record it.
   lockFileMaintenance: {
     enabled: true,
     schedule: ["before 5am on monday"],
   },
+
+  // Security fixes must not wait for the weekly window. Without this block a CVE
+  // fix could sit ~10 days: up to 3 for the age floor, then up to 7 for Monday.
+  // `schedule: []` clears the weekly restriction for these PRs only.
+  //
+  // The age floor drops to 25 hours rather than to zero. A same-day publish is the
+  // worst case for a compromised-package attack, and an advisory is not a reason to
+  // abandon the release-age guard entirely - 25 hours keeps a full day of exposure
+  // to other people catching a bad publish, while cutting the wait from 3 days to
+  // about 1. (25 rather than 24 is also the value that would clear pnpm 11's
+  // cooldown with an hour to spare, should this repo ever switch package managers.)
+  vulnerabilityAlerts: {
+    schedule: [],
+    minimumReleaseAge: "25 hours",
+    prBodyNotes: [
+      "Security update - this deliberately bypassed the weekly schedule. Still read it. Advisory version ranges are frequently flat and over-broad, so `npm audit` being red is not by itself evidence that the proposed bump is the fix.",
+    ],
+  },
+
+  // GitHub's own advisories miss ecosystem-only reports; OSV catches more.
+  osvVulnerabilityAlerts: true,
 
   // The submodules (FluteSharp, delaunator-sharp, CSharp.lua) are pinned to specific
   // commits and are upstream repos, not ours to bump. Renovate disables this manager
@@ -37,6 +163,8 @@
     // Grouping
     // ---------------------------------------------------------------------------
     {
+      // Includes the SHA re-pins produced by `helpers:pinGitHubActionDigests`
+      // above, which recur forever - one PR for all of them, not four.
       description: "Group all GitHub Actions bumps into one PR - they share a single CI gate.",
       matchManagers: ["github-actions"],
       groupName: "github actions",
@@ -62,8 +190,12 @@
 
     // ---------------------------------------------------------------------------
     // Documented holds. Each mirrors a comment in the code; keep the two in sync.
-    // allowedVersions is used rather than `enabled: false` so patches within the
-    // held line still flow.
+    // `allowedVersions` is used rather than `enabled: false` so patches within the
+    // held line still flow - the hold is on the major, not on maintenance.
+    //
+    // These match by package NAME, deliberately. A rule narrowed with a
+    // `matchDepTypes` guess that does not match what Renovate actually reports
+    // silently matches nothing, and no validator can catch that.
     // ---------------------------------------------------------------------------
     {
       description:
@@ -78,6 +210,9 @@
       matchManagers: ["npm"],
       matchPackageNames: ["@types/node"],
       allowedVersions: "<25.0.0",
+      prBodyNotes: [
+        "`node-version: 24` is hardcoded in both .github/workflows/ci.yml and .github/workflows/deploy-cloudflare.yml - there is no .node-version or .nvmrc file for Renovate to bump instead. If this ceiling is ever raised, those two workflows must move in the same PR, or the types will describe a runtime CI is not using.",
+      ],
     },
     {
       description:
@@ -107,6 +242,9 @@
       matchManagers: ["nuget"],
       matchPackageNames: ["Verify.DiffPlex"],
       allowedVersions: "<3.2.0",
+      prBodyNotes: [
+        "This failure mode BUILDS CLEANLY and dies at runtime, so a compiling branch is not evidence. Run the full `dotnet test` before believing any bump here.",
+      ],
     },
     {
       description:

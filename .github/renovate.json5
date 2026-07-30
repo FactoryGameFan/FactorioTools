@@ -229,12 +229,48 @@
       allowedVersions: "<3.0.0",
     },
     {
+      // THE CLI IS PART OF THIS STACK AND WAS MISSING FROM THE FIRST VERSION OF
+      // THIS RULE. `swashbuckle.aspnetcore.cli` lives in
+      // src/WebApp/.config/dotnet-tools.json (currently 6.5.0), not in any .csproj,
+      // so reading the project files alone does not reveal it - and because it is a
+      // separate package name, matching "Swashbuckle.AspNetCore" never covered it.
+      // Renovate promptly queued a jump straight to v10 for it. That CLI is what
+      // WebApp.csproj's PostBuild target runs to generate the committed
+      // swagger.json, which in turn generates the Vue client, so a v10 generator
+      // against a 6.x library is exactly the piecemeal move the csproj comment
+      // forbids. It is held here with the rest of the stack.
+      //
+      // CEILING IS <7.0.0, not the <9.0.0 originally guessed. Installed today are
+      // Swashbuckle.AspNetCore 6.9.0 and swashbuckle.aspnetcore.cli 6.5.0, and
+      // nothing in the csproj comment establishes that 7.x or 8.x is safe against
+      // Microsoft.AspNetCore.OpenApi 8.0.x - it reasons only about 6.x (current)
+      // and 10.x (the compatible target). <9.0.0 would have waved through a
+      // Swashbuckle v8 major on that unexamined basis. Patches within 6.x still
+      // flow; the hold is on the major.
       description:
-        "HOLD Microsoft.AspNetCore.OpenApi + Swashbuckle.AspNetCore, and keep them in one PR - they must move together or not at all. OpenApi 9.0+ pulls Microsoft.OpenApi 2.x, whose schema model Swashbuckle 6.x cannot consume; Swashbuckle 10.x adopts 2.x as well, so OpenApi 10.x + Swashbuckle 10.x is the compatible set. Getting there is a real migration (rewrite of OilFieldPlanRequestDefaultsSchemaFilter.cs, edits to RequireNonNullablePropertiesSchemaFilter.cs, regenerated swagger.json and Vue client), deferred because WebApp is not deployed. See the comment in src/WebApp/WebApp.csproj.",
+        "HOLD the WebApp OpenAPI stack at its current majors, and keep all of it in one PR - these move together or not at all. Microsoft.AspNetCore.OpenApi 9.0+ pulls Microsoft.OpenApi 2.x, whose schema model Swashbuckle 6.x cannot consume; Swashbuckle 10.x adopts 2.x as well, so OpenApi 10.x + Swashbuckle 10.x + CLI 10.x is the compatible set. Getting there is a real migration (rewrite of OilFieldPlanRequestDefaultsSchemaFilter.cs, edits to RequireNonNullablePropertiesSchemaFilter.cs, regenerated swagger.json and Vue client), deferred because WebApp is not deployed. See the comment in src/WebApp/WebApp.csproj.",
       matchManagers: ["nuget"],
-      matchPackageNames: ["Microsoft.AspNetCore.OpenApi", "Swashbuckle.AspNetCore"],
+      matchPackageNames: [
+        "Microsoft.AspNetCore.OpenApi",
+        "Swashbuckle.AspNetCore",
+        "swashbuckle.aspnetcore.cli",
+      ],
       groupName: "WebApp OpenAPI stack",
       allowedVersions: "<9.0.0",
+    },
+    {
+      // Split out because the two halves of the stack have different ceilings:
+      // Microsoft.AspNetCore.OpenApi is held below 9.0.0 (that is where the
+      // Microsoft.OpenApi 2.x break lands), while the Swashbuckle packages are held
+      // below 7.0.0 for the reason above. `allowedVersions` is last-match-wins, so
+      // this narrows the two Swashbuckle entries without disturbing the grouping or
+      // the OpenApi ceiling set by the rule above.
+      description:
+        "HOLD both Swashbuckle packages on 6.x specifically. Installed: Swashbuckle.AspNetCore 6.9.0, swashbuckle.aspnetcore.cli 6.5.0. The csproj rationale covers 6.x and 10.x only - 7.x/8.x are simply unexamined against Microsoft.AspNetCore.OpenApi 8.0.x, so they are not a safe default. Raise this only as part of the OpenApi 10.x migration, which moves the whole stack at once.",
+      matchManagers: ["nuget"],
+      matchPackageNames: ["Swashbuckle.AspNetCore", "swashbuckle.aspnetcore.cli"],
+      groupName: "WebApp OpenAPI stack",
+      allowedVersions: "<7.0.0",
     },
     {
       description:

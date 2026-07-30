@@ -330,12 +330,36 @@
     {
       // No tracking issue by design - this is a "not worth the review" call rather
       // than a deferred upgrade, and it reverses on its own if WebApp is hosted
-      // again. Note #45 is deciding whether src/WebApp/Dockerfile deserves the same
-      // treatment for the same reason; if it does, keep the two consistent.
+      // again. The Dockerfile rule below is the same call for the same reason;
+      // keep the two consistent.
       description:
         "SKIP major bumps of Microsoft.ApplicationInsights.AspNetCore. WebApp is no longer deployed, so telemetry majors are not worth the review. Patches still flow. Re-enable if the API is ever hosted again.",
       matchManagers: ["nuget"],
       matchPackageNames: ["Microsoft.ApplicationInsights.AspNetCore"],
+      matchUpdateTypes: ["major"],
+      enabled: false,
+    },
+    {
+      // Resolves #45. Same reasoning as the ApplicationInsights rule above, applied
+      // to the only Dockerfile in the repo (src/WebApp/Dockerfile - confirmed from
+      // the Renovate job log: "Matched 1 file(s) for manager dockerfile"). Not
+      // narrowed with matchFileNames, because there is exactly one such file and a
+      // path guess that stops matching after a move would fail silently.
+      //
+      // Majors off, patches ON, which is the deliberate half of this. A .NET major
+      // on an undeployed service is not worth a review, but base images accumulate
+      // OS-level CVEs, and `10.0` / `10.0-alpine` are FLOATING minor tags - the
+      // digest behind them moves on its own regardless of what Renovate proposes.
+      // Keeping patches live is what lets a rebuild pick those up.
+      //
+      // WORTH KNOWING: global.json now pins the SDK to 10.0.302 while this
+      // Dockerfile tracks whatever `10.0` currently resolves to. Those two can
+      // drift apart silently, and Renovate will not report it because a floating
+      // tag is never "out of date". If the container build ever behaves differently
+      // from CI, check that first.
+      description:
+        "SKIP major bumps of the src/WebApp/Dockerfile base images (mcr.microsoft.com/dotnet/sdk, runtime-deps). WebApp is no longer deployed, so a .NET major here is not worth the review - same call as Microsoft.ApplicationInsights.AspNetCore above. Patch/minor updates still flow, because base images carry OS-level security fixes even when the service is unhosted. Re-enable if the API is ever hosted again.",
+      matchManagers: ["dockerfile"],
       matchUpdateTypes: ["major"],
       enabled: false,
     },

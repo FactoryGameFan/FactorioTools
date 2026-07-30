@@ -116,6 +116,31 @@ The core + serialization libs are transpiled to Lua via the `CSharp.lua` submodu
 - `Score.HasExpectedScore.verified.txt` is the planner-quality scoreboard across the 57 test blueprints; `small-list.txt` / `big-list.txt` hold the blueprint corpus.
 - Test data blueprints are normalized via the CLI `oil-field normalize` command.
 
+## Dependency automation
+
+Dependency updates are handled by **Renovate**, configured in `.github/renovate.json5`. It is JSON5 so the reasoning lives in comments beside each rule - the comments are load-bearing, not decoration.
+
+- **Updates arrive as one weekly batch**, Monday morning `America/Los_Angeles`. Security fixes deliberately skip that window. To pull a run forward, tick the "trigger a request for Renovate to run again" checkbox on the dependency dashboard.
+- **Nothing automerges.** `automerge: false` is global with no exceptions. A green CI run proves the repo is *consistent*, not that a bump is *correct* - and planner correctness lives in Verify snapshots, where a subtle output change surfaces as a snapshot diff to accept rather than an obvious failure.
+- **There are deliberate holds.** Before "fixing" a version that looks stale, read the rule that holds it. Each carries its reason and the condition under which to revisit. Several also mirror a comment in the corresponding `.csproj`; keep the two in sync if you change either.
+- **The dependency dashboard issue is the live inventory** of everything held back, everything queued, and everything detected. It is a better place to look than reading manifests by hand - it is how a missing hold on `swashbuckle.aspnetcore.cli` (which lives in `.config/dotnet-tools.json`, not a `.csproj`) was found.
+- Holds that a migration would lift have a tracking issue named in the rule. Holds waiting on an external circumstance say explicitly that they have no issue *by design*, so an absent issue reads as a decision rather than an oversight.
+
+### Editing the config
+
+Validate every change - run this from **outside** the project root if a package manager is ever pinned via `devEngines` in `package.json`, or a bare `npx` fails with `EBADDEVENGINES` (not currently an issue here):
+
+```bash
+npx --yes --package renovate -- renovate-config-validator .github/renovate.json5
+```
+
+This matters more than normal linting because of the **silent failure mode**: the app runs with "Require config file" enabled, so if this file is absent or unparseable *on the default branch*, Renovate does nothing at all, silently. That is indistinguishable from "no updates available". If the bot appears to go quiet, check the config parses before assuming there is nothing to update.
+
+Two related traps:
+
+- Only **one** Renovate config file may exist. A second copy (e.g. at the repo root) is a config error, not an override - and the validator cannot catch it, since it only ever sees the file you hand it.
+- Prefer matching by package name alone over narrowing with `matchDepTypes` / `matchFileNames`. A guard that does not match what Renovate actually reports silently matches nothing, and no validator catches that either.
+
 ## Conventions
 
 - Use hyphens, not em/en dashes, in files.

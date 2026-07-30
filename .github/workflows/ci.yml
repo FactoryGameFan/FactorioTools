@@ -1,12 +1,17 @@
 name: Continuous integration
 
 on:
+  # Do not filter these on "*". In Actions filter patterns a single star does not
+  # match "/", so "*" silently excludes every branch with a slash in its name
+  # (chore/..., feat/..., etc). On pull_request the filter matches the PR's *base*
+  # branch, so stacked PRs got no checks at all. See issue #36.
   push:
+    # Push CI is intentionally limited to main; branches get their coverage from
+    # pull_request below. This avoids running the full matrix twice per push on
+    # any branch that already has a PR open.
     branches:
-      - "*"
+      - "main"
   pull_request:
-    branches:
-      - "*"
   workflow_dispatch:
 
 permissions:

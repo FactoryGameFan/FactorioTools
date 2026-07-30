@@ -196,15 +196,40 @@
     // These match by package NAME, deliberately. A rule narrowed with a
     // `matchDepTypes` guess that does not match what Renovate actually reports
     // silently matches nothing, and no validator can catch that.
+    //
+    // TRACKING ISSUES. Holds come in two shapes and only one of them is worth an
+    // issue:
+    //
+    //   Migration-shaped - there is real work that would lift the hold, so the
+    //   plan lives in an issue and the rule points at it:
+    //     typescript ............... #49  (upstream-gated: vue-tsc vs TS 7)
+    //     Verify family ............ #44  (migrate to xunit v3 + Verify.XunitV3)
+    //     WebApp OpenAPI stack ..... #47  (OpenApi 10.x + Swashbuckle 10.x)
+    //
+    //   Conditional - nothing to plan until an external circumstance changes, so
+    //   there is deliberately NO issue and the revisit condition is stated in the
+    //   rule itself. Filing issues for these would just create things to close:
+    //     SixLabors.ImageSharp ..... needs a Six Labors license key
+    //     @types/node .............. tracks CI's Node, not the registry
+    //     ApplicationInsights ...... only matters if WebApp is hosted again
+    //
+    // The live inventory of everything held back is dependency dashboard #41,
+    // which is a better place to look than reading manifests by hand - it is how
+    // the missing swashbuckle.aspnetcore.cli hold was found (#43).
     // ---------------------------------------------------------------------------
     {
+      // Tracking issue: #49. Upstream-gated - nothing here unblocks it. Expected to
+      // be a small bump whenever it does unblock, which is exactly why it is worth
+      // tracking rather than re-deriving the refusal each time the bot proposes it.
       description:
-        "HOLD typescript on 6.x. TypeScript 7 is the Go rewrite and does not ship the programmatic compiler API that vue-tsc/Volar embeds, so Vue template type-checking breaks. Note vue-tsc's peer range is an open '>=5.0.0' and would happily install TS 7 - the peer range is not permission. Unlock when TS 7.1 ships the API and vue-tsc announces support.",
+        "HOLD typescript on 6.x. TypeScript 7 is the Go rewrite and does not ship the programmatic compiler API that vue-tsc/Volar embeds, so Vue template type-checking breaks. Note vue-tsc's peer range is an open '>=5.0.0' and would happily install TS 7 - the peer range is not permission. Unlock when TS 7.1 ships the API and vue-tsc announces support - tracked in #49.",
       matchManagers: ["npm"],
       matchPackageNames: ["typescript"],
       allowedVersions: "<7.0.0",
     },
     {
+      // No tracking issue by design - this is not a deferred upgrade. It tracks
+      // whatever Node CI runs on, so it moves when that moves and never on its own.
       description:
         "HOLD @types/node on 24.x to match the Node 24 used by CI and the Cloudflare deploy. It should track the runtime, not the registry. Raise this and the workflows' node-version together.",
       matchManagers: ["npm"],
@@ -215,6 +240,10 @@
       ],
     },
     {
+      // No tracking issue by design - there is nothing to plan. The hold lifts if
+      // and only if someone registers a Six Labors license key; until then there is
+      // no migration to schedule, just a condition to state. Applies to the
+      // .Drawing rule below too, which must move with this one.
       description:
         "HOLD SixLabors.ImageSharp on 3.x. ImageSharp 4.x adds build-time license enforcement and fails the build without a Six Labors license key. See the comment in src/FactorioTools/FactorioTools.csproj. Debug-visualizer-only, never ships. Unlock only if someone registers a key (free for OSS qualifies).",
       matchManagers: ["nuget"],
@@ -229,6 +258,10 @@
       allowedVersions: "<3.0.0",
     },
     {
+      // Tracking issue: #47 - the OpenApi 10.x + Swashbuckle 10.x migration that
+      // lifts this whole group. Read it before touching any ceiling here; the two
+      // halves have different ones and the reasons are not interchangeable.
+      //
       // THE CLI IS PART OF THIS STACK AND WAS MISSING FROM THE FIRST VERSION OF
       // THIS RULE. `swashbuckle.aspnetcore.cli` lives in
       // src/WebApp/.config/dotnet-tools.json (currently 6.5.0), not in any .csproj,
@@ -266,15 +299,19 @@
       // this narrows the two Swashbuckle entries without disturbing the grouping or
       // the OpenApi ceiling set by the rule above.
       description:
-        "HOLD both Swashbuckle packages on 6.x specifically. Installed: Swashbuckle.AspNetCore 6.9.0, swashbuckle.aspnetcore.cli 6.5.0. The csproj rationale covers 6.x and 10.x only - 7.x/8.x are simply unexamined against Microsoft.AspNetCore.OpenApi 8.0.x, so they are not a safe default. Raise this only as part of the OpenApi 10.x migration, which moves the whole stack at once.",
+        "HOLD both Swashbuckle packages on 6.x specifically. Installed: Swashbuckle.AspNetCore 6.9.0, swashbuckle.aspnetcore.cli 6.5.0. The csproj rationale covers 6.x and 10.x only - 7.x/8.x are simply unexamined against Microsoft.AspNetCore.OpenApi 8.0.x, so they are not a safe default. Raise this only as part of the OpenApi 10.x migration, which moves the whole stack at once - tracked in #47.",
       matchManagers: ["nuget"],
       matchPackageNames: ["Swashbuckle.AspNetCore", "swashbuckle.aspnetcore.cli"],
       groupName: "WebApp OpenAPI stack",
       allowedVersions: "<7.0.0",
     },
     {
+      // Tracking issue: #44 - migrate the test project to xunit v3 + Verify.XunitV3,
+      // which frees this whole family at once. Renovate independently flags
+      // Verify.Xunit and xunit as deprecated with no replacement available, which
+      // is the same conclusion arrived at from the other direction.
       description:
-        "HOLD Verify.DiffPlex at 3.1.x. It is coupled to Verify.Xunit through the Verify core package. Verify.Xunit is the xunit v2 integration and its final release is 31.12.5, depending on Verify 31.12.5 with include='All'. Every DiffPlex above 3.1.2 requires a newer core (3.2.0 needs >=31.18.0, 3.3.0 needs >=31.20.0, 3.3.1 needs >=31.24.1), which builds cleanly and then fails at runtime with MethodAccessException on Guards.AgainstBadSourceFile - 2748 of 4261 tests. Unlock path is migrating the test project to xunit v3 + Verify.XunitV3. See the comment in test/FactorioTools.Test/FactorioTools.Test.csproj.",
+        "HOLD Verify.DiffPlex at 3.1.x. It is coupled to Verify.Xunit through the Verify core package. Verify.Xunit is the xunit v2 integration and its final release is 31.12.5, depending on Verify 31.12.5 with include='All'. Every DiffPlex above 3.1.2 requires a newer core (3.2.0 needs >=31.18.0, 3.3.0 needs >=31.20.0, 3.3.1 needs >=31.24.1), which builds cleanly and then fails at runtime with MethodAccessException on Guards.AgainstBadSourceFile - 2748 of 4261 tests. Unlock path is migrating the test project to xunit v3 + Verify.XunitV3 - tracked in #44. See the comment in test/FactorioTools.Test/FactorioTools.Test.csproj.",
       matchManagers: ["nuget"],
       matchPackageNames: ["Verify.DiffPlex"],
       allowedVersions: "<3.2.0",
@@ -283,13 +320,18 @@
       ],
     },
     {
+      // Same tracking issue as the ceiling above: #44.
       description:
-        "Keep the whole Verify family in one PR. Verify.Xunit cannot advance past 31.12.5 while the project is on xunit v2, and the family breaks at runtime when its halves drift apart.",
+        "Keep the whole Verify family in one PR. Verify.Xunit cannot advance past 31.12.5 while the project is on xunit v2, and the family breaks at runtime when its halves drift apart. Lifted by the xunit v3 migration in #44.",
       matchManagers: ["nuget"],
       matchPackageNames: ["Verify.Xunit", "Verify.DiffPlex", "Verify"],
       groupName: "Verify test snapshot stack",
     },
     {
+      // No tracking issue by design - this is a "not worth the review" call rather
+      // than a deferred upgrade, and it reverses on its own if WebApp is hosted
+      // again. Note #45 is deciding whether src/WebApp/Dockerfile deserves the same
+      // treatment for the same reason; if it does, keep the two consistent.
       description:
         "SKIP major bumps of Microsoft.ApplicationInsights.AspNetCore. WebApp is no longer deployed, so telemetry majors are not worth the review. Patches still flow. Re-enable if the API is ever hosted again.",
       matchManagers: ["nuget"],

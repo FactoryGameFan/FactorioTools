@@ -40,6 +40,25 @@ describe("the emitted artifact", () => {
   it("carries the quality levels, including the skipped level 4", () => {
     expect(QUALITY_LEVELS).toEqual({ Normal: 0, Uncommon: 1, Rare: 2, Epic: 3, Legendary: 5 })
   })
+
+  // Deliberately hardcoded, not derived from the artifact: PIPE_STRATEGY_DEFAULTS and
+  // BEACON_STRATEGY_DEFAULTS are built directly from artifact.allPipeStrategies /
+  // artifact.allBeaconStrategies (see strategyFlags below), so comparing them back
+  // against the same artifact fields would be true by construction and could never
+  // catch a missing enum member. A hardcoded list in a test is not the bug the
+  // hardcoded list in production code was - here it's the point: if a C# enum grows a
+  // member, this expectation fails loudly and forces a human to update it. Do not
+  // "fix" this by deriving the expected value from the artifact.
+  it("carries the full strategy universe from the C# enums", () => {
+    expect(artifact.allPipeStrategies).toEqual([
+      "FbeOriginal",
+      "Fbe",
+      "ConnectedCentersDelaunay",
+      "ConnectedCentersDelaunayMst",
+      "ConnectedCentersFlute",
+    ])
+    expect(artifact.allBeaconStrategies).toEqual(["FbeOriginal", "Fbe", "Snug"])
+  })
 })
 
 describe("strategyFlags", () => {
@@ -59,18 +78,6 @@ describe("strategyFlags", () => {
 
   it("defaults every beacon strategy except FbeOriginal to on", () => {
     expect(BEACON_STRATEGY_DEFAULTS).toEqual({ FbeOriginal: false, Fbe: true, Snug: true })
-  })
-
-  it("has a default entry for every pipe strategy the artifact knows about", () => {
-    for (const strategy of artifact.allPipeStrategies) {
-      expect(Object.keys(PIPE_STRATEGY_DEFAULTS)).toContain(strategy)
-    }
-  })
-
-  it("has a default entry for every beacon strategy the artifact knows about", () => {
-    for (const strategy of artifact.allBeaconStrategies) {
-      expect(Object.keys(BEACON_STRATEGY_DEFAULTS)).toContain(strategy)
-    }
   })
 })
 

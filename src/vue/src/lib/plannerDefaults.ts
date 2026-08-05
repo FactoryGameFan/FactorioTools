@@ -35,9 +35,10 @@ export function strategyFlags(
   return flags
 }
 
-// The full strategy universes come from the artifact too (options.allPipeStrategies /
-// options.allBeaconStrategies), not a hardcoded list here - so a new C# enum member
-// shows up automatically instead of silently missing from the Vue defaults.
+// The full strategy universes come from the artifact too (artifact.allPipeStrategies /
+// artifact.allBeaconStrategies, top-level keys, not under options), not a hardcoded
+// list here - so a new C# enum member shows up automatically instead of silently
+// missing from the Vue defaults.
 export const PIPE_STRATEGY_DEFAULTS = strategyFlags(
   artifact.allPipeStrategies,
   artifact.options.pipeStrategies,

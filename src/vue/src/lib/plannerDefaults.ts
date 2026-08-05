@@ -35,23 +35,16 @@ export function strategyFlags(
   return flags
 }
 
-const ALL_PIPE_STRATEGIES = [
-  "FbeOriginal",
-  "Fbe",
-  "ConnectedCentersDelaunay",
-  "ConnectedCentersDelaunayMst",
-  "ConnectedCentersFlute",
-] as const
-
-const ALL_BEACON_STRATEGIES = ["FbeOriginal", "Fbe", "Snug"] as const
-
+// The full strategy universes come from the artifact too (options.allPipeStrategies /
+// options.allBeaconStrategies), not a hardcoded list here - so a new C# enum member
+// shows up automatically instead of silently missing from the Vue defaults.
 export const PIPE_STRATEGY_DEFAULTS = strategyFlags(
-  ALL_PIPE_STRATEGIES,
+  artifact.allPipeStrategies,
   artifact.options.pipeStrategies,
 )
 
 export const BEACON_STRATEGY_DEFAULTS = strategyFlags(
-  ALL_BEACON_STRATEGIES,
+  artifact.allBeaconStrategies,
   artifact.options.beaconStrategies,
 )
 

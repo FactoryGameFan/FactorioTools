@@ -61,6 +61,8 @@ public class PlannerDefaultsTest
             qualityLevels = Enum
                 .GetValues<Quality>()
                 .ToDictionary(q => q.ToString(), q => (int)q),
+            allPipeStrategies = OilFieldOptions.AllPipeStrategies.Select(s => s.ToString()).ToList(),
+            allBeaconStrategies = OilFieldOptions.AllBeaconStrategies.Select(s => s.ToString()).ToList(),
         };
 
         var json = JsonSerializer.Serialize(payload);

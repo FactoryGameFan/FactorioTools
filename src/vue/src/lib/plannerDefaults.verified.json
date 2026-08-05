@@ -84,5 +84,17 @@
     "Rare": 2,
     "Epic": 3,
     "Legendary": 5
-  }
+  },
+  "allPipeStrategies": [
+    "FbeOriginal",
+    "Fbe",
+    "ConnectedCentersDelaunay",
+    "ConnectedCentersDelaunayMst",
+    "ConnectedCentersFlute"
+  ],
+  "allBeaconStrategies": [
+    "FbeOriginal",
+    "Fbe",
+    "Snug"
+  ]
 }

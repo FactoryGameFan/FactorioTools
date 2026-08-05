@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest"
+import artifact from "./plannerDefaults.verified.json"
 import {
   BEACON_MODULE_DEFAULT,
   BEACON_STRATEGY_DEFAULTS,
@@ -58,6 +59,18 @@ describe("strategyFlags", () => {
 
   it("defaults every beacon strategy except FbeOriginal to on", () => {
     expect(BEACON_STRATEGY_DEFAULTS).toEqual({ FbeOriginal: false, Fbe: true, Snug: true })
+  })
+
+  it("has a default entry for every pipe strategy the artifact knows about", () => {
+    for (const strategy of artifact.allPipeStrategies) {
+      expect(Object.keys(PIPE_STRATEGY_DEFAULTS)).toContain(strategy)
+    }
+  })
+
+  it("has a default entry for every beacon strategy the artifact knows about", () => {
+    for (const strategy of artifact.allBeaconStrategies) {
+      expect(Object.keys(BEACON_STRATEGY_DEFAULTS)).toContain(strategy)
+    }
   })
 })
 

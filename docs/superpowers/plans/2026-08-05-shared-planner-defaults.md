@@ -451,10 +451,12 @@ Append to `src/vue/src/lib/plannerDefaults.test.ts`:
 ```ts
 import { getDefaults } from "../stores/OilFieldStore"
 
-// Store keys with no counterpart in the C# planner options. Everything else in the
-// store must come from the artifact, so a planner option added later cannot quietly
-// become a TypeScript literal - the same enumerate-the-store approach that
-// advancedOptions.test.ts uses.
+// Every store key must be classified into exactly one of these three groups. That is
+// the point of the test: a planner option added later lands in none of them and fails
+// here, so it cannot quietly become a TypeScript literal. Same enumerate-the-store
+// approach as advancedOptions.test.ts.
+
+/** Store keys with no counterpart in the C# planner options. */
 const VUE_ONLY_KEYS = [
   "usingQueryString",
   "useStagingApi",
@@ -466,17 +468,65 @@ const VUE_ONLY_KEYS = [
   "showProgress",
 ] as const
 
+/** Store keys whose name matches an artifact option key, and whose value must equal it. */
+const NAME_MATCHED_KEYS = [
+  "addBeacons",
+  "addElectricPoles",
+  "addHeatPipes",
+  "overlapBeacons",
+  "beaconEntityName",
+  "beaconSupplyWidth",
+  "beaconSupplyHeight",
+  "beaconWidth",
+  "beaconHeight",
+  "electricPoleEntityName",
+  "electricPoleWidth",
+  "electricPoleHeight",
+  "electricPoleSupplyWidth",
+  "electricPoleSupplyHeight",
+  "electricPoleWireReach",
+  "useUndergroundPipes",
+  "optimizePipes",
+  "validateSolution",
+  "pumpjackQuality",
+  "pumpjackModuleQuality",
+  "beaconQuality",
+  "beaconModuleQuality",
+  "electricPoleQuality",
+] as const
+
+/** Store keys derived from the artifact through a conversion, checked by their own tests below. */
+const CONVERTED_KEYS = [
+  "pumpjackModule",
+  "beaconModule",
+  "beaconModuleSlots",
+  "pipeStrategyFbeOriginal",
+  "pipeStrategyFbe",
+  "pipeStrategyConnectedCentersDelaunay",
+  "pipeStrategyConnectedCentersDelaunayMst",
+  "pipeStrategyConnectedCentersFlute",
+  "beaconStrategyFbeOriginal",
+  "beaconStrategyFbe",
+  "beaconStrategySnug",
+] as const
+
 describe("store defaults", () => {
-  it("takes every planner-derived value from the artifact", () => {
+  it("classifies every store key exactly once", () => {
+    const classified: string[] = [...VUE_ONLY_KEYS, ...NAME_MATCHED_KEYS, ...CONVERTED_KEYS]
+    expect(new Set(classified).size, "a key is classified twice").toBe(classified.length)
+    // Both directions: no unclassified store key, and no classification for a key that
+    // no longer exists. An unclassified key is a planner option nobody wired up.
+    expect(classified.sort()).toEqual(Object.keys(getDefaults()).sort())
+  })
+
+  it("takes every name-matched value from the artifact", () => {
     const defaults = getDefaults() as Record<string, unknown>
     const options = PLANNER_OPTION_DEFAULTS as Record<string, unknown>
 
     const mismatched: string[] = []
-    for (const [key, value] of Object.entries(defaults)) {
-      if ((VUE_ONLY_KEYS as readonly string[]).includes(key)) {
-        continue
-      }
-      if (key in options && options[key] !== value) {
+    for (const key of NAME_MATCHED_KEYS) {
+      expect(options, `${key} is missing from the artifact`).toHaveProperty(key)
+      if (options[key] !== defaults[key]) {
         mismatched.push(key)
       }
     }
@@ -516,9 +566,9 @@ describe("store defaults", () => {
 cd src/vue && npx vitest run src/lib/plannerDefaults.test.ts
 ```
 
-Expected: FAIL - the store still declares its own literals, so at minimum the strategy and module assertions compare a literal against the artifact by identity and the coverage test reports keys.
+Expected: FAIL. Note that the store's literals currently *agree* with the C#, so the value assertions may pass before any change is made - that is expected and is not evidence the test is worthless. The classification test is the one that must fail or pass on its own merits.
 
-If it passes by accident because every literal happens to agree with the C# today, that is expected - the literals are currently correct. Confirm the test is real by temporarily changing `electricPoleSupplyWidth` in the store to `70`, re-running to see it fail, then changing it back.
+Whatever the initial result, confirm the test has teeth before implementing: temporarily change `electricPoleSupplyWidth` in the store to `70`, re-run and see "takes every name-matched value from the artifact" fail, then change it back. Then temporarily add a junk key `foo: 1` to the store's defaults, re-run and see "classifies every store key exactly once" fail, then remove it. If either does not fail, stop - the test is not doing its job.
 
 - [ ] **Step 3: Rewrite the store defaults**
 

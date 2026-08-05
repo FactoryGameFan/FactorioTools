@@ -82,7 +82,11 @@ describe("getPlanWithProgress", () => {
   it("returns the best result by effects, then beacons, then pipes", async () => {
     selectStrategies({ fbe: true, ccDt: true, ccFlute: true })
     mockPerStrategy({
-      [PipeStrategy.Fbe]: planResponse(PipeStrategy.Fbe, { effects: 10, beacons: 5, pipes: 40 }, "FBE_BP"),
+      [PipeStrategy.Fbe]: planResponse(
+        PipeStrategy.Fbe,
+        { effects: 10, beacons: 5, pipes: 40 },
+        "FBE_BP",
+      ),
       [PipeStrategy.ConnectedCentersDelaunay]: planResponse(
         PipeStrategy.ConnectedCentersDelaunay,
         { effects: 12, beacons: 6, pipes: 50 },

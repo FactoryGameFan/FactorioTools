@@ -34,9 +34,10 @@
       v-model="electricPoleQuality"
     />
     <p class="form-text" v-show="showAdvancedOptions && addElectricPoles">
-      Effective coverage at {{ electricPoleQuality }}:
-      supply {{ Number(electricPoleSupplyWidth) + 2 * level }}x{{ Number(electricPoleSupplyHeight) + 2 * level }},
-      wire reach {{ Number(electricPoleWireReach) + 2 * level }}
+      Effective coverage at {{ electricPoleQuality }}: supply
+      {{ Number(electricPoleSupplyWidth) + 2 * level }}x{{
+        Number(electricPoleSupplyHeight) + 2 * level
+      }}, wire reach {{ Number(electricPoleWireReach) + 2 * level }}
     </p>
     <div class="row" v-show="showAdvancedOptions && addElectricPoles">
       <div class="col-lg-4 mt-3">

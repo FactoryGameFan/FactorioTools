@@ -167,7 +167,10 @@ p = "src/vue/src/lib/plannerDefaults.verified.json"
 s = open(p, encoding="utf-8-sig").read().replace('"electricPoleWireReach": 9', '"electricPoleWireReach": 99')
 open(p, "w", encoding="utf-8-sig").write(s)
 PY
-CI=true dotnet test --filter "FullyQualifiedName~PlannerDefaultsTest" --logger "console;verbosity=minimal"
+# NOT CI=true: Verify's build-server detection (DiffEngine's BuildServerDetector)
+# checks provider-specific variables, not a generic CI flag. GITHUB_ACTION is what
+# GitHub Actions sets on every step, including plain `run:` steps.
+GITHUB_ACTION=__run dotnet test --filter "FullyQualifiedName~PlannerDefaultsTest" --logger "console;verbosity=minimal"
 ```
 
 Expected: FAIL with a diff showing 99 against 9. Then restore it:

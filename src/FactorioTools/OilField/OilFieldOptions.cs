@@ -4,8 +4,9 @@ using Knapcode.FactorioTools.Data;
 namespace Knapcode.FactorioTools.OilField;
 
 // These defaults and the For* presets below also ship to the Vue app, emitted by
-// PlannerDefaultsTest into src/vue/src/lib/plannerDefaults.verified.json. Change a
-// number here and `dotnet test` will rewrite that file; commit it with your change.
+// PlannerDefaultsTest into src/vue/src/lib/plannerDefaults.verified.json (alongside the
+// Quality enum, which supplies that artifact's qualityLevels). Change a number here and
+// `dotnet test` will rewrite that file; commit it with your change.
 public class OilFieldOptions
 {
     public static OilFieldOptions ForSmallIronElectricPole

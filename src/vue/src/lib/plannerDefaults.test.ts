@@ -17,6 +17,12 @@ import artifact from "./plannerDefaults.verified.json"
 //
 // Do not tighten a shape check into a pinned value, or loosen a pinned value into a
 // shape check, without re-reading this comment and deciding which kind it is.
+//
+// advancedOptions.test.ts pins the substation preset's geometry (18/18/18/2/2) exactly,
+// which looks like a contradiction of the SHAPE rule above - it isn't. That test is
+// pinning a specific preset's numbers as a regression check on the reset-to-preset
+// behavior, not asserting a semantic contract about pole geometry in general. Don't
+// "fix" either file to match the other.
 import {
   BEACON_MODULE_DEFAULT,
   BEACON_STRATEGY_DEFAULTS,
@@ -34,10 +40,22 @@ describe("the emitted artifact", () => {
   // SHAPE: these are tuning numbers - the C# Verify snapshot already gates their exact
   // values, so this only checks the fields are present and physically sensible.
   it("carries the planner geometry", () => {
-    expect(PLANNER_OPTION_DEFAULTS.electricPoleSupplyWidth).toBeGreaterThan(0)
-    expect(PLANNER_OPTION_DEFAULTS.electricPoleWireReach).toBeGreaterThan(0)
-    expect(PLANNER_OPTION_DEFAULTS.beaconSupplyWidth).toBeGreaterThan(0)
-    expect(PLANNER_OPTION_DEFAULTS.beaconWidth).toBeGreaterThan(0)
+    const geometryFields = [
+      "electricPoleSupplyWidth",
+      "electricPoleSupplyHeight",
+      "electricPoleWireReach",
+      "electricPoleWidth",
+      "electricPoleHeight",
+      "beaconSupplyWidth",
+      "beaconSupplyHeight",
+      "beaconWidth",
+      "beaconHeight",
+    ] as const
+    const options = PLANNER_OPTION_DEFAULTS as Record<string, unknown>
+    for (const field of geometryFields) {
+      expect(options, field).toHaveProperty(field)
+      expect(options[field], field).toBeGreaterThan(0)
+    }
   })
 
   // PINNED (which presets exist) + SHAPE (their geometry): the set of five preset keys,
@@ -196,6 +214,19 @@ describe("store defaults", () => {
     // Both directions: no unclassified store key, and no classification for a key that
     // no longer exists. An unclassified key is a planner option nobody wired up.
     expect(classified.sort()).toEqual(Object.keys(getDefaults()).sort())
+
+    // A key classified as VUE_ONLY or CONVERTED must not also be a literal artifact
+    // option name - otherwise the store could hardcode a value under that name (see
+    // NAME_MATCHED_KEYS above) while claiming it has no C# counterpart, and this test
+    // would still pass. This is what let beaconSupplyWidth silently diverge from the
+    // C# default before it was caught: moving it into VUE_ONLY_KEYS and hardcoding a
+    // stale value in the store left every other assertion here green.
+    for (const key of [...VUE_ONLY_KEYS, ...CONVERTED_KEYS]) {
+      expect(
+        PLANNER_OPTION_DEFAULTS,
+        `${key} shares a name with an artifact option`,
+      ).not.toHaveProperty(key)
+    }
   })
 
   it("takes every name-matched value from the artifact", () => {

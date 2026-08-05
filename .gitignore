@@ -407,3 +407,6 @@ FodyWeavers.xsd
 src/vue/public/framework/
 pump_2.2.0.zip
 /pump_2.2.0
+
+# Wrangler local dev state (Cloudflare Pages/Workers CLI cache, incl. miniflare)
+.wrangler/

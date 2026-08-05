@@ -1,5 +1,22 @@
 import { describe, expect, it } from "vitest"
 import artifact from "./plannerDefaults.verified.json"
+
+// This file deliberately mixes two kinds of assertion against the artifact:
+//
+// - PINNED (exact value/list): reserved for a semantic contract - a fact about
+//   Factorio, or a design decision someone must consciously review if it changes.
+//   Examples: the quality levels skipping level 4 (Factorio's own gap), the full
+//   pipe/beacon strategy universe (enum membership), which electric pole presets
+//   exist. These must keep failing loudly on any drift.
+// - SHAPE (presence / positivity / non-emptiness): reserved for pure tuning numbers
+//   that the planner's author may retune at will - beacon/pole geometry, which
+//   strategies happen to be enabled by default. The C# Verify snapshot
+//   (plannerDefaults.verified.json's own generation test) already gates those
+//   numbers; pinning them here too means every retune forces an unrelated Vue test
+//   edit, which defeats the point of sharing the artifact.
+//
+// Do not tighten a shape check into a pinned value, or loosen a pinned value into a
+// shape check, without re-reading this comment and deciding which kind it is.
 import {
   BEACON_MODULE_DEFAULT,
   BEACON_STRATEGY_DEFAULTS,
@@ -14,13 +31,18 @@ import {
 import { getDefaults } from "../stores/OilFieldStore"
 
 describe("the emitted artifact", () => {
+  // SHAPE: these are tuning numbers - the C# Verify snapshot already gates their exact
+  // values, so this only checks the fields are present and physically sensible.
   it("carries the planner geometry", () => {
-    expect(PLANNER_OPTION_DEFAULTS.electricPoleSupplyWidth).toBe(7)
-    expect(PLANNER_OPTION_DEFAULTS.electricPoleWireReach).toBe(9)
-    expect(PLANNER_OPTION_DEFAULTS.beaconSupplyWidth).toBe(9)
-    expect(PLANNER_OPTION_DEFAULTS.beaconWidth).toBe(3)
+    expect(PLANNER_OPTION_DEFAULTS.electricPoleSupplyWidth).toBeGreaterThan(0)
+    expect(PLANNER_OPTION_DEFAULTS.electricPoleWireReach).toBeGreaterThan(0)
+    expect(PLANNER_OPTION_DEFAULTS.beaconSupplyWidth).toBeGreaterThan(0)
+    expect(PLANNER_OPTION_DEFAULTS.beaconWidth).toBeGreaterThan(0)
   })
 
+  // PINNED (which presets exist) + SHAPE (their geometry): the set of five preset keys,
+  // including the modded small-iron-electric-pole, is a design decision worth pinning.
+  // The geometry of each preset is a tuning number, so only its shape is checked.
   it("carries all five pole presets, including the modded one", () => {
     expect(Object.keys(ELECTRIC_POLE_PRESETS).sort()).toEqual([
       "big-electric-pole",
@@ -29,21 +51,23 @@ describe("the emitted artifact", () => {
       "small-iron-electric-pole",
       "substation",
     ])
-    expect(ELECTRIC_POLE_PRESETS["substation"]).toEqual({
-      width: 2,
-      height: 2,
-      supplyWidth: 18,
-      supplyHeight: 18,
-      wireReach: 18,
-    })
+    for (const [name, preset] of Object.entries(ELECTRIC_POLE_PRESETS)) {
+      expect(preset.width, `${name}.width`).toBeGreaterThan(0)
+      expect(preset.height, `${name}.height`).toBeGreaterThan(0)
+      expect(preset.supplyWidth, `${name}.supplyWidth`).toBeGreaterThan(0)
+      expect(preset.supplyHeight, `${name}.supplyHeight`).toBeGreaterThan(0)
+      expect(preset.wireReach, `${name}.wireReach`).toBeGreaterThan(0)
+    }
   })
 
+  // PINNED: Legendary skipping level 4 is Factorio's own gap, not a planner tuning
+  // choice. A change here means the game changed.
   it("carries the quality levels, including the skipped level 4", () => {
     expect(QUALITY_LEVELS).toEqual({ Normal: 0, Uncommon: 1, Rare: 2, Epic: 3, Legendary: 5 })
   })
 
-  // Deliberately hardcoded, not derived from the artifact: PIPE_STRATEGY_DEFAULTS and
-  // BEACON_STRATEGY_DEFAULTS are built directly from artifact.allPipeStrategies /
+  // PINNED, deliberately hardcoded, not derived from the artifact: PIPE_STRATEGY_DEFAULTS
+  // and BEACON_STRATEGY_DEFAULTS are built directly from artifact.allPipeStrategies /
   // artifact.allBeaconStrategies (see strategyFlags below), so comparing them back
   // against the same artifact fields would be true by construction and could never
   // catch a missing enum member. A hardcoded list in a test is not the bug the
@@ -63,22 +87,28 @@ describe("the emitted artifact", () => {
 })
 
 describe("strategyFlags", () => {
+  // PINNED: exercises the function's own logic with inputs it owns, not the artifact.
   it("turns an enabled list into one boolean per strategy", () => {
     expect(strategyFlags(["A", "B", "C"], ["A", "C"])).toEqual({ A: true, B: false, C: true })
   })
 
-  it("defaults every pipe strategy except FbeOriginal to on", () => {
-    expect(PIPE_STRATEGY_DEFAULTS).toEqual({
-      FbeOriginal: false,
-      Fbe: true,
-      ConnectedCentersDelaunay: true,
-      ConnectedCentersDelaunayMst: true,
-      ConnectedCentersFlute: true,
-    })
+  // SHAPE: which strategies are enabled by default is a tuning choice (see
+  // OilFieldOptions.DefaultPipeStrategies / DefaultBeaconStrategies in C#), so this
+  // does not pin the exact set. It only asserts the defaults aren't vacuous.
+  //
+  // Note: an assertion of the form "every strategy in the universe has a boolean
+  // entry" is deliberately NOT included here - PIPE_STRATEGY_DEFAULTS /
+  // BEACON_STRATEGY_DEFAULTS are built by strategyFlags from
+  // artifact.allPipeStrategies / artifact.allBeaconStrategies directly, so that would
+  // be true by construction and could never fail. The strategyFlags unit test above
+  // and "carries the full strategy universe from the C# enums" above already cover
+  // that ground.
+  it("enables at least one pipe strategy by default", () => {
+    expect(Object.values(PIPE_STRATEGY_DEFAULTS).some(Boolean)).toBe(true)
   })
 
-  it("defaults every beacon strategy except FbeOriginal to on", () => {
-    expect(BEACON_STRATEGY_DEFAULTS).toEqual({ FbeOriginal: false, Fbe: true, Snug: true })
+  it("enables at least one beacon strategy by default", () => {
+    expect(Object.values(BEACON_STRATEGY_DEFAULTS).some(Boolean)).toBe(true)
   })
 })
 

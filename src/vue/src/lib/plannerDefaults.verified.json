@@ -1,0 +1,88 @@
+﻿{
+  "options": {
+    "useUndergroundPipes": true,
+    "addBeacons": true,
+    "optimizePipes": true,
+    "overlapBeacons": true,
+    "addElectricPoles": true,
+    "addHeatPipes": false,
+    "heatPipeEntityName": "heat-pipe",
+    "pipeStrategies": [
+      "Fbe",
+      "ConnectedCentersDelaunay",
+      "ConnectedCentersDelaunayMst",
+      "ConnectedCentersFlute"
+    ],
+    "beaconStrategies": [
+      "Fbe",
+      "Snug"
+    ],
+    "electricPoleEntityName": "medium-electric-pole",
+    "electricPoleSupplyWidth": 7,
+    "electricPoleSupplyHeight": 7,
+    "electricPoleWireReach": 9,
+    "electricPoleWidth": 1,
+    "electricPoleHeight": 1,
+    "beaconEntityName": "beacon",
+    "beaconSupplyWidth": 9,
+    "beaconSupplyHeight": 9,
+    "beaconWidth": 3,
+    "beaconHeight": 3,
+    "validateSolution": false,
+    "pumpjackModules": {
+      "productivity-module-3": 2
+    },
+    "beaconModules": {
+      "speed-module-3": 2
+    },
+    "pumpjackQuality": "Normal",
+    "beaconQuality": "Normal",
+    "electricPoleQuality": "Normal",
+    "pumpjackModuleQuality": "Normal",
+    "beaconModuleQuality": "Normal"
+  },
+  "electricPolePresets": {
+    "small-iron-electric-pole": {
+      "width": 1,
+      "height": 1,
+      "supplyWidth": 5,
+      "supplyHeight": 5,
+      "wireReach": 7.5
+    },
+    "small-electric-pole": {
+      "width": 1,
+      "height": 1,
+      "supplyWidth": 5,
+      "supplyHeight": 5,
+      "wireReach": 7.5
+    },
+    "medium-electric-pole": {
+      "width": 1,
+      "height": 1,
+      "supplyWidth": 7,
+      "supplyHeight": 7,
+      "wireReach": 9
+    },
+    "big-electric-pole": {
+      "width": 2,
+      "height": 2,
+      "supplyWidth": 4,
+      "supplyHeight": 4,
+      "wireReach": 32
+    },
+    "substation": {
+      "width": 2,
+      "height": 2,
+      "supplyWidth": 18,
+      "supplyHeight": 18,
+      "wireReach": 18
+    }
+  },
+  "qualityLevels": {
+    "Normal": 0,
+    "Uncommon": 1,
+    "Rare": 2,
+    "Epic": 3,
+    "Legendary": 5
+  }
+}

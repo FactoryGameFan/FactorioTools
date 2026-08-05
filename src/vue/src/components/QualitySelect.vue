@@ -2,7 +2,12 @@
   <div class="row" v-show="showAdvancedOptions">
     <div class="col">
       <label :for="idPrefix + '-quality'" class="form-label d-flex align-items-center gap-2">
-        <svg class="quality-badge" viewBox="0 0 24 24" role="img" :aria-label="qualityLabel(modelValue as Quality) + ' quality'">
+        <svg
+          class="quality-badge"
+          viewBox="0 0 24 24"
+          role="img"
+          :aria-label="qualityLabel(modelValue as Quality) + ' quality'"
+        >
           <circle
             v-for="(pip, i) in pips"
             :key="i"

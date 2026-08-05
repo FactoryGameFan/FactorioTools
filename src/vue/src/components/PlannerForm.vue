@@ -150,7 +150,8 @@
 import { storeToRefs } from "pinia"
 import { pick } from "../lib/helpers"
 import { useAutoPlanStore } from "../stores/AutoPlanStore"
-import { getDefaults, useOilFieldStore } from "../stores/OilFieldStore"
+import { useOilFieldStore } from "../stores/OilFieldStore"
+import { resetPlannerAdvancedOptions } from "../lib/advancedOptions"
 import { Steps } from "../lib/steps"
 import AlgorithmStep from "./AlgorithmStep.vue"
 
@@ -195,21 +196,7 @@ export default {
   },
   methods: {
     reset() {
-      const defaults = getDefaults()
-      this.useUndergroundPipes = defaults.useUndergroundPipes
-      this.useStagingApi = defaults.useStagingApi
-      this.optimizePipes = defaults.optimizePipes
-      this.validateSolution = defaults.validateSolution
-      this.showProgress = defaults.showProgress
-      this.pipeStrategyFbeOriginal = defaults.pipeStrategyFbeOriginal
-      this.pipeStrategyFbe = defaults.pipeStrategyFbe
-      this.pipeStrategyConnectedCentersDelaunay = defaults.pipeStrategyConnectedCentersDelaunay
-      this.pipeStrategyConnectedCentersDelaunayMst =
-        defaults.pipeStrategyConnectedCentersDelaunayMst
-      this.pipeStrategyConnectedCentersFlute = defaults.pipeStrategyConnectedCentersFlute
-      this.beaconStrategyFbeOriginal = defaults.beaconStrategyFbeOriginal
-      this.beaconStrategyFbe = defaults.beaconStrategyFbe
-      this.beaconStrategySnug = defaults.beaconStrategySnug
+      resetPlannerAdvancedOptions(this)
     },
   },
   components: { AlgorithmStep },

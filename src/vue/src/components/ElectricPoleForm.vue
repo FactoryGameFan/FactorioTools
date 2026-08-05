@@ -119,7 +119,8 @@
 <script lang="ts">
 import { storeToRefs } from "pinia"
 import { pick } from "../lib/helpers"
-import { getDefaults, useOilFieldStore } from "../stores/OilFieldStore"
+import { useOilFieldStore } from "../stores/OilFieldStore"
+import { resetElectricPoleAdvancedOptions, setKnownElectricPole } from "../lib/advancedOptions"
 import { Quality } from "../lib/FactorioToolsApi"
 import { qualityLevel } from "../lib/quality"
 import CustomizeSelect from "./CustomizeSelect.vue"
@@ -163,44 +164,10 @@ export default {
   },
   methods: {
     reset() {
-      if (!this.setKnownElectricPole(this.electricPoleEntityName)) {
-        const defaults = getDefaults()
-        this.electricPoleEntityName = defaults.electricPoleEntityName
-      }
+      resetElectricPoleAdvancedOptions(this)
     },
     setKnownElectricPole(electricPoleEntityName: string) {
-      switch (electricPoleEntityName) {
-        case "small-electric-pole":
-          this.electricPoleWidth = 1
-          this.electricPoleHeight = 1
-          this.electricPoleSupplyWidth = 5
-          this.electricPoleSupplyHeight = 5
-          this.electricPoleWireReach = 7.5
-          return true
-        case "medium-electric-pole":
-          this.electricPoleWidth = 1
-          this.electricPoleHeight = 1
-          this.electricPoleSupplyWidth = 7
-          this.electricPoleSupplyHeight = 7
-          this.electricPoleWireReach = 9
-          return true
-        case "big-electric-pole":
-          this.electricPoleWidth = 2
-          this.electricPoleHeight = 2
-          this.electricPoleSupplyWidth = 4
-          this.electricPoleSupplyHeight = 4
-          this.electricPoleWireReach = 32
-          return true
-        case "substation":
-          this.electricPoleWidth = 2
-          this.electricPoleHeight = 2
-          this.electricPoleSupplyWidth = 18
-          this.electricPoleSupplyHeight = 18
-          this.electricPoleWireReach = 18
-          return true
-        default:
-          return false
-      }
+      return setKnownElectricPole(this, electricPoleEntityName)
     },
   },
   components: { CustomizeSelect, QualitySelect },

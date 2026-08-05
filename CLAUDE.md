@@ -96,9 +96,11 @@ Flags include `UseHashSets` (`USE_HASHSETS`), `UseBitArray` (`USE_BITARRAY`), `L
 
 ## Lua transpilation
 
-The core + serialization libs are transpiled to Lua via the `CSharp.lua` submodule so the planner can run inside Factorio/Lua. Output lives in `src/lua`; rebuild with `src/lua/Invoke-LuaBuild.ps1` (PowerShell). Target is **Lua 5.2** - Factorio mods run on a modified Lua 5.2 environment, and the transpiled output is exercised with Lua 5.2.4 (see the "Lua performance log" in `README.md`).
+The core lib is transpiled to Lua via the `CSharp.lua` submodule so the planner can run inside Factorio/Lua. `FactorioTools.Serialization` is **not** transpiled - `Invoke-LuaBuild.ps1` never passes it, which is why the core must stay free of JSON/serialization dependencies (see the core library section above). Output lives in `src/lua`; rebuild with `src/lua/Invoke-LuaBuild.ps1` (PowerShell). Target is **Lua 5.2** - Factorio mods run on a modified Lua 5.2 environment, and the transpiled output is exercised with Lua 5.2.4 (see the "Lua performance log" in `README.md`).
 
-- Avoid C# constructs the existing code avoids in hot paths under Lua settings: `yield return`, LINQ, named tuples, try/catch, and struct dictionary keys have all been removed for Lua performance.
+The `transpile-lua` CI job runs that script, fails if the committed `src/lua` no longer matches what the C# transpiles to, and syntax-checks the result with `luac5.2`. So if you change the core, regenerate `src/lua` and commit it in the same change.
+
+- Avoid C# constructs the existing code avoids in hot paths under Lua settings: `yield return`, LINQ, named tuples, try/catch, and struct dictionary keys have all been removed for Lua performance. LINQ is worse than a perf problem: `CoreSystem.lua` does not load `Collections.Linq`, so `Invoke-LuaBuild.ps1` never copies `Linq.lua` and LINQ transpiles into calls on a module that was never shipped - a runtime failure inside Factorio, not a build error.
 - Keep control flow deterministic: Factorio modifies `pairs()` and `math.random()` for determinism, so prefer simple, stable iteration and avoid order-dependent assumptions.
 - Syntax-check generated Lua with `for f in src/lua/**/*.lua; luac5.2 -p $f; end` (fish). `luac5.2`/`lua5.2` only validate syntax, not Factorio runtime APIs.
 

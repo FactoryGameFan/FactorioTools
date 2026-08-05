@@ -639,7 +639,7 @@ const defaults = {
 }
 ```
 
-The key set and order are unchanged from the original object, so `storeToQuery` and `OilFieldStoreState` still line up. Do not add or remove keys in this step.
+The key SET is unchanged from the original object, so `storeToQuery` and `OilFieldStoreState` still line up. Do not add or remove keys in this step. The order does differ from the original, which is harmless: `storeToQuery` is a separately declared name-keyed object, and `populateStoreFromQuery` and `generateQueryString` both look keys up by name, never by position.
 
 - [ ] **Step 4: Point the pole presets at the artifact**
 

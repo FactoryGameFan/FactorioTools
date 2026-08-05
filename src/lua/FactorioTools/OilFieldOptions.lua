@@ -10,7 +10,7 @@ end)
 System.namespace("Knapcode.FactorioTools.OilField", function (namespace)
   namespace.class("OilFieldOptions", function (namespace)
     local getForSmallIronElectricPole, getForSmallElectricPole, getForMediumElectricPole, getForBigElectricPole, getForSubstation, AllPipeStrategies, DefaultPipeStrategies, AllBeaconStrategies, 
-    DefaultBeaconStrategies, getElectricPoleWireReach, setElectricPoleWireReach, class, static, __ctor__
+    DefaultBeaconStrategies, class, static, __ctor__
     static = function (this)
       AllPipeStrategies = ArrayInt32 { 0 --[[PipeStrategy.FbeOriginal]], 1 --[[PipeStrategy.Fbe]], 2 --[[PipeStrategy.ConnectedCentersDelaunay]], 3 --[[PipeStrategy.ConnectedCentersDelaunayMst]], 4 --[[PipeStrategy.ConnectedCentersFlute]] }
       this.AllPipeStrategies = AllPipeStrategies
@@ -36,7 +36,7 @@ System.namespace("Knapcode.FactorioTools.OilField", function (namespace)
       default.ElectricPoleEntityName = "small-iron-electric-pole" --[[AaiIndustry.SmallIronElectricPole]]
       default.ElectricPoleSupplyWidth = 5
       default.ElectricPoleSupplyHeight = 5
-      setElectricPoleWireReach(default, 7.5)
+      default.ElectricPoleWireReach = 7.5
       default.ElectricPoleWidth = 1
       default.ElectricPoleHeight = 1
       return default
@@ -46,7 +46,7 @@ System.namespace("Knapcode.FactorioTools.OilField", function (namespace)
       default.ElectricPoleEntityName = "small-electric-pole" --[[Vanilla.SmallElectricPole]]
       default.ElectricPoleSupplyWidth = 5
       default.ElectricPoleSupplyHeight = 5
-      setElectricPoleWireReach(default, 7.5)
+      default.ElectricPoleWireReach = 7.5
       default.ElectricPoleWidth = 1
       default.ElectricPoleHeight = 1
       return default
@@ -56,7 +56,7 @@ System.namespace("Knapcode.FactorioTools.OilField", function (namespace)
       default.ElectricPoleEntityName = "medium-electric-pole" --[[Vanilla.MediumElectricPole]]
       default.ElectricPoleSupplyWidth = 7
       default.ElectricPoleSupplyHeight = 7
-      setElectricPoleWireReach(default, 9)
+      default.ElectricPoleWireReach = 9
       default.ElectricPoleWidth = 1
       default.ElectricPoleHeight = 1
       return default
@@ -66,7 +66,7 @@ System.namespace("Knapcode.FactorioTools.OilField", function (namespace)
       default.ElectricPoleEntityName = "big-electric-pole" --[[Vanilla.BigElectricPole]]
       default.ElectricPoleSupplyWidth = 4
       default.ElectricPoleSupplyHeight = 4
-      setElectricPoleWireReach(default, 32)
+      default.ElectricPoleWireReach = 32
       default.ElectricPoleWidth = 2
       default.ElectricPoleHeight = 2
       return default
@@ -76,16 +76,10 @@ System.namespace("Knapcode.FactorioTools.OilField", function (namespace)
       default.ElectricPoleEntityName = "substation" --[[Vanilla.Substation]]
       default.ElectricPoleSupplyWidth = 18
       default.ElectricPoleSupplyHeight = 18
-      setElectricPoleWireReach(default, 18)
+      default.ElectricPoleWireReach = 18
       default.ElectricPoleWidth = 2
       default.ElectricPoleHeight = 2
       return default
-    end
-    getElectricPoleWireReach = function (this)
-      return this._electricPoleWireReach
-    end
-    setElectricPoleWireReach = function (this, value)
-      this._electricPoleWireReach = value
     end
     class = {
       getForSmallIronElectricPole = getForSmallIronElectricPole,
@@ -103,9 +97,7 @@ System.namespace("Knapcode.FactorioTools.OilField", function (namespace)
       ElectricPoleEntityName = "medium-electric-pole" --[[Vanilla.MediumElectricPole]],
       ElectricPoleSupplyWidth = 7,
       ElectricPoleSupplyHeight = 7,
-      _electricPoleWireReach = 9 --[[OilFieldOptions.DefaultElectricPoleWireReach]],
-      getElectricPoleWireReach = getElectricPoleWireReach,
-      setElectricPoleWireReach = setElectricPoleWireReach,
+      ElectricPoleWireReach = 9 --[[OilFieldOptions.DefaultElectricPoleWireReach]],
       ElectricPoleWidth = 1,
       ElectricPoleHeight = 1,
       BeaconEntityName = "beacon" --[[Vanilla.Beacon]],

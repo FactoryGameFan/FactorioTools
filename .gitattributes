@@ -1,3 +1,8 @@
+# src/lua is generated and CI checks it against a fresh transpile. The manifest
+# is written with [Environment]::NewLine, so a Windows regen would otherwise
+# produce CRLF and fail that check for no real reason.
+*.lua text eol=lf
+
 *.verified.txt text eol=lf working-tree-encoding=UTF-8
 *.verified.xml text eol=lf working-tree-encoding=UTF-8
 *.verified.json text eol=lf working-tree-encoding=UTF-8

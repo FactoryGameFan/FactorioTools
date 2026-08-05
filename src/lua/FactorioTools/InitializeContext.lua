@@ -119,7 +119,7 @@ System.namespace("Knapcode.FactorioTools.OilField", function (namespace)
       local poleLevel = options.ElectricPoleQuality
       context.ElectricPoleSupplyWidthWithQuality = options.ElectricPoleSupplyWidth + 2 * poleLevel
       context.ElectricPoleSupplyHeightWithQuality = options.ElectricPoleSupplyHeight + 2 * poleLevel
-      context.ElectricPoleWireReachWithQuality = options:getElectricPoleWireReach() + 2 * poleLevel
+      context.ElectricPoleWireReachWithQuality = options.ElectricPoleWireReach + 2 * poleLevel
       context.ElectricPoleWireReachSquaredWithQuality = context.ElectricPoleWireReachWithQuality * context.ElectricPoleWireReachWithQuality
 
       return context

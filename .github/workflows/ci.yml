@@ -50,8 +50,66 @@ jobs:
         run: npm run test
         working-directory: ${{ env.BUILD_PATH }}
 
-  test-lua:
-    name: Test .NET with Lua settings
+  # Transpiles the core library with CSharp.lua, the way src/lua is actually
+  # produced. This is the job that catches a C# construct Lua cannot take -
+  # test-lua-settings below only flips MSBuild #if flags and never runs the
+  # transpiler. LINQ is the case worth knowing: CSharp.lua transpiles it
+  # happily, but Collections.Linq is not in the CoreSystem load list, so the
+  # emitted Lua would call a module that was never shipped and fail at runtime
+  # inside Factorio rather than at build time.
+  transpile-lua:
+    name: Transpile to Lua
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          submodules: recursive
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v6
+        with:
+          global-json-file: global.json
+
+      # No "dotnet workload restore" here: the script builds only FactorioTools
+      # and the two submodule libraries, so the wasm-tools workload is not needed.
+      - name: Transpile to Lua
+        run: pwsh -File src/lua/Invoke-LuaBuild.ps1
+
+      # src/lua is generated output that happens to be committed, so it can go
+      # stale without anything failing - it already had, for the pole wire reach.
+      - name: Check the committed Lua is up to date
+        run: |
+          if [ -n "$(git status --porcelain -- src/lua)" ]; then
+            echo "::error::src/lua does not match what the C# transpiles to. Run src/lua/Invoke-LuaBuild.ps1 and commit the result."
+            git status --porcelain -- src/lua
+            git diff -- src/lua
+            exit 1
+          fi
+          echo "src/lua matches the transpiled output."
+
+      # Factorio runs a modified Lua 5.2, and this package is Lua 5.2.4 - the
+      # same version the README's Lua performance log was measured against.
+      - name: Install Lua 5.2
+        run: sudo apt-get update && sudo apt-get install -y lua5.2
+
+      - name: Syntax-check the generated Lua
+        run: find src/lua -name '*.lua' -print0 | xargs -0 -n1 luac5.2 -p
+
+      # The step that catches LINQ, and the reason a syntax check is not enough.
+      # LINQ transpiles cleanly and parses cleanly; it emits
+      # "local Linq = System.Linq.Enumerable", which is nil because
+      # Collections.Linq is not in the CoreSystem load list. That only shows up
+      # when the module is loaded, so the check has to actually run the planner:
+      #   ./FactorioTools/InitializeContext.lua:3: attempt to index field 'Linq'
+      # Takes well under a second, and proves the transpiled planner runs at all
+      # rather than merely parsing.
+      - name: Run the planner under Lua 5.2
+        run: lua5.2 sample.lua
+        working-directory: src/lua
+
+  test-lua-settings:
+    name: Test .NET with Lua-compatible settings
     runs-on: ubuntu-latest
     steps:
       - name: Checkout

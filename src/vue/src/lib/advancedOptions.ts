@@ -1,4 +1,5 @@
 import { getDefaults, type OilFieldStoreState } from "../stores/OilFieldStore"
+import { ELECTRIC_POLE_PRESETS, type ElectricPolePreset } from "./plannerDefaults"
 
 // Turning advanced options back off hides the advanced controls with v-show,
 // which is CSS only - the store values survive, keep going out in the plan
@@ -125,23 +126,8 @@ export function resetPlannerAdvancedOptions(state: PlannerAdvancedOptions) {
   state.autoPlan = false
 }
 
-export type ElectricPolePreset = {
-  width: number
-  height: number
-  supplyWidth: number
-  supplyHeight: number
-  wireReach: number
-}
-
-// Mirrors the C# presets in OilFieldOptions.cs (ForSmallElectricPole and
-// friends). Kept in sync by hand - see the "planner constants are hand-copied
-// across C#, Lua and Vue" issue.
-export const ELECTRIC_POLE_PRESETS: Record<string, ElectricPolePreset> = {
-  "small-electric-pole": { width: 1, height: 1, supplyWidth: 5, supplyHeight: 5, wireReach: 7.5 },
-  "medium-electric-pole": { width: 1, height: 1, supplyWidth: 7, supplyHeight: 7, wireReach: 9 },
-  "big-electric-pole": { width: 2, height: 2, supplyWidth: 4, supplyHeight: 4, wireReach: 32 },
-  substation: { width: 2, height: 2, supplyWidth: 18, supplyHeight: 18, wireReach: 18 },
-}
+export { ELECTRIC_POLE_PRESETS }
+export type { ElectricPolePreset }
 
 export type ElectricPoleGeometry = AdvancedOptionState<
   | "electricPoleWidth"

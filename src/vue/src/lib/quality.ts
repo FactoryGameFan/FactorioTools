@@ -1,4 +1,5 @@
 import { Quality } from "./FactorioToolsApi"
+import { QUALITY_LEVELS } from "./plannerDefaults"
 
 export const QUALITY_ORDER: Quality[] = [
   Quality.Normal,
@@ -8,12 +9,14 @@ export const QUALITY_ORDER: Quality[] = [
   Quality.Legendary,
 ]
 
+// The integer levels come from the C# Quality enum via plannerDefaults.verified.json.
+// Factorio skips a hidden level 4, which is why Legendary is 5 and not 4.
 const levels: Record<Quality, number> = {
-  [Quality.Normal]: 0,
-  [Quality.Uncommon]: 1,
-  [Quality.Rare]: 2,
-  [Quality.Epic]: 3,
-  [Quality.Legendary]: 5,
+  [Quality.Normal]: QUALITY_LEVELS.Normal,
+  [Quality.Uncommon]: QUALITY_LEVELS.Uncommon,
+  [Quality.Rare]: QUALITY_LEVELS.Rare,
+  [Quality.Epic]: QUALITY_LEVELS.Epic,
+  [Quality.Legendary]: QUALITY_LEVELS.Legendary,
 }
 
 const labels: Record<Quality, string> = {

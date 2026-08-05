@@ -2,3 +2,4 @@ node_modules/
 dist/
 public/framework/
 src/lib/FactorioToolsApi.ts
+src/lib/plannerDefaults.verified.json

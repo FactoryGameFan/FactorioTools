@@ -11,6 +11,7 @@ import {
   Quality,
 } from "./FactorioToolsApi"
 import { getEntries } from "./helpers"
+import { PUMPJACK_MODULE_DEFAULT } from "./plannerDefaults"
 import * as wasmPlanner from "./wasmPlanner"
 
 type RequestPropertyGetters = {
@@ -69,7 +70,7 @@ const requestPropertyGetters: RequestPropertyGetters = {
     const output: Record<string, number> = {}
     const module = state.pumpjackModule.trim()
     if (module) {
-      output[module] = 2
+      output[module] = PUMPJACK_MODULE_DEFAULT.count
     }
     return output
   },

@@ -129,10 +129,8 @@
 <script lang="ts">
 import { storeToRefs } from "pinia"
 import { pick } from "../lib/helpers"
-import {
-  getDefaults,
-  useOilFieldStore,
-} from "../stores/OilFieldStore"
+import { useOilFieldStore } from "../stores/OilFieldStore"
+import { resetBeaconAdvancedOptions } from "../lib/advancedOptions"
 import ModuleSelect from "./ModuleSelect.vue"
 import QualitySelect from "./QualitySelect.vue"
 
@@ -174,14 +172,7 @@ export default {
   },
   methods: {
     reset() {
-      const defaults = getDefaults()
-      this.beaconEntityName = defaults.beaconEntityName
-      this.beaconModuleSlots = defaults.beaconModuleSlots
-      this.beaconWidth = defaults.beaconWidth
-      this.beaconHeight = defaults.beaconHeight
-      this.beaconSupplyWidth = defaults.beaconSupplyWidth
-      this.beaconSupplyHeight = defaults.beaconSupplyHeight
-      this.overlapBeacons = defaults.overlapBeacons
+      resetBeaconAdvancedOptions(this)
     },
   },
   components: { ModuleSelect, QualitySelect },

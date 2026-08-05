@@ -29,6 +29,7 @@
 import { storeToRefs } from "pinia"
 import { pick } from "../lib/helpers"
 import { useOilFieldStore } from "../stores/OilFieldStore"
+import { resetPumpjackAdvancedOptions } from "../lib/advancedOptions"
 import ModuleSelect from "./ModuleSelect.vue"
 import QualitySelect from "./QualitySelect.vue"
 
@@ -47,6 +48,18 @@ export default {
       "pumpjackQuality",
       "pumpjackModuleQuality",
     )
+  },
+  watch: {
+    showAdvancedOptions: function (newVal: boolean) {
+      if (!newVal) {
+        this.reset()
+      }
+    },
+  },
+  methods: {
+    reset() {
+      resetPumpjackAdvancedOptions(this)
+    },
   },
   components: { ModuleSelect, QualitySelect },
 }

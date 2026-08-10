@@ -38,11 +38,16 @@ npm run build-wasm     # publish BrowserWasm and copy the bundle (incl. dotnet.j
 
 - The Vue app plans in-browser via .NET WASM. After changing C# planner code, run
   `npm run build-wasm` in `src/vue` to refresh `public/framework` (the bundle,
-  incl. `dotnet.js`, lives in `public/framework`). Note: `src/vue/public/` is
-  gitignored and absent in a fresh checkout, so the copy must create it first
-  (`mkdir -p public`) - otherwise `cp -r .../_framework public/...` flattens the
-  bundle's contents into the `public/` root and the `framework/dotnet.js` import
-  404s on the deployed site. Requires the .NET 10 SDK plus the wasm-tools
+  incl. `dotnet.js`, lives in `public/framework`). The copy must land as
+  `public/framework/`, not flattened into `public/` - a flattened bundle puts
+  `dotnet.js` at the root, the `framework/dotnet.js` import 404s, and the site
+  loads but cannot plan. `build-wasm` does `mkdir -p public` first to guarantee
+  that. (Only `src/vue/public/framework/` is gitignored, not all of
+  `src/vue/public/`; the directory itself exists in a fresh checkout because
+  `_worker.js` is tracked in it, so the `mkdir -p` is belt-and-braces rather
+  than load-bearing.) `deploy-cloudflare.yml` runs `build-wasm` and asserts the
+  resulting shape, on pull requests as well as on deploys, so this is now
+  checked rather than trusted. Requires the .NET 10 SDK plus the wasm-tools
   workload; without a local .NET 10 SDK, publish via `./docker-build.sh` (the SDK image
   also needs `python3` on PATH for the emscripten native relink step) and copy
   `src/BrowserWasm/bin/Release/net10.0/browser-wasm/AppBundle/_framework` into

@@ -79,9 +79,16 @@
   //   1. Branch protection on `main` with a CI check REQUIRED, `bypass_actors`
   //      empty, and `strict_required_status_checks_policy: true`. Without all
   //      three a PR can merge red, or merge having been tested against a different
-  //      `main` than the one it lands on. Note this repo's CI is three separate
-  //      checks ("Build front-end", "Test .NET with Lua settings", "Test .NET with
-  //      default settings"), so all three have to be required, not just one.
+  //      `main` than the one it lands on. Note this repo's CI is FOUR separate
+  //      checks ("Build front-end", "Transpile to Lua", "Test .NET with
+  //      Lua-compatible settings", "Test .NET with default settings"), so all four
+  //      have to be required, not just one.
+  //
+  //      There is also a fifth, "Build and deploy" from deploy-cloudflare.yml,
+  //      which runs on pull requests behind a `paths` filter. Do NOT make that one
+  //      required: a paths-filtered check does not report at all on a PR it does
+  //      not match, which leaves a required check permanently pending and blocks
+  //      the merge outright.
   //   2. Repo-level "Allow auto-merge" enabled (`allow_auto_merge` in the repo
   //      settings API). Renovate's `platformAutomerge` cannot do anything without
   //      it, and when it is off Renovate silently falls back to polling and merging

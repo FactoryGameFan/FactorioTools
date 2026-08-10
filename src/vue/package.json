@@ -11,7 +11,7 @@
     "lint": "eslint . --fix",
     "format": "prettier --write src/",
     "swagger-gen": "swagger-typescript-api generate --path ../WebApp/swagger.json --output src/lib --name FactorioToolsApi",
-    "build-wasm": "dotnet publish ../BrowserWasm/BrowserWasm.csproj -c Release && shx rm -rf public/framework && shx mkdir -p public && shx cp -r ../BrowserWasm/bin/Release/net10.0/browser-wasm/AppBundle/_framework public/framework",
+    "build-wasm": "dotnet publish ../BrowserWasm/BrowserWasm.csproj -c Release && shx rm -rf public/framework && shx mkdir -p public && shx cp -r ../BrowserWasm/bin/Release/net10.0/browser-wasm/AppBundle/_framework/. public/",
     "test": "vitest run",
     "test:watch": "vitest"
   },

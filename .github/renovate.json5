@@ -34,13 +34,19 @@
   extends: [
     "config:recommended",
     // Pin every GitHub Action to a commit SHA rather than a moving tag, and keep
-    // the trailing `# vX.Y.Z` comment beside it updated. Today all four actions in
-    // this repo are on moving tags - actions/checkout@v7, actions/setup-node@v7,
-    // actions/setup-dotnet@v6, cloudflare/wrangler-action@v4 - so the FIRST run
-    // after enabling the app will open a PR converting all of them to SHAs. That
-    // PR is expected; it is the preset doing its job. Adopting the preset makes
-    // pinned-vs-tag the rule for anything added later, so the choice cannot drift
-    // action by action.
+    // the trailing `# vX.Y.Z` comment beside it updated. All four actions in this
+    // repo - actions/checkout, actions/setup-node, actions/setup-dotnet and
+    // cloudflare/wrangler-action - were converted from moving tags to SHAs by the
+    // preset's first PR (#61). Adopting the preset makes pinned-vs-tag the rule for
+    // anything added later, so the choice cannot drift action by action.
+    //
+    // WORTH KNOWING WHEN REVIEWING THE RE-PIN PRs THIS NOW PRODUCES: a digest update
+    // carries no release timestamp, so `minimumReleaseAge` below has nothing to
+    // measure and `renovate/stability-days` sits PENDING rather than ever going
+    // green. Waiting does not clear it. #61 was merged with that check outstanding,
+    // after verifying each SHA against the live tag ref by hand - which is the check
+    // that actually matters here, since a wrong SHA is the whole risk that pinning
+    // exists to remove. Expect to do the same on every re-pin.
     "helpers:pinGitHubActionDigests",
   ],
 
@@ -264,7 +270,7 @@
       //
       // THE CLI IS PART OF THIS STACK AND WAS MISSING FROM THE FIRST VERSION OF
       // THIS RULE. `swashbuckle.aspnetcore.cli` lives in
-      // src/WebApp/.config/dotnet-tools.json (currently 6.5.0), not in any .csproj,
+      // src/WebApp/.config/dotnet-tools.json (currently 6.9.0), not in any .csproj,
       // so reading the project files alone does not reveal it - and because it is a
       // separate package name, matching "Swashbuckle.AspNetCore" never covered it.
       // Renovate promptly queued a jump straight to v10 for it. That CLI is what
@@ -274,7 +280,7 @@
       // forbids. It is held here with the rest of the stack.
       //
       // CEILING IS <7.0.0, not the <9.0.0 originally guessed. Installed today are
-      // Swashbuckle.AspNetCore 6.9.0 and swashbuckle.aspnetcore.cli 6.5.0, and
+      // Swashbuckle.AspNetCore 6.9.0 and swashbuckle.aspnetcore.cli 6.9.0, and
       // nothing in the csproj comment establishes that 7.x or 8.x is safe against
       // Microsoft.AspNetCore.OpenApi 8.0.x - it reasons only about 6.x (current)
       // and 10.x (the compatible target). <9.0.0 would have waved through a
@@ -299,7 +305,7 @@
       // this narrows the two Swashbuckle entries without disturbing the grouping or
       // the OpenApi ceiling set by the rule above.
       description:
-        "HOLD both Swashbuckle packages on 6.x specifically. Installed: Swashbuckle.AspNetCore 6.9.0, swashbuckle.aspnetcore.cli 6.5.0. The csproj rationale covers 6.x and 10.x only - 7.x/8.x are simply unexamined against Microsoft.AspNetCore.OpenApi 8.0.x, so they are not a safe default. Raise this only as part of the OpenApi 10.x migration, which moves the whole stack at once - tracked in #47.",
+        "HOLD both Swashbuckle packages on 6.x specifically. Installed: Swashbuckle.AspNetCore 6.9.0, swashbuckle.aspnetcore.cli 6.9.0 - the two were out of step until #63 brought the CLI up to match, which is what this rule existing at all is meant to keep true. The csproj rationale covers 6.x and 10.x only - 7.x/8.x are simply unexamined against Microsoft.AspNetCore.OpenApi 8.0.x, so they are not a safe default. Raise this only as part of the OpenApi 10.x migration, which moves the whole stack at once - tracked in #47.",
       matchManagers: ["nuget"],
       matchPackageNames: ["Swashbuckle.AspNetCore", "swashbuckle.aspnetcore.cli"],
       groupName: "WebApp OpenAPI stack",

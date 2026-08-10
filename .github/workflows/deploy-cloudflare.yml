@@ -1,9 +1,34 @@
 name: Deploy to Cloudflare Pages
 
 on:
+  # Do not filter branches on "*". In Actions filter patterns a single star does
+  # not match "/", so "*" silently excludes every slash-named branch. See ci.yml
+  # and issue #36.
   push:
     branches:
       - "main"
+  # Pull requests run this whole job except the deploy step itself, so the WASM
+  # publish and the public/framework copy are proven before merge rather than by
+  # the deploy that happens after it. ci.yml's front-end build does none of that
+  # work - it builds with public/framework absent, so it is green against a
+  # different artifact from the one that ships.
+  #
+  # The paths list is the dependency chain that feeds the bundle:
+  # BrowserWasm -> Serialization + Contract -> FactorioTools, plus the Vue app
+  # that consumes it and the build inputs that change how any of them compile.
+  # Keep it in sync when a new project joins that chain; a missing entry costs
+  # coverage silently, which is the failure mode this job exists to remove.
+  pull_request:
+    paths:
+      - ".github/workflows/deploy-cloudflare.yml"
+      - "src/BrowserWasm/**"
+      - "src/FactorioTools/**"
+      - "src/FactorioTools.Serialization/**"
+      - "src/FactorioTools.Contract/**"
+      - "src/vue/**"
+      - "submodules/**"
+      - "global.json"
+      - "Directory.Build.props"
   workflow_dispatch:
 
 permissions:
@@ -26,31 +51,52 @@ jobs:
         uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6
         with:
           global-json-file: global.json
+      # build-wasm below shells out to dotnet publish, which needs the workload.
       - name: Restore wasm-tools workload
         run: dotnet workload restore
-      - name: Publish BrowserWasm
-        run: dotnet publish src/BrowserWasm/BrowserWasm.csproj -c Release
-      - name: Copy WASM assets into Vue public
-        run: |
-          # public/ is gitignored and absent in a fresh checkout; create it so
-          # cp targets public/framework instead of flattening the bundle into public/.
-          mkdir -p "$BUILD_PATH/public"
-          rm -rf "$BUILD_PATH/public/framework"
-          cp -r src/BrowserWasm/bin/Release/net10.0/browser-wasm/AppBundle/_framework \
-                "$BUILD_PATH/public/framework"
       - name: Set up Node
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with:
           node-version: 24
           cache: "npm"
           cache-dependency-path: ${{ env.BUILD_PATH }}/package-lock.json
+      # Node is set up before the .NET publish because build-wasm runs through
+      # npm and needs shx from node_modules.
       - name: Install dependencies
         run: npm install
+        working-directory: ${{ env.BUILD_PATH }}
+      # Publishes BrowserWasm and copies AppBundle/_framework to public/framework.
+      # This deliberately calls the npm script rather than reimplementing those
+      # steps inline: this workflow used to carry its own copy of the publish and
+      # cp logic, so the command developers run locally (per CLAUDE.md) and the
+      # one that builds the deployed site were two hand-maintained definitions
+      # that had already drifted in operation order. Now there is one, and this
+      # job is what proves it still works.
+      - name: Build the WASM bundle
+        run: npm run build-wasm
         working-directory: ${{ env.BUILD_PATH }}
       - name: Build
         run: npm run build
         working-directory: ${{ env.BUILD_PATH }}
+      # Guard against the bundle landing in the wrong shape - a flattened copy
+      # leaves dotnet.js at the dist root, the import 404s, and the site loads but
+      # cannot plan. Cheap to assert, and the assertion is the point of running
+      # this job on pull requests at all.
+      - name: Check the WASM bundle landed in the right shape
+        run: |
+          for f in framework/dotnet.js framework/dotnet.boot.js framework/dotnet.native.wasm; do
+            if [ ! -f "$BUILD_PATH/dist/$f" ]; then
+              echo "::error::$BUILD_PATH/dist/$f is missing - the _framework copy did not land as dist/framework/."
+              echo "dist contents:"
+              ls -la "$BUILD_PATH/dist"
+              exit 1
+            fi
+          done
+          echo "dist/framework/ contains the expected bundle entry points."
       - name: Deploy to Cloudflare Pages
+        # Pull requests build and verify, but never deploy. This also keeps the
+        # repository's only credential-bearing step off the PR path.
+        if: github.event_name != 'pull_request'
         uses: cloudflare/wrangler-action@ebbaa1584979971c8614a24965b4405ff95890e0 # v4
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}

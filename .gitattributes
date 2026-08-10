@@ -3,6 +3,13 @@
 # produce CRLF and fail that check for no real reason.
 *.lua text eol=lf
 
+# Same deal for the other two committed generated files CI now checks against a
+# fresh regeneration: swagger.json (Swashbuckle CLI) and the TS client generated
+# from it (swagger-typescript-api). Both are LF today; pinning them keeps a regen
+# on a Windows checkout from failing those checks on line endings alone.
+src/WebApp/swagger.json text eol=lf
+src/vue/src/lib/FactorioToolsApi.ts text eol=lf
+
 *.verified.txt text eol=lf working-tree-encoding=UTF-8
 *.verified.xml text eol=lf working-tree-encoding=UTF-8
 *.verified.json text eol=lf working-tree-encoding=UTF-8

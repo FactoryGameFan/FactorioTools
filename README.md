@@ -14,7 +14,7 @@ Why did I build my own? Well, I didn't know of these tools before I started and 
 
 ### Check it out
 
-The tool is available here: https://factoriotools-5jg.pages.dev/oil-field. The planner runs entirely in your browser via .NET WebAssembly, so no blueprint data leaves your machine. There is an "Add sample" button (which drops one of my test blueprints in) and "View in FBE" buttons to view the input and output blueprints. Give it a try and let me know what you think!
+The tool is available here: https://oilfieldplanner.factorygamefan.com/oil-field. The planner runs entirely in your browser via .NET WebAssembly, so no blueprint data leaves your machine. There is an "Add sample" button (which drops one of my test blueprints in) and "View in FBE" buttons to view the input and output blueprints. Give it a try and let me know what you think!
 
 I've also attached a video of the thing in action.
 
@@ -38,7 +38,7 @@ https://user-images.githubusercontent.com/94054/224560733-35ca401f-ae51-46a9-951
 
 ### Methodology
 
-I captured 57 test blueprints from my own saves and used them for a scoring data set. If the beacon or pipe planning algorithms I tried produced better results on this data set, I considered it a better algorithm and moved forward with the idea. This iterative process allowed me to come up with several algorithm variants that are all used.
+I captured a set of test blueprints from my own saves and used them for a scoring data set (61 of them today, in [`small-list.txt`](test/FactorioTools.Test/OilField/small-list.txt)). If the beacon or pipe planning algorithms I tried produced better results on this data set, I considered it a better algorithm and moved forward with the idea. This iterative process allowed me to come up with several algorithm variants that are all used.
 
 I re-implemented FBE's pipe planner and beacon planner (with some tweaks) and wrote my own algorithms for pipe placement, pipe straitening, beacon placement, and electric pole placement. I did not try FBE's electric pole algorithm since it's not that important to have the fewest electric poles.
 

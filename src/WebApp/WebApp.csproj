@@ -66,7 +66,7 @@
   -->
   <Target Name="PostBuild" AfterTargets="PostBuildEvent" Condition="'$(GenerateSwagger)' != 'false'">
     <Exec Command="dotnet tool restore" StandardOutputImportance="normal" />
-    <!-- DOTNET_ROLL_FORWARD=Major lets the net7-targeted Swashbuckle CLI run on net10-only hosts (CI runners), which otherwise fail with exit code 150. -->
+    <!-- DOTNET_ROLL_FORWARD=Major lets the Swashbuckle CLI run on net10-only hosts (CI runners), which otherwise fail with exit code 150. The CLI's highest shipped target is net8.0 as of 6.9.0 (it was net7.0 until #63 bumped it from 6.5.0), so it still needs a major roll-forward either way - do not assume a CLI bump makes this removable without checking its tools/ TFMs. -->
     <Exec Command="dotnet swagger tofile --output swagger.json $(OutputPath)\$(AssemblyName).dll v1" StandardOutputImportance="normal" EnvironmentVariables="DOTNET_ROLL_FORWARD=Major" />
   </Target>
 

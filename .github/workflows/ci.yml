@@ -153,6 +153,16 @@ jobs:
       - name: Test with Lua settings
         run: dotnet test --no-build --configuration Release --logger "console;verbosity=normal"
 
+      - name: Check no Verify snapshots drifted
+        run: |
+          if [ -n "$(git status --porcelain -- '*.verified.*')" ]; then
+            echo "::error::A Verify snapshot changed during the test run. The committed snapshot does not match current behavior - regenerate locally and commit, or fix the regression."
+            git status --porcelain -- '*.verified.*'
+            git diff -- '*.verified.*'
+            exit 1
+          fi
+          echo "No Verify snapshots drifted."
+
   test-default:
     name: Test .NET with default settings
     runs-on: ubuntu-latest
@@ -221,6 +231,24 @@ jobs:
 
       - name: Test with default settings
         run: dotnet test --no-build --configuration Release --logger "console;verbosity=normal"
+
+      # Verify snapshots are committed generated output, same as swagger.json above -
+      # and they had the weaker guard. SetVerifySettings calls
+      # AutoVerify(includeBuildServer: false), which is meant to stop snapshots being
+      # auto-accepted on CI, but DiffEngine's BuildServerDetector reports false under
+      # this runner's environment (checked against both 18.4.1 and 19.3.3), so a
+      # mismatch is silently accepted and the run stays green. This step does not
+      # depend on that detector working: if the test run rewrote a snapshot, the file
+      # is dirty, and a dirty snapshot means the committed one was stale.
+      - name: Check no Verify snapshots drifted
+        run: |
+          if [ -n "$(git status --porcelain -- '*.verified.*')" ]; then
+            echo "::error::A Verify snapshot changed during the test run. The committed snapshot does not match current behavior - regenerate locally and commit, or fix the regression."
+            git status --porcelain -- '*.verified.*'
+            git diff -- '*.verified.*'
+            exit 1
+          fi
+          echo "No Verify snapshots drifted."
 
       - name: Publish
         run: dotnet publish src/WebApp --configuration Release --output src/WebApp/bin/publish --runtime linux-x64 --no-self-contained /p:PublishReadyToRun=true

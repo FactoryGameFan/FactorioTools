@@ -209,8 +209,11 @@
     //   Migration-shaped - there is real work that would lift the hold, so the
     //   plan lives in an issue and the rule points at it:
     //     typescript ............... #49  (upstream-gated: vue-tsc vs TS 7)
-    //     Verify family ............ #44  (migrate to xunit v3 + Verify.XunitV3)
     //     WebApp OpenAPI stack ..... #47  (OpenApi 10.x + Swashbuckle 10.x)
+    //
+    //   The Verify family used to be listed here against #44. That migration
+    //   landed - the test project is on xunit v3 + Verify.XunitV3 - so the version
+    //   ceiling is gone. Only the grouping remains, and it is not a hold.
     //
     //   Conditional - nothing to plan until an external circumstance changes, so
     //   there is deliberately NO issue and the revisit condition is stated in the
@@ -312,26 +315,24 @@
       allowedVersions: "<7.0.0",
     },
     {
-      // Tracking issue: #44 - migrate the test project to xunit v3 + Verify.XunitV3,
-      // which frees this whole family at once. Renovate independently flags
-      // Verify.Xunit and xunit as deprecated with no replacement available, which
-      // is the same conclusion arrived at from the other direction.
+      // The version ceiling that used to sit here came off with #44: the test
+      // project moved to xunit v3 + Verify.XunitV3, so Verify.DiffPlex is no longer
+      // pinned to 3.1.x and the family tracks current again.
+      //
+      // The grouping stays, because the coupling that made the old hold necessary
+      // is structural, not version-specific. Verify.DiffPlex and Verify.XunitV3
+      // both bind to Verify core, so bumping one alone can pull core past what the
+      // other supports. That mismatch is the dangerous kind - it compiles with zero
+      // warnings and dies at runtime. On the old stack it took out 2748 of 4261
+      // tests with MethodAccessException on Guards.AgainstBadSourceFile.
       description:
-        "HOLD Verify.DiffPlex at 3.1.x. It is coupled to Verify.Xunit through the Verify core package. Verify.Xunit is the xunit v2 integration and its final release is 31.12.5, depending on Verify 31.12.5 with include='All'. Every DiffPlex above 3.1.2 requires a newer core (3.2.0 needs >=31.18.0, 3.3.0 needs >=31.20.0, 3.3.1 needs >=31.24.1), which builds cleanly and then fails at runtime with MethodAccessException on Guards.AgainstBadSourceFile - 2748 of 4261 tests. Unlock path is migrating the test project to xunit v3 + Verify.XunitV3 - tracked in #44. See the comment in test/FactorioTools.Test/FactorioTools.Test.csproj.",
+        "Keep the whole Verify family in one PR. Verify.DiffPlex and Verify.XunitV3 both bind to the Verify core package, so bumping one alone can pull core past what the other supports - which builds cleanly and then fails at runtime with MethodAccessException on Guards.AgainstBadSourceFile. Not a version hold; these are free to move, just not separately. See the comment in test/FactorioTools.Test/FactorioTools.Test.csproj.",
       matchManagers: ["nuget"],
-      matchPackageNames: ["Verify.DiffPlex"],
-      allowedVersions: "<3.2.0",
-      prBodyNotes: [
-        "This failure mode BUILDS CLEANLY and dies at runtime, so a compiling branch is not evidence. Run the full `dotnet test` before believing any bump here.",
-      ],
-    },
-    {
-      // Same tracking issue as the ceiling above: #44.
-      description:
-        "Keep the whole Verify family in one PR. Verify.Xunit cannot advance past 31.12.5 while the project is on xunit v2, and the family breaks at runtime when its halves drift apart. Lifted by the xunit v3 migration in #44.",
-      matchManagers: ["nuget"],
-      matchPackageNames: ["Verify.Xunit", "Verify.DiffPlex", "Verify"],
+      matchPackageNames: ["Verify.XunitV3", "Verify.DiffPlex", "Verify"],
       groupName: "Verify test snapshot stack",
+      prBodyNotes: [
+        "This family's failure mode BUILDS CLEANLY and dies at runtime, so a compiling branch is not evidence. Run the full `dotnet test` before believing any bump here.",
+      ],
     },
     {
       // No tracking issue by design - this is a "not worth the review" call rather

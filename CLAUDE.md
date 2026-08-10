@@ -119,7 +119,7 @@ The `transpile-lua` CI job runs that script, fails if the committed `src/lua` no
 
 ## Testing notes
 
-- Tests use **xUnit + Verify** (`Verify.Xunit`). Many tests assert against committed `*.verified.txt` snapshots under `test/FactorioTools.Test/OilField`. When behavior legitimately changes, update snapshots via Verify's accept workflow (received vs verified) rather than editing expected files by hand.
+- Tests use **xUnit v3 + Verify** (`xunit.v3` + `Verify.XunitV3`). Many tests assert against committed `*.verified.txt` snapshots under `test/FactorioTools.Test/OilField`. When behavior legitimately changes, update snapshots via Verify's accept workflow (received vs verified) rather than editing expected files by hand. CI does not rely on Verify failing on a stale snapshot - `AutoVerify` still auto-accepts on the runner - so a "Check no Verify snapshots drifted" step fails the build if `dotnet test` leaves any `*.verified.*` file dirty. Commit regenerated snapshots with your change.
 - `Score.HasExpectedScore.verified.txt` is the planner-quality scoreboard across the 57 test blueprints; `small-list.txt` / `big-list.txt` hold the blueprint corpus.
 - Test data blueprints are normalized via the CLI `oil-field normalize` command.
 

@@ -46,6 +46,22 @@ jobs:
         run: npm run build
         working-directory: ${{ env.BUILD_PATH }}
 
+      # "npm run build" runs swagger-gen first, so the build above has already
+      # regenerated the committed TS client from the committed swagger.json.
+      # This is the second link in the chain the swagger.json check below guards:
+      # WebApp C# -> swagger.json -> src/vue/src/lib -> the deployed front-end.
+      # Without this, the client could keep describing an older contract than the
+      # swagger.json sitting next to it. Only FactorioToolsApi.ts is generated -
+      # everything else in src/lib is hand-written.
+      - name: Check the committed API client is up to date
+        run: |
+          if [ -n "$(git status --porcelain -- src/vue/src/lib/FactorioToolsApi.ts)" ]; then
+            echo "::error::src/vue/src/lib/FactorioToolsApi.ts does not match what swagger.json generates. Run 'npm run swagger-gen' in src/vue and commit the result."
+            git diff -- src/vue/src/lib/FactorioToolsApi.ts
+            exit 1
+          fi
+          echo "src/vue/src/lib/FactorioToolsApi.ts matches the generated client."
+
       - name: Test
         run: npm run test
         working-directory: ${{ env.BUILD_PATH }}
@@ -186,6 +202,22 @@ jobs:
 
       - name: Build release with default settings
         run: dotnet build --configuration Release
+
+      # swagger.json is committed generated output: WebApp.csproj's PostBuild
+      # target reruns the Swashbuckle CLI on every build, including every build
+      # above, so by now CI has already regenerated it several times. Nothing
+      # compared it to the committed copy, so a contract change could sit stale
+      # indefinitely while CI stayed green. Note the invocation lives in MSBuild,
+      # not in this file - grepping the workflows for "swagger" finds nothing,
+      # which makes this easy to misdiagnose as "the tool never runs in CI".
+      - name: Check the committed swagger.json is up to date
+        run: |
+          if [ -n "$(git status --porcelain -- src/WebApp/swagger.json)" ]; then
+            echo "::error::src/WebApp/swagger.json does not match what the WebApp generates. Run 'dotnet build src/WebApp/WebApp.csproj' and commit the result (then 'npm run swagger-gen' in src/vue to refresh the client)."
+            git diff -- src/WebApp/swagger.json
+            exit 1
+          fi
+          echo "src/WebApp/swagger.json matches the generated document."
 
       - name: Test with default settings
         run: dotnet test --no-build --configuration Release --logger "console;verbosity=normal"

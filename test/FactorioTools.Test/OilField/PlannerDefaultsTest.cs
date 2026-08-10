@@ -8,14 +8,14 @@ namespace Knapcode.FactorioTools.OilField;
 /// time in TypeScript. The Vue app imports the verified file directly.
 ///
 /// This test IS the generator. Locally, AutoVerify rewrites the file when the C#
-/// changes and the test passes, so commit the rewritten file.
+/// changes and the test passes, so commit the rewritten file. On CI, AutoVerify is
+/// off, so a stale committed file fails here with a diff.
 ///
-/// On CI it does NOT fail here, which is worth knowing before relying on it:
-/// SetVerifySettings asks for AutoVerify(includeBuildServer: false), but DiffEngine's
-/// BuildServerDetector reports false on the runner, so a stale file is auto-accepted
-/// and this test passes. What actually catches it is the "Check no Verify snapshots
-/// drifted" step in ci.yml, which fails the build when the test run leaves any
-/// *.verified.* file dirty.
+/// Do not try to reproduce that CI behaviour by setting CI=1 or GITHUB_ACTIONS=true
+/// locally - DiffEngine's build-server detection does not trip on those alone, so a
+/// local run auto-accepts and looks like the guard is broken when it is not. This was
+/// confirmed the other way round, on a real runner, by committing a corrupted
+/// snapshot and watching the test throw VerifyException.
 /// </summary>
 public class PlannerDefaultsTest
 {

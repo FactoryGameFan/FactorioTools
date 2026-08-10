@@ -232,14 +232,19 @@ jobs:
       - name: Test with default settings
         run: dotnet test --no-build --configuration Release --logger "console;verbosity=normal"
 
-      # Verify snapshots are committed generated output, same as swagger.json above -
-      # and they had the weaker guard. SetVerifySettings calls
-      # AutoVerify(includeBuildServer: false), which is meant to stop snapshots being
-      # auto-accepted on CI, but DiffEngine's BuildServerDetector reports false under
-      # this runner's environment (checked against both 18.4.1 and 19.3.3), so a
-      # mismatch is silently accepted and the run stays green. This step does not
-      # depend on that detector working: if the test run rewrote a snapshot, the file
-      # is dirty, and a dirty snapshot means the committed one was stale.
+      # Backstop, not the primary guard. The primary guard works: SetVerifySettings
+      # calls AutoVerify(includeBuildServer: false), DiffEngine correctly detects this
+      # runner as a build server, and a stale snapshot fails the test above with
+      # VerifyException - confirmed by committing a corrupted snapshot and watching
+      # CI go red at "Test with Lua settings".
+      #
+      # This step exists because that guard is only as good as DiffEngine's detection,
+      # which is version-dependent and has changed before. If it ever regresses, a
+      # rewritten snapshot leaves the file dirty and this catches it. Costs nothing.
+      #
+      # Worth knowing if you ever debug this: setting CI=1 / GITHUB_ACTIONS=true
+      # locally does NOT reproduce the detection, so a local run auto-accepts and
+      # looks like the guard is broken. It is not - test it on a real runner.
       - name: Check no Verify snapshots drifted
         run: |
           if [ -n "$(git status --porcelain -- '*.verified.*')" ]; then

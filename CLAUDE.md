@@ -117,6 +117,35 @@ The `transpile-lua` CI job runs that script, fails if the committed `src/lua` no
 - Lua 5.2 manual: <https://www.lua.org/manual/5.2/>
 - Prefer official Factorio docs over forum/blog/wiki advice when changing runtime behavior.
 
+### The Factorio oracle (re-capture after a game update)
+
+The planner hardcodes entity names, item names, direction values, and entity sizes. When Factorio changes any of those, nothing here notices - plans keep generating, they are just wrong. Factorio 2.0 renamed `effectivity-module-N` to `efficiency-module-N` and widened directions from 8-way to 16-way, and both went unnoticed for a long time.
+
+So don't trust memory or the wiki. The game is the only authority on what the game accepts, and it ships four machine-readable sources:
+
+| Source | Answers |
+| --- | --- |
+| `factorio --dump-data` | Every prototype: names, collision boxes, pipe connections, pole supply and wire reach, beacon stats |
+| `data/*/migrations/*.json` | Every rename, as a table. This is a complete list, not a guess |
+| `doc-html/runtime-api.json` | `defines.*` values, version-stamped to the install |
+| `data/changelog.txt` | Behavior changes per patch |
+
+`tools/capture-factorio-oracle.sh` pulls all four into `test/FactorioTools.Test/OilField/factorio-oracle.json`:
+
+```bash
+tools/capture-factorio-oracle.sh                        # auto-detects a Steam or /Applications install
+tools/capture-factorio-oracle.sh --factorio /path/to/factorio.app
+```
+
+Notes on using it:
+
+- **Re-capture after every Factorio update and commit the diff.** A changed fixture is the signal that a hardcoded constant needs review.
+- **It runs with user mods disabled** (`--mod-directory` pointed at an empty directory). Mods rewrite prototypes freely, so a capture that loads them describes one person's modded game rather than Factorio. The script prints which mods loaded; expect only `core base elevated-rails quality recycler space-age`.
+- **CI never runs the capture** and needs no Factorio install - it reads the committed fixture. That is why the fixture is committed rather than generated on demand.
+- Capture needs `python3` (for JSON trimming) and a Factorio install. Neither is needed to build or test.
+- `EntityNames.AaiIndustry` names come from a mod, so they are deliberately absent from a vanilla capture. That is expected, not drift.
+- Output is deterministic: two captures of the same install are byte-identical.
+
 ## Testing notes
 
 - Tests use **xUnit v3 + Verify** (`xunit.v3` + `Verify.XunitV3`). Many tests assert against committed `*.verified.txt` snapshots under `test/FactorioTools.Test/OilField`. When behavior legitimately changes, update snapshots via Verify's accept workflow (received vs verified) rather than editing expected files by hand. A stale committed snapshot **does** fail on CI: `AutoVerify` is off there, so the test itself throws `VerifyException` with the diff (confirmed on a real runner, not just inferred - note that setting `CI`/`GITHUB_ACTIONS` locally does *not* reproduce the build-server detection, so local simulation of this is misleading). A "Check no Verify snapshots drifted" step backs that up by failing if `dotnet test` leaves any `*.verified.*` file dirty, in case the detection ever regresses. Commit regenerated snapshots with your change.

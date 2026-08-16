@@ -85,13 +85,13 @@ This mirrors `PlannerDefaultsTest`, which is already the repo's "the test is the
 
 The failure message must name `tools/capture-factorio-oracle.sh`, so a red CI run says how to fix itself.
 
-Note: `factorio-oracle.json` will need a `<None Update=... CopyToOutputDirectory>` entry in `test/FactorioTools.Test/FactorioTools.Test.csproj`, alongside the existing `small-list.txt` entry.
+Note: tests resolve the fixture through `BaseTest.GetRepositoryRoot()`, matching `BasePlannerTest.SmallListFilePath`, so no csproj entry is needed.
 
 ### C3 - Direction conversion
 
 **The internal `Direction` enum does not change.** It stays `Up=0, Right=2, Down=4, Left=6`. It is the planner's logical four-way concept, it is transpiled to Lua, and renumbering it would churn the whole core, every snapshot, and the Lua output for no benefit. All version knowledge lives at the serialization boundary.
 
-Output keeps `ToOutputDirection` (multiply by 2) and starts writing a real version stamp instead of 0.
+Output keeps `ToOutputDirection` (multiply by 2). Output already stamps a real version: `GridToBlueprintString.cs:222` sets `Version = FormatVersion(2, 0, 32, 0)`, and `ParseVersion`/`FormatVersion` already exist at `:233` and `:243`, matching the confirmed layout below.
 
 Input gains the inverse, in `FactorioTools.Serialization`:
 
@@ -150,6 +150,8 @@ This is the same treatment input direction already gets, and it is the minimum t
 Extend `NormalizeBlueprints` to convert 1.1 direction values to 2.x and stamp a real version, then re-run `oil-field normalize` over both `small-list.txt` (61) and `big-list.txt` (1147).
 
 Both lists, not just the scored one. `big-list.txt` is not scored so it carries no snapshot risk, but leaving it on 1.1 means the two corpora disagree and the next person to look hits exactly the confusion this document exists to clear up.
+
+The corpus carries `version: 0` because `CleanBlueprint.cs:34` builds a `new Blueprint` without copying `Version` from the input.
 
 ## The invariant that makes this safe
 

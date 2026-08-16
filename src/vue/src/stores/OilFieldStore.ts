@@ -112,6 +112,26 @@ const storeToQuery: StoreToQuery = {
   electricPoleQuality: "poleQ",
 } as const
 
+// Factorio 2.0 renamed the efficiency modules. Anyone who picked one before this fix
+// has the dead name in localStorage, or in a shared query-string link (storeToQuery
+// maps pumpjackModule/beaconModule into the URL), and would keep sending it to the
+// planner forever, so rewrite on load rather than only fixing the dropdown.
+const RENAMED_MODULES: Record<string, string> = {
+  "effectivity-module": "efficiency-module",
+  "effectivity-module-2": "efficiency-module-2",
+  "effectivity-module-3": "efficiency-module-3",
+}
+
+export function migrateModuleNames<T extends Record<string, unknown>>(state: T): T {
+  for (const key of Object.keys(state)) {
+    const value = state[key]
+    if (typeof value === "string" && value in RENAMED_MODULES) {
+      ;(state as Record<string, unknown>)[key] = RENAMED_MODULES[value]
+    }
+  }
+  return state
+}
+
 type OilFieldStore = Store<"OilFieldStore", OilFieldStoreState>
 
 class ToggleStorage implements StorageLike {
@@ -137,6 +157,12 @@ function getStore(): OilFieldStore {
     state: () => Object.assign({}, defaults),
     persist: {
       storage: toggleStorage,
+      // Rewrites dead module names hydrated from localStorage. This does not cover
+      // the query-string load path (populateStoreFromQuery below), which never
+      // hydrates and needs its own call.
+      afterHydrate: (ctx) => {
+        migrateModuleNames(ctx.store.$state as Record<string, unknown>)
+      },
     },
   })()
   return store
@@ -187,6 +213,11 @@ function populateStoreFromQuery(query: LocationQuery) {
 
     ;(store as unknown as Record<string, unknown>)[storeKey] = newValue
   }
+
+  // Module names travel in the query string too (pumpjackModule -> pumpMod,
+  // beaconModule -> beaconMod), and this path never hydrates from storage, so it
+  // never runs the afterHydrate migration above. Migrate explicitly here as well.
+  migrateModuleNames(store.$state as unknown as Record<string, unknown>)
 
   return store
 }

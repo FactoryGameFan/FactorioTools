@@ -6,6 +6,7 @@ import {
   getDefaults,
   hasMatchingQueryString,
   initializeOilFieldStore,
+  migrateModuleNames,
   persistStore,
   setReadOnly,
   useOilFieldStore,
@@ -141,6 +142,73 @@ describe("OilFieldStore persistence", () => {
     expect(store.beaconModuleSlots).toBe(4)
     // Untouched keys keep their defaults.
     expect(store.addBeacons).toBe(getDefaults().addBeacons)
+  })
+})
+
+describe("migrateModuleNames", () => {
+  it("rewrites module names Factorio renamed in 2.0", () => {
+    const migrated = migrateModuleNames({
+      pumpjackModule: "effectivity-module-3",
+      beaconModule: "effectivity-module",
+    })
+
+    expect(migrated.pumpjackModule).toBe("efficiency-module-3")
+    expect(migrated.beaconModule).toBe("efficiency-module")
+  })
+
+  it("leaves current names alone", () => {
+    const migrated = migrateModuleNames({
+      pumpjackModule: "productivity-module-3",
+      beaconModule: "speed-module-3",
+    })
+
+    expect(migrated.pumpjackModule).toBe("productivity-module-3")
+    expect(migrated.beaconModule).toBe("speed-module-3")
+  })
+})
+
+describe("module name migration on load", () => {
+  beforeEach(() => {
+    installStorage()
+    freshPinia()
+    setReadOnly(false)
+    vi.spyOn(console, "log").mockImplementation(() => {})
+  })
+
+  afterEach(() => {
+    vi.unstubAllGlobals()
+    vi.restoreAllMocks()
+  })
+
+  it("rewrites dead module names hydrated from localStorage (afterHydrate site)", () => {
+    seedPersisted("OilFieldStore", {
+      pumpjackModule: "effectivity-module-3",
+      beaconModule: "effectivity-module",
+    })
+
+    // A fresh pinia is a fresh store instance - the plugin rehydrates on creation,
+    // which is where the afterHydrate migration hook should fire.
+    freshPinia()
+    const store = useOilFieldStore()
+
+    expect(store.pumpjackModule).toBe("efficiency-module-3")
+    expect(store.beaconModule).toBe("efficiency-module")
+  })
+
+  it("rewrites dead module names carried in a shared query-string link (populateStoreFromQuery site)", () => {
+    // Module names travel in URLs via storeToQuery (pumpjackModule -> pumpMod,
+    // beaconModule -> beaconMod). This path never touches localStorage or
+    // afterHydrate, so it needs its own migration call.
+    initializeOilFieldStore({
+      source: "QUERY_BP",
+      pumpMod: "effectivity-module-3",
+      beaconMod: "effectivity-module",
+    })
+
+    const store = useOilFieldStore()
+    expect(store.usingQueryString).toBe(true)
+    expect(store.pumpjackModule).toBe("efficiency-module-3")
+    expect(store.beaconModule).toBe("efficiency-module")
   })
 })
 

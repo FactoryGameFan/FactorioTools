@@ -9,9 +9,9 @@
     @update:modelValue="(newVal: string) => $emit('update:modelValue', newVal)"
   >
     <option value="">None</option>
-    <option value="effectivity-module">Efficiency module</option>
-    <option value="effectivity-module-2">Efficiency module 2</option>
-    <option value="effectivity-module-3">Efficiency module 3</option>
+    <option value="efficiency-module">Efficiency module</option>
+    <option value="efficiency-module-2">Efficiency module 2</option>
+    <option value="efficiency-module-3">Efficiency module 3</option>
     <option v-if="showProductivityModules" value="productivity-module">Productivity module</option>
     <option v-if="showProductivityModules" value="productivity-module-2">
       Productivity module 2

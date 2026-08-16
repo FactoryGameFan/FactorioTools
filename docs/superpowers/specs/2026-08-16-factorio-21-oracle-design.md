@@ -176,6 +176,14 @@ The same is expected of the per-blueprint plan snapshots. A moved snapshot is a 
 - Rebuild the WASM bundle (`npm run build-wasm` in `src/vue`).
 - Build and test under `UseLuaSettings=true` as well as the default, per the repo's CI matrix.
 
+## Decided: the drift check stays manual
+
+`tools/capture-factorio-oracle.sh --check` will not run in CI. CI has no Factorio install and never will, so it could not run there anyway.
+
+The axis that matters is covered: `FactorioOracleTest` (C2) compares the committed fixture against the C# constants on every build, with no game needed. `--check` covers a different axis - installed game versus committed fixture - and that is a human step after a Factorio update, documented in CLAUDE.md.
+
+The residual gap is that nothing automatically notices a new Factorio release. Accepted for now.
+
 ## Out of scope
 
 - **Honoring a pumpjack flip on output.** The planner picks orientations itself, so it is not clear what honoring an input flip would even mean, and answering that needs real investigation into whether a mirrored pumpjack changes valid terminal positions. C5 only stops the flag being lost.

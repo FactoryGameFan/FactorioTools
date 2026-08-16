@@ -33,6 +33,22 @@ Direction.Down  = 4          4 now means east;      south is 8
 Direction.Left  = 6          6 now means southeast; west is 12
 ```
 
+#### Cross-checked against wube's own repo
+
+The capture was validated against `wube/factorio-data` checked out at tag `2.1.14` (locally at `~/GitHub/factorio-data`). The `base/migrations` directories are byte-identical to the installed game's, and `base/prototypes/item.lua:2615` defines `efficiency-module` directly. Two independent sources, same answer.
+
+Worth noting so nobody re-raises it: `effectivity` still appears 14 times in 2.1.14 prototypes, but only ever as a **property** name (`distribution_effectivity`, and `effectivity` on vehicles). It is never an item name. The rename touched item, recipe and technology names only, exactly as the migration table says.
+
+`factorio-data` is also the no-install path to part of the oracle. Migrations and prototype source need no Factorio binary, so only the resolved geometry from `--dump-data` truly requires the game.
+
+#### Generating blueprints as test fixtures
+
+Two of the confirmations above came from a throwaway Factorio mod rather than from docs, and the technique is worth recording because it is the only way to get authoritative blueprint fixtures.
+
+A mod whose `on_init` calls `stack.set_blueprint_entities{...}` and `helpers.write_file(name, stack.export_stack())`, run headless via `factorio --create <save> --mod-directory <dir>`, exports whatever blueprint you ask for, stamped with the real game version. That is how the direction table and the `mirror` field above were established.
+
+(`game.write_file` moved to `helpers.write_file` in 2.0 - a fitting instance of the same problem this document is about. Check names against `doc-html/runtime-api.json` rather than memory.)
+
 The oracle also **ruled things out**, which narrows the work considerably. Every pole and beacon number still matches the game: supply distances 2.5/3.5/2/9, wire reach 7.5/9/32/18, beacon supply 3 and distribution effectivity 1.5. `PlanUndergroundPipes.MaxUnderground = 11` still agrees with the game's `max_underground_distance: 10` (which counts the gap, not the ends). None of the geometry drifted.
 
 ## Defects in scope
@@ -41,7 +57,7 @@ The oracle also **ruled things out**, which narrows the work considerably. Every
 
 **D2 - Direction is converted on output but not on input.** `GridToBlueprintString.cs:38` multiplies by 2, which is right. `ParseBlueprint.cs` does nothing, so `InitializeContext.cs:250` reads a raw 2.x value into the 1.1-style enum. An east pumpjack (4) is read as `Direction.Down`; south (8) and west (12) are not valid enum members at all.
 
-**D3 - Pumpjack flips are dropped.** Changelog 2.1.7 added pumpjack flipping. `src/FactorioTools/Data/Entity.cs` has no `mirror` property, so the flag vanishes on parse.
+**D3 - Pumpjack flips are dropped.** Changelog 2.1.7 and [FFF #442](https://factorio.com/blog/post/fff-442) added pumpjack flipping. The FFF describes the feature but says nothing about how a flip is represented in a blueprint, so it was tested rather than assumed: a blueprint round-tripped through 2.1.14 writes `"mirror": true` alongside `direction`. `src/FactorioTools/Data/Entity.cs` has no `mirror` property, so the flag vanishes on parse.
 
 **D4 - The corpus encodes 1.1 directions.** Left alone, it would keep hiding D2.
 
@@ -90,17 +106,30 @@ Missing or zero defaults to 16-way, because that is what every user pastes today
 
 **Value-sniffing was considered and rejected.** A blueprint whose directions are all in `{0, 4}` is valid under both encodings with different meanings, so inference cannot always be correct. The version field is the only sound signal.
 
-#### Must verify before implementing
+#### Version encoding (confirmed)
 
-`Blueprint.Version` is a `ulong` that this repo has never read. The layout is believed to be `major<<48 | minor<<32 | patch<<16 | dev`, which would make the 2.0 threshold `2<<48 = 562949953421312`, but **no blueprint in this repo carries a nonzero version**, so that is unconfirmed.
+`Blueprint.Version` is a `ulong` this repo has never read. The layout is confirmed against a real blueprint exported from Factorio 2.1.14:
 
-Confirm it first, and do not write the threshold from memory:
+```
+raw   562954249306113
+hex   0x0002_0001_000e_0001
+      major=2  minor=1  patch=14  dev=1   ->  2.1.14.1
+```
 
-1. In Factorio 2.1, create any blueprint and export the string.
-2. Base64-decode past the leading version byte, zlib-inflate, and read `blueprint.version`.
-3. Check the value is >= the threshold and that a 1.1-era blueprint string falls below it.
+So the layout is `major<<48 | minor<<32 | patch<<16 | dev`, and the 2.0 threshold is `2<<48 = 562949953421312`. Only an ordered comparison is needed, and the major version dominates it.
 
-If the layout differs, only the threshold constant changes; the rest of the design holds, because all that is needed is an ordered comparison in which the major version dominates.
+#### Direction encoding in blueprints (confirmed)
+
+Confirmed by round-tripping a blueprint through the game rather than reading docs. Asking for each cardinal and reading back what the exporter wrote:
+
+| Requested | Field written |
+| --- | --- |
+| north | *omitted entirely* |
+| east | `4` |
+| south | `8` |
+| west | `12` |
+
+North being omitted rather than written as `0` matters: `Entity.Direction` is already nullable and `InitializeContext.cs:250` already defaults it to `Up`, so that path is correct today and must stay correct.
 
 ### C4 - Rename, including persisted settings
 
@@ -136,7 +165,8 @@ The same is expected of the per-blueprint plan snapshots. A moved snapshot is a 
 
 - `FactorioOracleTest`, per C2.
 - Direction round-trip unit tests: a 2.x blueprint parses east as `Right`; a 1.1 blueprint with an explicit sub-2.0 version parses east as `Right`; the ambiguous `{0, 4}` case resolves by version; a non-cardinal value throws with a useful message.
-- A regression test pinning the actual reported bug: parse a 2.1-exported blueprint with a non-north pumpjack and assert the orientation survives a round trip. This is the test that would have caught the original report, and the corpus cannot provide it, so the blueprint string needs to come from the game.
+- A regression test pinning the actual reported bug: parse a 2.1-exported blueprint with a non-north pumpjack and assert the orientation survives a round trip. This is the test that would have caught the original report, and the corpus cannot provide it. Generate the fixture with the probe-mod technique above, so it carries a genuine 2.1 version stamp and genuine `4`/`8`/`12` direction values rather than hand-written ones.
+- A `mirror: true` blueprint parses without loss or error, per C5. The same probe generates it.
 - `Score.HasExpectedScore.verified.txt` unchanged, per the invariant above.
 - Vue: a persistence test that a stored `effectivity-module-3` loads as `efficiency-module-3`.
 
@@ -155,7 +185,7 @@ The same is expected of the per-blueprint plan snapshots. A moved snapshot is a 
 
 ## Risks
 
-- **The version threshold is unconfirmed.** Mitigated by making confirmation the first implementation step, with a stated procedure.
+- ~~The version threshold is unconfirmed.~~ **Resolved.** Confirmed against a real 2.1.14 export; see the version encoding section.
 - **The corpus rewrite is large.** 1208 blueprints across two files. Mitigated by the score invariant: a correct rewrite moves no scores.
 - **A blueprint with a genuinely missing version stamp that really is 1.1** will now be read as 2.x and mis-rotated. This is a deliberate trade: it favors the many users pasting current blueprints over the few pasting decade-old ones.
 

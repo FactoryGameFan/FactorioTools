@@ -27,24 +27,43 @@
 # Usage
 # -----
 #   tools/capture-factorio-oracle.sh
+#   tools/capture-factorio-oracle.sh --check
 #   tools/capture-factorio-oracle.sh --factorio /path/to/factorio.app --out some/file.json
+#
+# The installed binary is the authority on which version is captured. Steam updates it
+# without asking, so it decides and everything else follows. This mirrors the convention
+# in FactorioMapWebUI's scripts/sync-factorio-refs.sh.
 #
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-OUT="$REPO_ROOT/test/FactorioTools.Test/OilField/factorio-oracle.json"
+FIXTURE="$REPO_ROOT/test/FactorioTools.Test/OilField/factorio-oracle.json"
+OUT="$FIXTURE"
 FACTORIO_APP=""
 USER_DATA_DIR=""
+CHECK_ONLY=0
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --factorio) FACTORIO_APP="$2"; shift 2 ;;
     --out) OUT="$2"; shift 2 ;;
     --user-data-dir) USER_DATA_DIR="$2"; shift 2 ;;
-    -h|--help) sed -n '2,32p' "${BASH_SOURCE[0]}"; exit 0 ;;
+    --check) CHECK_ONLY=1; shift ;;
+    -h|--help) sed -n '2,38p' "${BASH_SOURCE[0]}"; exit 0 ;;
     *) echo "unknown argument: $1" >&2; exit 2 ;;
   esac
 done
+
+# One scratch directory and one EXIT trap for the whole script. Registering a second
+# trap on EXIT would silently replace the first and leak the earlier directory.
+WORK="$(mktemp -d)"
+trap 'rm -rf "$WORK"' EXIT
+
+# --check captures to a scratch file and reports drift instead of rewriting the fixture,
+# so "has the game moved past what we committed?" is answerable without a dirty tree.
+if [[ "$CHECK_ONLY" -eq 1 ]]; then
+  OUT="$WORK/factorio-oracle.json"
+fi
 
 # ---------------------------------------------------------------------------
 # 1. Locate the game.
@@ -99,8 +118,6 @@ echo "Factorio $VERSION at $FACTORIO_APP"
 # --mod-directory at an empty directory leaves only core, base and the bundled DLC
 # (elevated-rails, quality, recycler, space-age), which is what the planner targets.
 # ---------------------------------------------------------------------------
-WORK="$(mktemp -d)"
-trap 'rm -rf "$WORK"' EXIT
 mkdir -p "$WORK/mods"
 printf '{"mods":[{"name":"base","enabled":true}]}\n' > "$WORK/mods/mod-list.json"
 
@@ -139,5 +156,18 @@ echo "Trimming to fixture..."
 DUMP="$DUMP" DATA_DIR="$DATA_DIR" DOC_DIR="$DOC_DIR" \
 VERSION="$VERSION" LOADED_MODS="$LOADED_MODS" OUT="$OUT" \
   python3 "$REPO_ROOT/tools/trim-factorio-oracle.py"
+
+if [[ "$CHECK_ONLY" -eq 1 ]]; then
+  if diff -u "$FIXTURE" "$OUT" > "$WORK/drift.diff" 2>&1; then
+    echo "Up to date: the committed fixture matches Factorio $VERSION."
+    exit 0
+  fi
+  echo
+  echo "DRIFT: the committed fixture does not match Factorio $VERSION."
+  echo "Re-run without --check to update it, then review what moved."
+  echo
+  cat "$WORK/drift.diff"
+  exit 1
+fi
 
 echo "Wrote $OUT"

@@ -134,17 +134,24 @@ So don't trust memory or the wiki. The game is the only authority on what the ga
 
 ```bash
 tools/capture-factorio-oracle.sh                        # auto-detects a Steam or /Applications install
+tools/capture-factorio-oracle.sh --check                # report drift, change nothing, exit 1 on mismatch
 tools/capture-factorio-oracle.sh --factorio /path/to/factorio.app
 ```
 
 Notes on using it:
 
-- **Re-capture after every Factorio update and commit the diff.** A changed fixture is the signal that a hardcoded constant needs review.
+- **Re-capture after every Factorio update and commit the diff.** A changed fixture is the signal that a hardcoded constant needs review. `--check` answers "has the game moved past what we committed?" without dirtying the tree.
+- **The installed binary is the authority** on which version gets captured. Steam updates it without asking, so it decides and everything else follows. Same convention as `scripts/sync-factorio-refs.sh` in FactorioMapWebUI.
 - **It runs with user mods disabled** (`--mod-directory` pointed at an empty directory). Mods rewrite prototypes freely, so a capture that loads them describes one person's modded game rather than Factorio. The script prints which mods loaded; expect only `core base elevated-rails quality recycler space-age`.
 - **CI never runs the capture** and needs no Factorio install - it reads the committed fixture. That is why the fixture is committed rather than generated on demand.
 - Capture needs `python3` (for JSON trimming) and a Factorio install. Neither is needed to build or test.
 - `EntityNames.AaiIndustry` names come from a mod, so they are deliberately absent from a vanilla capture. That is expected, not drift.
 - Output is deterministic: two captures of the same install are byte-identical.
+
+Two related sources, for when the game binary is not the easiest thing to reach:
+
+- **`wube/factorio-data`** (cloned at `~/GitHub/factorio-data`) is the official prototype source, tagged per version. Its `*/migrations/*.json` files are byte-identical to the installed game's, so renames can be checked with no Factorio install at all. Only the resolved geometry from `--dump-data` genuinely needs the binary.
+- **A throwaway mod is the way to generate blueprint fixtures.** Docs describe prototypes, not what the blueprint exporter writes. A mod whose `on_init` calls `stack.set_blueprint_entities{...}` then `helpers.write_file(name, stack.export_stack())`, run headless via `factorio --create <save> --mod-directory <dir>`, produces a real blueprint string stamped with the real game version. This is how the direction values and the `mirror` field were established rather than assumed. Check runtime API names against `doc-html/runtime-api.json` first - `game.write_file` became `helpers.write_file` in 2.0.
 
 ## Testing notes
 

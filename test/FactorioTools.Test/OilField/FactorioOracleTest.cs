@@ -35,6 +35,11 @@ public class FactorioOracleTest : BaseTest
         return element.EnumerateArray().Select(x => x.GetString()!).ToHashSet();
     }
 
+    /// <summary>
+    /// This reflects EntityNames.Vanilla only, so EntityNames.AaiIndustry is deliberately NOT
+    /// checked. Those names come from the AAI Industry mod, and the oracle is captured with
+    /// mods disabled on purpose, so their absence is expected rather than drift.
+    /// </summary>
     [Fact]
     public void EveryVanillaEntityNameExistsInFactorio()
     {
@@ -49,11 +54,6 @@ public class FactorioOracleTest : BaseTest
         Assert.True(missing.Count == 0, $"Not in Factorio: {string.Join(", ", missing)}. {ReCaptureHint}");
     }
 
-    /// <summary>
-    /// EntityNames.AaiIndustry is deliberately NOT checked. Those names come from the AAI
-    /// Industry mod, and the oracle is captured with mods disabled on purpose, so their
-    /// absence is expected rather than drift.
-    /// </summary>
     [Fact]
     public void EveryVanillaModuleNameExistsInFactorio()
     {

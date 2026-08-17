@@ -19,6 +19,25 @@
 # CI reads the committed fixture, which is why the fixture is committed rather than
 # generated on demand - CI machines have no Factorio install and never will.
 #
+# There is a replacement, and it is proven equivalent
+# ---------------------------------------------------
+# FactoryGameFan/factorio-oracle is a shared Rust CLI doing this job for four repos.
+# Its acceptance test reproduces this fixture BYTE FOR BYTE from a real 2.1.14
+# install, so that is checked rather than hoped for:
+#
+#   factorio-oracle run  --probe dump-data.json --work-dir /tmp/w > /tmp/run.json
+#   factorio-oracle trim --run /tmp/run.json --spec trim-spec.json --out <fixture>
+#
+# The WANTED_* allowlists in trim-factorio-oracle.py move into that spec unchanged.
+# This script stays anyway: the agreed migration rule across the four repos is new
+# probes only. See issue #82.
+#
+# Two things that tool measured, which apply here too. An empty mod directory keeps
+# out USER mods and nothing else - Factorio rewrites mod-list.json and re-enables
+# every bundled mod the file omits, so the "base only" list written below still loads
+# all six. And the fixture's `directions` come from `order` in runtime-api.json, which
+# is a documentation index rather than the runtime value; see issue #83.
+#
 # Requirements
 # ------------
 #   - A Factorio install (Steam or standalone). Only needed to re-capture, not to build.
@@ -49,7 +68,10 @@ while [[ $# -gt 0 ]]; do
     --out) OUT="$2"; shift 2 ;;
     --user-data-dir) USER_DATA_DIR="$2"; shift 2 ;;
     --check) CHECK_ONLY=1; shift ;;
-    -h|--help) sed -n '2,36p' "${BASH_SOURCE[0]}"; exit 0 ;;
+    # Print the whole leading comment block, however long it grows. A hardcoded
+    # line range silently truncates the help the first time the header is edited,
+    # which is exactly what happened to the old '2,36p'.
+    -h|--help) awk 'NR>1 { if (/^#/) print; else exit }' "${BASH_SOURCE[0]}"; exit 0 ;;
     *) echo "unknown argument: $1" >&2; exit 2 ;;
   esac
 done

@@ -130,16 +130,17 @@ Use the script rather than your own `luac`. Homebrew no longer ships Lua 5.2, so
 
 The planner hardcodes entity names, item names, direction values, and entity sizes. When Factorio changes any of those, nothing here notices - plans keep generating, they are just wrong. Factorio 2.0 renamed `effectivity-module-N` to `efficiency-module-N` and widened directions from 8-way to 16-way, and both went unnoticed for a long time.
 
-So don't trust memory or the wiki. The game is the only authority on what the game accepts, and it ships four machine-readable sources:
+So don't trust memory or the wiki. The game is the only authority on what the game accepts, and the capture reads three machine-readable sources:
 
 | Source | Answers |
 | --- | --- |
 | `factorio --dump-data` | Every prototype: names, collision boxes, pipe connections, pole supply and wire reach, beacon stats |
 | `data/*/migrations/*.json` | Every rename, as a table. This is a complete list, not a guess |
-| `doc-html/runtime-api.json` | `defines.*` values, version-stamped to the install |
-| `data/changelog.txt` | Behavior changes per patch |
+| `doc-html/runtime-api.json` | The `defines.*` tables, version-stamped to the install. See the caveat below: it publishes a documentation index, not the values |
 
-`tools/capture-factorio-oracle.sh` pulls all four into `test/FactorioTools.Test/OilField/factorio-oracle.json`:
+A fourth source, `data/changelog.txt`, records behavior changes per patch. It is worth reading after an update, but nothing automates it - no code in `tools/` touches it.
+
+`tools/capture-factorio-oracle.sh` pulls those three into `test/FactorioTools.Test/OilField/factorio-oracle.json`:
 
 ```bash
 tools/capture-factorio-oracle.sh                        # auto-detects a Steam or /Applications install
@@ -154,10 +155,30 @@ Notes on using it:
 - **Re-capture after every Factorio update and commit the diff.** A changed fixture is the signal that a hardcoded constant needs review. `--check` answers "has the game moved past what we committed?" without dirtying the tree.
 - **The installed binary is the authority** on which version gets captured. Steam updates it without asking, so it decides and everything else follows. Same convention as `scripts/sync-factorio-refs.sh` in FactorioMapWebUI.
 - **It runs with user mods disabled** (`--mod-directory` pointed at an empty directory). Mods rewrite prototypes freely, so a capture that loads them describes one person's modded game rather than Factorio. The script prints which mods loaded; expect only `core base elevated-rails quality recycler space-age`.
+
+  Careful with what that buys. Measured on 2.1.14: **an empty mod directory keeps out user mods and nothing else.** Factorio rewrites `mod-list.json` at startup and adds back every bundled mod the file does not mention, with `enabled: true`. The file this script writes names only `base`, and all six still load. An explicit `enabled: false` is honoured, so naming a mod is the only way to get a smaller game than the install ships with. Loading the full set is the right default here, since that is what the fixture records, but "the directory is empty" must not be read as "only base is loaded".
+- **`defines` values in the fixture are inferred, not read.** `runtime-api.json` has no value field at all: across all 1,554 entries the only keys are `name`, `order` and `description`, and `trim-factorio-oracle.py:150` uses `order`. That is right today only because Factorio declares directions clockwise from `north = 0` with no gaps, and a dense index cannot express a gap, a duplicate, or a non-zero start. Issue #83. Reading the real value needs a probe mod; `factorio-oracle` does that now, and confirmed the two agree on 2.1.14.
 - **CI never runs the capture** and needs no Factorio install - it reads the committed fixture. That is why the fixture is committed rather than generated on demand.
 - Capture needs `python3` (for JSON trimming) and a Factorio install. Neither is needed to build or test.
 - `EntityNames.AaiIndustry` names come from a mod, so they are deliberately absent from a vanilla capture. That is expected, not drift.
 - Output is deterministic: two captures of the same install are byte-identical.
+
+**This script now has a replacement, and it is proven equivalent.**
+[`FactoryGameFan/factorio-oracle`](https://github.com/FactoryGameFan/factorio-oracle)
+is a shared Rust CLI doing the same job for four repos. Its acceptance test
+reproduces the committed `factorio-oracle.json` **byte for byte** from a real
+2.1.14 install, so this is a checked claim rather than an intention:
+
+```bash
+factorio-oracle run  --probe dump-data.json --work-dir /tmp/w > /tmp/run.json
+factorio-oracle trim --run /tmp/run.json --spec trim-spec.json \
+  --out test/FactorioTools.Test/OilField/factorio-oracle.json [--check]
+```
+
+The allowlists that live in `trim-factorio-oracle.py` move into that `trim-spec.json`
+unchanged. **This script stays** regardless: the agreed migration rule across the four
+repos is new probes only, so nothing existing changes until there is a reason to touch
+it. See issue #82.
 
 Two related sources, for when the game binary is not the easiest thing to reach:
 

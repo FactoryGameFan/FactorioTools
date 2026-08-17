@@ -60,7 +60,7 @@ version = "0.1.0"
 edition = "2021"
 description = "Ask a real Factorio install what it does, and record the answer with its provenance"
 license = "MIT"
-repository = "https://github.com/wormeyman/factorio-oracle"
+repository = "https://github.com/FactoryGameFan/factorio-oracle"
 
 [lib]
 name = "factorio_oracle"
@@ -1192,6 +1192,16 @@ mod tests {
         assert!(ACTIVE_MODS_PRELUDE.contains("oracle-active-mods.json"));
         assert!(ACTIVE_MODS_PRELUDE.contains("script.active_mods"));
     }
+
+    #[test]
+    fn the_active_mods_prelude_registers_no_event() {
+        // Measured on 2.1.14: a toplevel write works, and an on_init in a
+        // prelude is silently discarded when the consumer registers one too.
+        // Any event registration here is a regression, so assert their absence.
+        assert!(!ACTIVE_MODS_PRELUDE.contains("on_init"));
+        assert!(!ACTIVE_MODS_PRELUDE.contains("on_nth_tick"));
+        assert!(!ACTIVE_MODS_PRELUDE.contains("on_event"));
+    }
 }
 ```
 
@@ -1221,20 +1231,24 @@ use std::path::Path;
 /// contaminated capture describes one person's game rather than Factorio - and
 /// it looks entirely normal, which is the failure nobody notices.
 ///
-/// **Deliberately not `script.on_init`.** That takes exactly one handler, so a
-/// prelude using it would be silently replaced by the consumer's own, and 17 of
-/// 18 probes in factorio-blueprint-editor register one. The report would vanish
-/// with no error. This self-cancelling `on_nth_tick` runs once and unregisters
-/// itself, colliding with nothing.
+/// **Registers no event at all.** Measured 2026-08-16 on 2.1.14:
+/// `helpers.write_file` works at `control.lua` toplevel with no event, and
+/// `script.active_mods` is populated there.
 ///
-/// The reported set deliberately includes the probe's own throwaway mod. That
-/// is proof the mod loaded, which is the thing most worth knowing when a run
-/// produces no dump.
+/// That matters because `script.on_init` takes exactly one handler. The same
+/// measurement proved it: an `instrument-control.lua` that registered `on_init`
+/// had its handler silently discarded when `control.lua` registered one too -
+/// no error, the handler simply never ran. 17 of 18 probes in
+/// factorio-blueprint-editor register an `on_init`, so any prelude using one
+/// would vanish. A toplevel write has no collision surface whatsoever, and does
+/// not wait a tick.
+///
+/// The reported set deliberately includes the probe's own throwaway mod - the
+/// measurement confirmed `oracle_instr: 0.0.1` appears alongside base and the
+/// DLC. That is proof the mod loaded, which is the thing most worth knowing
+/// when a run produces no dump.
 pub const ACTIVE_MODS_PRELUDE: &str = r#"
-script.on_nth_tick(1, function()
-  script.on_nth_tick(1, nil)
-  helpers.write_file("oracle-active-mods.json", helpers.table_to_json(script.active_mods))
-end)
+helpers.write_file("oracle-active-mods.json", helpers.table_to_json(script.active_mods))
 "#;
 
 /// The mod's `info.json`.

@@ -315,13 +315,16 @@ share that convention and nothing checks it, so it cannot currently distinguish
   for `Loading mod` (which works for `dump-data` alone), and FactorioMapWebUI
   captures none.
 
-  **The mechanism must not be `script.on_init`.** Factorio's `on_init` takes
-  exactly one handler, so a prelude registering it would be silently replaced by
-  the consumer's own - and 17 of 18 factorio-blueprint-editor probes register one.
-  The report would just vanish, with no error. Use a self-cancelling
-  `script.on_nth_tick(1, ...)` that unregisters itself on first run, which is the
-  pattern in `terite/factorio-data-dumper` and collides with nothing. Cost is one
-  tick against a 1.7 second launch.
+  **The prelude registers no event at all.** Measured 2026-08-16 on 2.1.14:
+  `helpers.write_file` works at `control.lua` toplevel with no event, and
+  `script.active_mods` is populated there. So the whole prelude is one line.
+
+  That matters because `script.on_init` takes exactly one handler, which the same
+  measurement proved rather than assumed: an `instrument-control.lua` registering
+  `on_init` had its handler silently discarded once `control.lua` registered one
+  too. No error - the handler simply never ran. 17 of 18 factorio-blueprint-editor
+  probes register an `on_init`, so any prelude using one would vanish. A toplevel
+  write has no collision surface and costs no ticks.
 
   The reported set should include the probe's own throwaway mod - it is proof the
   mod loaded, which is the thing most worth knowing when a run produces no dump.
@@ -522,8 +525,9 @@ all four consumers.
 
 ## Repo setup
 
-- Public GitHub repo. `wormeyman/factorio-oracle` is free; the `FactoryGameFan` org
-  is an open question (below).
+- Public GitHub repo at **`FactoryGameFan/factorio-oracle`**. Five of the six
+  Factorio repos moved to that org on 2026-08-16, so a new shared tool starting
+  anywhere else would be the odd one out from its first commit.
 - `rust-toolchain.toml`, pinned. MapWebUI pins 1.97.1 as a correctness control
   rather than a convenience, and that reasoning transfers if a crate is ever shared.
 - **Renovate in the first commit.** The app runs with "Require config file"
@@ -611,12 +615,25 @@ Steps 1 to 4 are the part that has to be right. Everything after is additive.
    `script.active_mods`.~~ **Decided 2026-08-16: on by default**, using a
    self-cancelling `on_nth_tick` rather than `on_init`. See the contamination
    guard above.
-3. **Whether `--instrument-mod` is a better launch path than `--create` plus
-   `helpers.write_file`** for some probes. The flag is real - verified in the
-   2.1.14 binary as "Name of a mod to enable Instrument Mode" - but whether it
-   gives an earlier or cleaner hook than `on_init` is not investigated. **Agreed
-   to spike this before Plan 2**, because `on_init` is exactly where the handler
-   collision above bites.
+3. ~~Whether `--instrument-mod` is a better launch path.~~ **Measured 2026-08-16
+   on 2.1.14. Answer: no, and it makes the collision worse.**
+
+   Instrument Mode does give earlier hooks. With `--instrument-mod`,
+   `instrument-data.lua` ran at 0.045s against `data.lua` at 0.129s, and
+   `instrument-control.lua` toplevel ran before `control.lua` toplevel. Without
+   the flag, neither instrument file loads at all.
+
+   But `instrument-control.lua`'s `script.on_init` handler **never fired**,
+   because `control.lua` registered one too and the later registration replaced
+   it. So Instrument Mode gives a probe an earlier hook whose event registration
+   the consumer then silently destroys - strictly worse than the plain path.
+
+   One quirk worth recording: `instrument-control.lua`'s toplevel logged twice in
+   the same run. Not investigated further, since the mode is not being adopted.
+
+   The useful finding came out of the same run: `helpers.write_file` works at
+   plain `control.lua` toplevel with no event at all, and `script.active_mods` is
+   populated there. That is what the contamination prelude now uses.
 
 ## First customer
 

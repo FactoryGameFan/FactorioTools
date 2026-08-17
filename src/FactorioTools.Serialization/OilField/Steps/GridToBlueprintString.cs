@@ -38,6 +38,14 @@ public static class GridToBlueprintString
         return (Direction)((int)direction * 2);
     }
 
+    /// <summary>
+    /// The version stamped on every blueprint this class emits. It must be 2.0 or later,
+    /// because <see cref="ToOutputDirection"/> always writes Factorio 2.0's 16-way direction
+    /// values, and <see cref="ParseBlueprint.ToInternalDirection"/> reads the stamp to decide
+    /// how to read them back.
+    /// </summary>
+    private static readonly ulong OutputVersion = FormatVersion(2, 0, 32, 0);
+
     // defines.inventory.mining_drill_modules and defines.inventory.beacon_modules in Factorio 2.0, used to target the
     // module inventory in the 2.0 "items" array form (confirmed against a real 2.0 export).
     private const int MiningDrillModuleInventory = 2;
@@ -104,7 +112,7 @@ public static class GridToBlueprintString
                     entities.Add(new Entity
                     {
                         EntityNumber = nextEntityNumber++,
-                        Direction = ToOutputDirection(pumpjackCenter.Direction),
+                        Direction = pumpjackCenter.Direction,
                         Name = EntityNames.Vanilla.Pumpjack,
                         Position = position,
                         Items = ToOutputItems(context.Options.PumpjackModules, MiningDrillModuleInventory, context.Options.PumpjackModuleQuality),
@@ -118,7 +126,7 @@ public static class GridToBlueprintString
                     entities.Add(new Entity
                     {
                         EntityNumber = nextEntityNumber++,
-                        Direction = ToOutputDirection(undergroundPipe.Direction),
+                        Direction = undergroundPipe.Direction,
                         Name = EntityNames.Vanilla.PipeToGround,
                         Position = position,
                     });
@@ -219,7 +227,6 @@ public static class GridToBlueprintString
                     }
                 }
             },
-            Version = FormatVersion(2, 0, 32, 0),
             Item = ItemNames.Vanilla.Blueprint,
             Entities = entities.ToArray(),
         };
@@ -245,8 +252,29 @@ public static class GridToBlueprintString
         return ((ulong)major << 48) | ((ulong)minor << 32) | ((ulong)patch << 16) | developer;
     }
 
+    /// <summary>
+    /// Turns a blueprint holding internal directions into a blueprint string. This rewrites the
+    /// blueprint it is given - version, directions, and with addFbeOffset the entity array - so
+    /// call it once per blueprint. Every caller today builds a fresh blueprint for it.
+    /// </summary>
     public static string SerializeBlueprint(Blueprint blueprint, bool addFbeOffset)
     {
+        // Every blueprint string this class produces goes through here, so this is the one
+        // place that converts internal directions to Factorio 2.0's 16-way values and the one
+        // place that stamps the version saying so. Keeping them together means they can never
+        // disagree. Before, only the planner path converted, so the normalize path (see
+        // NormalizeBlueprints and PlanOrchestrator, which serialize a CleanBlueprint result)
+        // emitted internal 1.1-style directions under version 0.
+        blueprint.Version = OutputVersion;
+        for (var i = 0; i < blueprint.Entities.Length; i++)
+        {
+            var entity = blueprint.Entities[i];
+            if (entity.Direction.HasValue)
+            {
+                entity.Direction = ToOutputDirection(entity.Direction.Value);
+            }
+        }
+
         // FBE applies some offset to the blueprint coordinates. This makes it hard to compare the grid used in memory
         // with the rendered blueprint in FBE. To account for this, we can add an entity to the corner of the
         // blueprint with a position that makes FBE keep the original entity positions used by the grid.

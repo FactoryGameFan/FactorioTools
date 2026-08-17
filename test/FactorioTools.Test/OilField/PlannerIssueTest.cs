@@ -661,7 +661,7 @@ public class PlannerIssueTest : BasePlannerTest
         var options = OilFieldOptions.ForMediumElectricPole;
         options.ValidateSolution = true;
         options.PipeStrategies = new List<PipeStrategy> { PipeStrategy.FbeOriginal };
-        var blueprintString = "0eJyM1ctuhSAQBuB3mTULGby/StM0Hg9paI9ovDQ1xncviou2h4R/KeLH4PCHjW6PRQ+jsTPVG5m2txPVLxtN5t02j2PMNp2mmoalGz6a9pMEzetwjJhZd7QLMvauv6mW+6sgbWczG+2N82F9s0t306ObIALW0E/ug94eKzlEsaDVTVXOvZtRt/5dsosnjgFO5p7L45wCOC48V8a5FOFSz1VxLkM2W50cJ3EuR1rhq2MZ5wpks76zzH85DnAlwlVBLlRdhfy70nMqXp1MEC/zXhYvTyK5uI4K5CHB4MR7QDAkkgwlvVcAHhKNY9HDK4F+INngywOiJpFwcIl7SDqu86KAsEkoHn6/6l880pCH5IPzoBfqByP5uLz0Kb7uDjnvlfrXxSToS4/TNWH/AQAA//8DANANMhY=";
+        var blueprintString = "0eNqN1dtuhCAQBuB3mWsuZAAFX6VpNnsgDe3KGg9NNxvfvSq9aLsk/JcifgwOf3jQ6Tr7fghxovZB4XyLI7UvDxrDWzxet7F47Dy11M9d/348f5Cg6d5vI2HyHS2CQrz4L2rl8irIxylMwSdjf7gf4tyd/LBOEBmrv43rB7e4rbQiigXd16lqdS9h8Of0rlrEE8cAJ+vE1WVOARw3ibNlTiOcTpwrcwbZrNs5rspcjbQiVceyzDXIZlNnmf9yOsNZhHNZLledQ/6dTZwqVycrxDPJM+XypMSPCuQhweAqeUAwJJIMJZPXAB4SjW3RzbNAP5Bs8I8HRE0i4WCLew1+XhQQNmnx/ap/8bA5D8kH11kv1w+ucE8/xXe9Q/Z7pf11MQn69MO4TzA1O+2cMUZaXetl+Qa0MDUU";
 
         var blueprint = ParseBlueprint.Execute(blueprintString);
 
@@ -683,7 +683,7 @@ public class PlannerIssueTest : BasePlannerTest
         var options = OilFieldOptions.ForMediumElectricPole;
         options.ValidateSolution = true;
         options.PipeStrategies = new List<PipeStrategy> { PipeStrategy.FbeOriginal };
-        var blueprintString = "0eJyUlttuwyAMht/F11wEDDm9yjRNPaCJraFRkk6rqrz70ppKU8eUv5dNyReD/dlcaHs4+X4IcaL2QmF3jCO1Lxcaw3vcHK7P4qbz1FJ/6vqPze6TFE3n/vokTL6jWVGIe/9NrZ5fFfk4hSl4Ydx+nN/iqdv6YVmgMqz+OC4vHOP1SwuEa0XnZSkv3H0Y/E7+K2b1B2cAnCsE59ZxjERXCq5ex1kAV6bomnWcA3BW33CmWMeVyNkZwel1XIXgKsGZdVyNpMIJDiiUBjm7CsbpAgmvEZ4FeIgXmoUHFLJGxDApvhLgIWZYl+WZHA9Rg9N+KyA+yI0C5z0jB8JD7OBUf0Bn0YgeNp1fA+QD8qPO8rJ9+Qk/GGguBpobUn8MdBeD+JH6wSMvd34GmhxSf4zMNcQPa3Ae4od7Ij7Ej3t+H/qfzfEQP+77LQEe5IfL8rL7RfxgKzygHzDkR8oH0A8Y8eNez4C/jPiR+rMF/GXID6kXC9QfQ/ND8muR/ULzw/7DW+68t3tw++sirejLD2NaMP8AAAD//wMA5MG5Zw==";
+        var blueprintString = "0eNqVlsluhDAQRP+lzxywu22WX4miaBYrcjJ4EEuU0Yh/D4M5RBNHFEeMebTbVWXf6XgZXdv5MFB9J3+6hp7qlzv1/j0cLo+xcGgc1dSOTftxOH1SRsOtfYz4wTU0ZeTD2X1TrabXjFwY/OBdZCwPt7cwNkfXzROyBKu99vMH1/D40wzhMqPbPJVn7tl37hTf5VP2B6cBnMkjzmzjGKnORly5jRMAZ9fqqm2cAXCiFpzOt3EW6Z2OOLWNKxBcEXF6G1ciW2EiDhBKhfSugHEqR8qrIk8AHuILxZEHCFkhxtBrfRbgIc4Qk+RJiodYg9f1FkB9kDdynLfHHAgPcQev+gOSRSH2kLV/FbAfkD/KJC+Zyzv8wUC4aIXHAQPpojWeB8+8VP80dHJE/TFyriH+EI3zDH5QQjy7Y3+f8q9M8Yod67UAr8TzioH804g/WCIPyAPOd+gFyANWO/QM+Jc1ns8C+JcZ14sA+mPB80CQ9ULnh/zDm++8yz24/nWRzujLdf0ywVhdSVUZY1QpVqbpB1ASvGc=";
 
         var blueprint = ParseBlueprint.Execute(blueprintString);
 

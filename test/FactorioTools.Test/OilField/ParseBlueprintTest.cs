@@ -1,3 +1,5 @@
+using Knapcode.FactorioTools.Data;
+
 namespace Knapcode.FactorioTools.OilField;
 
 public class ParseBlueprintTest : BaseTest
@@ -18,5 +20,35 @@ public class ParseBlueprintTest : BaseTest
             e => Assert.Null(e.Mirror),
             e => Assert.True(e.Mirror),
             e => Assert.True(e.Mirror));
+    }
+
+    private const ulong Version2_1_14 = 562954249306113UL;   // confirmed against a real export
+    private const ulong Version1_1_0 = 281479271677952UL;    // FormatVersion(1, 1, 0, 0)
+
+    [Theory]
+    // Factorio 2.x blueprints: north omitted, east 4, south 8, west 12.
+    [InlineData(0, Version2_1_14, Direction.Up)]
+    [InlineData(4, Version2_1_14, Direction.Right)]
+    [InlineData(8, Version2_1_14, Direction.Down)]
+    [InlineData(12, Version2_1_14, Direction.Left)]
+    // An unstamped blueprint is assumed to be modern, because that is what users paste.
+    [InlineData(4, 0UL, Direction.Right)]
+    // Genuine 1.1 blueprints still parse, when they say so.
+    [InlineData(2, Version1_1_0, Direction.Right)]
+    [InlineData(6, Version1_1_0, Direction.Left)]
+    public void ConvertsBlueprintDirectionsToInternalOnes(int raw, ulong version, Direction expected)
+    {
+        Assert.Equal(expected, ParseBlueprint.ToInternalDirection((Direction)raw, version));
+    }
+
+    [Theory]
+    [InlineData(2)]   // northeast in 2.x, not a cardinal
+    [InlineData(6)]   // southeast in 2.x, not a cardinal
+    public void RejectsDirectionsAPumpjackCannotHave(int raw)
+    {
+        var ex = Assert.Throws<FactorioToolsException>(
+            () => ParseBlueprint.ToInternalDirection((Direction)raw, Version2_1_14));
+
+        Assert.Contains(raw.ToString(), ex.Message);
     }
 }

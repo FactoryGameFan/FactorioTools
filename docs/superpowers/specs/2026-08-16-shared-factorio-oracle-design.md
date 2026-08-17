@@ -129,7 +129,7 @@ cosmetic.
 | Mode | Launch | Mod | Success is | Used by |
 | --- | --- | --- | --- | --- |
 | `dump-data` | `--dump-data` | none | exit 0, then dump exists | FactorioTools, wiki repo |
-| `create` | `--create <save>` | generated | dump exists (exit is non-zero) | FBE, MapWebUI |
+| `create` | `--create <save>` | generated | dump exists (exit is 1) | FBE, MapWebUI |
 | `interactive` | `--load-scenario <s>` | generated | consumer decides | FBE |
 | `preview` | `--generate-map-preview` | none | **exit 0** and the PNG exists | MapWebUI |
 | `read-only` | no binary at all | none | files read | FactorioTools |
@@ -201,28 +201,45 @@ embeds it in its own Lua, which is what every probe does today.
 its `data.lua` may run before `space-age`'s and `data.raw.resource[...]` will not
 exist yet - a silent no-op. Prototype overrides belong in `data_final_fixes_lua`.
 
-**`map_gen_settings` is always passed for `create`.** FactorioMapWebUI's
-`buildFactorioArgs` has no way to omit it, so always-passed is a correct
-description of established practice. Whether the game *requires* it is
-**unmeasured** - nobody has run `--create` without it. Recorded as a claim about
-practice rather than about the game, pending a measurement.
+**`map_gen_settings` is optional for `create`, and so is the seed flag.**
+Measured 2026-08-16 against 2.1.14, by FactorioMapWebUI, with a probe mod that
+reads back `game.surfaces[1].map_gen_settings.seed` - the seed the surface
+actually got:
 
-**The seed goes to both channels, from one field.** This is the subtle one. The
-game can be told the map seed twice: `seed` inside the map-gen settings JSON, and
-`--map-gen-seed` on the command line. FactorioMapWebUI sets both, from the same
-variable, so they have never disagreed - and consequently nothing establishes which
-one the game honours.
+| arm | file seed | flag seed | surface seed | result |
+| --- | --- | --- | --- | --- |
+| both | 111111 | 222222 | **222222** | flag wins |
+| flag only, no settings file | - | 222222 | 222222 | works |
+| neither | - | - | 3972429021 | works, random |
+| settings file only | 111111 | - | 111111 | file used |
 
-So the spec takes a single `seed` and writes it to **both** channels. That makes
-the design correct whether the flag wins or the file does, and makes disagreement
-structurally impossible rather than merely unlikely.
+Arms two and three generated a map, loaded the mod and produced a dump with no
+settings file at all. So "always passed" was habit in the consumer repos, not a
+requirement of the game. The CLI passes it when the caller supplies one and omits
+it otherwise.
 
-Collapsing to one channel would be a real hazard, and of the worst kind: if the
-flag beat the file, a CLI writing only the file would generate a different map from
-the same request, with nothing erroring and no sign in the output. That repo has
-already paid for a seed-provenance mistake once - a correct field compared against
-the wrong seed convention scored 0.5% overlap where the right convention scored
-99.9%, and nothing about the failing run looked like a seed problem.
+**`--map-gen-seed` overrides the seed inside the settings file.** That is arm one:
+the file says 111111, the flag says 222222, and the surface comes out 222222. Arm
+four rules out the file simply being ignored - without the flag, the file's seed is
+what you get. Precedence is flag over file.
+
+**So the CLI takes one `seed` field and writes both channels.** With the precedence
+now known, this is not merely defensive: a tool that wrote only the file while a
+caller also passed a flag would be silently overridden. Writing both from one
+source makes them agree, which makes the precedence irrelevant.
+
+The failure this avoids is the bad kind - everything runs, nothing errors, and the
+numbers come from a different map. FactorioMapWebUI has already paid for a
+seed-provenance mistake once: a correct field compared against the wrong seed
+convention scored 0.5% overlap where the right convention scored 99.9%, and nothing
+about the failing run looked like a seed problem.
+
+A note for anyone reading a consumer's harness: the same measurement showed that
+FactorioMapWebUI's `seed` field inside its map-gen settings JSON **has never done
+anything**, because that harness always passes the flag too. No fixture there is
+wrong, since the two values always agreed - but it is a dead write that looks
+load-bearing, and its `mapGenOverrides` path silently discards a `seed` passed
+through it. Tracked on that repo's #232.
 
 **The mod directory does both jobs.** For `create` and `interactive` it is an
 isolated directory the runner owns *containing* the generated mod. For `dump-data`

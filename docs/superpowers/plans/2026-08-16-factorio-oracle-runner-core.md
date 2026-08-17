@@ -1330,10 +1330,10 @@ mod tests {
     }
 
     #[test]
-    fn create_always_passes_map_gen_settings() {
+    fn create_passes_map_gen_settings_when_there_are_any() {
         let args = build_args(&Launch::Create {
             save: "/w/probe.zip".into(),
-            map_gen: "/w/map-gen.json".into(),
+            map_gen: Some("/w/map-gen.json".into()),
             seed: None,
             mod_dir: "/w/mods".into(),
             config: "/w/config.ini".into(),
@@ -1344,13 +1344,28 @@ mod tests {
     }
 
     #[test]
-    fn create_also_passes_the_seed_on_the_command_line() {
-        // The seed reaches the game through two channels and nobody has
-        // established which one wins. Both come from one field, so they cannot
-        // disagree - and a caller that omits the seed gets neither.
+    fn create_omits_map_gen_settings_when_there_are_none() {
+        // Measured 2026-08-16 on 2.1.14: --create works with no settings file.
+        // The consumer repos always passed one out of habit, not necessity.
         let args = build_args(&Launch::Create {
             save: "/w/probe.zip".into(),
-            map_gen: "/w/map-gen.json".into(),
+            map_gen: None,
+            seed: None,
+            mod_dir: "/w/mods".into(),
+            config: "/w/config.ini".into(),
+        });
+        assert!(!args.contains(&"--map-gen-settings".to_string()));
+        assert!(args.contains(&"--mod-directory".to_string()));
+    }
+
+    #[test]
+    fn create_also_passes_the_seed_on_the_command_line() {
+        // Measured: --map-gen-seed overrides the seed inside the settings file.
+        // Both come from one field so they agree, and a caller that omits the
+        // seed gets neither channel.
+        let args = build_args(&Launch::Create {
+            save: "/w/probe.zip".into(),
+            map_gen: Some("/w/map-gen.json".into()),
             seed: Some(123456),
             mod_dir: "/w/mods".into(),
             config: "/w/config.ini".into(),
@@ -1360,7 +1375,7 @@ mod tests {
 
         let without = build_args(&Launch::Create {
             save: "/w/probe.zip".into(),
-            map_gen: "/w/map-gen.json".into(),
+            map_gen: Some("/w/map-gen.json".into()),
             seed: None,
             mod_dir: "/w/mods".into(),
             config: "/w/config.ini".into(),
@@ -1438,10 +1453,12 @@ pub enum Launch {
     },
     Create {
         save: PathBuf,
-        map_gen: PathBuf,
-        /// Written into the map-gen settings file as well. The game can be told
-        /// the seed twice and nobody has established which channel wins, so both
-        /// are fed from one field and cannot disagree.
+        /// `None` when the caller supplied no settings. Measured 2026-08-16 on
+        /// 2.1.14: `--create` succeeds with no settings file at all.
+        map_gen: Option<PathBuf>,
+        /// Also written into the settings file. Measured: `--map-gen-seed`
+        /// overrides the file's seed, so both come from one field and agree,
+        /// which makes the precedence irrelevant.
         seed: Option<u64>,
         mod_dir: PathBuf,
         config: PathBuf,
@@ -1481,18 +1498,18 @@ pub fn build_args(launch: &Launch) -> Vec<String> {
             mod_dir,
             config,
         } => {
-            let mut args = vec![
-                "--create".into(),
-                s(save),
-                // Always passed. Whether the game requires it is unmeasured;
-                // this matches established practice in the consumer repos.
-                "--map-gen-settings".into(),
-                s(map_gen),
-            ];
-            // The seed also goes inside the map-gen settings file. Nobody has
-            // established which channel the game honours, so both come from one
-            // field and cannot disagree. Picking one would risk generating a
-            // different map from the same request, with nothing erroring.
+            let mut args = vec!["--create".into(), s(save)];
+            // Optional. Measured 2026-08-16 on 2.1.14: --create generates a map,
+            // loads the mod and produces a dump with no settings file at all.
+            // The consumer repos always passed one out of habit.
+            if let Some(map_gen) = map_gen {
+                args.push("--map-gen-settings".into());
+                args.push(s(map_gen));
+            }
+            // The seed also goes inside the settings file. Measured: the flag
+            // overrides the file, so a tool writing only the file would be
+            // silently overridden by a caller's flag. Both come from one field
+            // and therefore agree, which makes the precedence irrelevant.
             if let Some(seed) = seed {
                 args.push("--map-gen-seed".into());
                 args.push(seed.to_string());
@@ -1990,7 +2007,7 @@ mod tests {
             layout: layout_in(install.path()),
             version: version(),
             work_dir: work.path().to_path_buf(),
-            map_gen_settings: serde_json::json!({ "seed": 123456 }),
+            map_gen_settings: Some(serde_json::json!({ "seed": 123456 })),
         };
 
         let fake = FakeGame {
@@ -2058,7 +2075,7 @@ mod tests {
             layout: layout_in(install.path()),
             version: version(),
             work_dir: work.path().to_path_buf(),
-            map_gen_settings: serde_json::json!({}),
+            map_gen_settings: Some(serde_json::json!({})),
         };
         let fake = FakeGame {
             write_dump_to: work.path().join("write/script-output/oracle-dump.json"),
@@ -2086,7 +2103,7 @@ mod tests {
             layout: layout_in(install.path()),
             version: version(),
             work_dir: work.path().to_path_buf(),
-            map_gen_settings: serde_json::json!({}),
+            map_gen_settings: Some(serde_json::json!({})),
         };
 
         struct CleanExit {
@@ -2134,7 +2151,7 @@ mod tests {
             layout: layout_in(install.path()),
             version: version(),
             work_dir: work.path().to_path_buf(),
-            map_gen_settings: serde_json::json!({}),
+            map_gen_settings: Some(serde_json::json!({})),
         };
 
         struct NoDump;
@@ -2195,7 +2212,9 @@ pub struct RunRequest {
     pub layout: InstallLayout,
     pub version: VersionInfo,
     pub work_dir: PathBuf,
-    pub map_gen_settings: serde_json::Value,
+    /// `None` when the caller wants the game's own defaults. Measured: a
+    /// `--create` run needs no settings file.
+    pub map_gen_settings: Option<serde_json::Value>,
 }
 
 /// The dump file a `--dump-data` run writes, named by the game.
@@ -2238,10 +2257,9 @@ pub fn run_probe(request: &RunRequest, spawner: &dyn Spawner) -> anyhow::Result<
     // The isolated config is what makes a stale dump impossible: write-data
     // points at a directory that started empty.
     fs::write(&config_path, build_config_ini(&write_data))?;
-    fs::write(
-        &map_gen_path,
-        serde_json::to_string_pretty(&request.map_gen_settings)?,
-    )?;
+    if let Some(settings) = request.map_gen_settings.as_ref() {
+        fs::write(&map_gen_path, serde_json::to_string_pretty(settings)?)?;
+    }
 
     let mod_name = request.spec.r#mod.as_ref().map(|m| m.name.clone());
     fs::write(
@@ -2286,12 +2304,16 @@ pub fn run_probe(request: &RunRequest, spawner: &dyn Spawner) -> anyhow::Result<
         Mode::Create => (
             Some(Launch::Create {
                 save: write_data.join("probe.zip"),
-                map_gen: map_gen_path.clone(),
+                map_gen: request.map_gen_settings.as_ref().map(|_| map_gen_path.clone()),
                 // One source of truth. The caller writes the seed once, into
                 // map_gen_settings, and it reaches the game through both the
-                // file and the flag. Which channel the game honours is not
-                // established, so they must not be able to disagree.
-                seed: request.map_gen_settings.get("seed").and_then(|s| s.as_u64()),
+                // file and the flag. Measured: the flag overrides the file, so
+                // writing only the file would let a caller's flag silently win.
+                seed: request
+                    .map_gen_settings
+                    .as_ref()
+                    .and_then(|s| s.get("seed"))
+                    .and_then(|s| s.as_u64()),
                 mod_dir: mod_dir.clone(),
                 config: config_path.clone(),
             }),
@@ -2448,7 +2470,7 @@ and add the matching arm in `main`:
                 layout: chosen.layout,
                 version: chosen.version.expect("filtered to installs with a version"),
                 work_dir: work,
-                map_gen_settings: serde_json::json!({ "seed": 123456 }),
+                map_gen_settings: Some(serde_json::json!({ "seed": 123456 })),
             };
 
             let result = factorio_oracle::run::run_probe(&request, &factorio_oracle::spawn::RealSpawner)?;

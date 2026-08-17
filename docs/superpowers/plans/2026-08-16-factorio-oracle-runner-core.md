@@ -1331,16 +1331,41 @@ mod tests {
 
     #[test]
     fn create_always_passes_map_gen_settings() {
-        // Required even when nothing reads it, or the run fails.
         let args = build_args(&Launch::Create {
             save: "/w/probe.zip".into(),
             map_gen: "/w/map-gen.json".into(),
+            seed: None,
             mod_dir: "/w/mods".into(),
             config: "/w/config.ini".into(),
         });
         assert!(args.contains(&"--map-gen-settings".to_string()));
         assert_eq!(args[0], "--create");
         assert_eq!(args[1], "/w/probe.zip");
+    }
+
+    #[test]
+    fn create_also_passes_the_seed_on_the_command_line() {
+        // The seed reaches the game through two channels and nobody has
+        // established which one wins. Both come from one field, so they cannot
+        // disagree - and a caller that omits the seed gets neither.
+        let args = build_args(&Launch::Create {
+            save: "/w/probe.zip".into(),
+            map_gen: "/w/map-gen.json".into(),
+            seed: Some(123456),
+            mod_dir: "/w/mods".into(),
+            config: "/w/config.ini".into(),
+        });
+        assert!(args.contains(&"--map-gen-seed".to_string()));
+        assert!(args.contains(&"123456".to_string()));
+
+        let without = build_args(&Launch::Create {
+            save: "/w/probe.zip".into(),
+            map_gen: "/w/map-gen.json".into(),
+            seed: None,
+            mod_dir: "/w/mods".into(),
+            config: "/w/config.ini".into(),
+        });
+        assert!(!without.contains(&"--map-gen-seed".to_string()));
     }
 
     #[test]
@@ -1414,6 +1439,10 @@ pub enum Launch {
     Create {
         save: PathBuf,
         map_gen: PathBuf,
+        /// Written into the map-gen settings file as well. The game can be told
+        /// the seed twice and nobody has established which channel wins, so both
+        /// are fed from one field and cannot disagree.
+        seed: Option<u64>,
         mod_dir: PathBuf,
         config: PathBuf,
     },
@@ -1448,20 +1477,34 @@ pub fn build_args(launch: &Launch) -> Vec<String> {
         Launch::Create {
             save,
             map_gen,
+            seed,
             mod_dir,
             config,
-        } => vec![
-            "--create".into(),
-            s(save),
-            // Required for --create even when nothing reads it. Omitting it
-            // fails the run.
-            "--map-gen-settings".into(),
-            s(map_gen),
-            "--mod-directory".into(),
-            s(mod_dir),
-            "--config".into(),
-            s(config),
-        ],
+        } => {
+            let mut args = vec![
+                "--create".into(),
+                s(save),
+                // Always passed. Whether the game requires it is unmeasured;
+                // this matches established practice in the consumer repos.
+                "--map-gen-settings".into(),
+                s(map_gen),
+            ];
+            // The seed also goes inside the map-gen settings file. Nobody has
+            // established which channel the game honours, so both come from one
+            // field and cannot disagree. Picking one would risk generating a
+            // different map from the same request, with nothing erroring.
+            if let Some(seed) = seed {
+                args.push("--map-gen-seed".into());
+                args.push(seed.to_string());
+            }
+            args.extend([
+                "--mod-directory".into(),
+                s(mod_dir),
+                "--config".into(),
+                s(config),
+            ]);
+            args
+        }
         Launch::Interactive {
             scenario,
             mod_dir,
@@ -1973,9 +2016,18 @@ mod tests {
             fs::read_to_string(work.path().join("mods/bp_probe_0.0.1/control.lua")).unwrap();
         assert_eq!(control, "script.on_init(function() end)");
 
-        // --map-gen-settings is always passed for create.
+        // --map-gen-settings is always passed for create, and the seed reaches
+        // the game through both channels from the single map_gen_settings field.
         let args = fake.seen_args.borrow();
         assert!(args.contains(&"--map-gen-settings".to_string()));
+        assert!(args.contains(&"--map-gen-seed".to_string()));
+        assert!(args.contains(&"123456".to_string()));
+
+        let written: serde_json::Value = serde_json::from_str(
+            &fs::read_to_string(work.path().join("map-gen-settings.json")).unwrap(),
+        )
+        .unwrap();
+        assert_eq!(written["seed"], 123456);
     }
 
     #[test]
@@ -2235,6 +2287,11 @@ pub fn run_probe(request: &RunRequest, spawner: &dyn Spawner) -> anyhow::Result<
             Some(Launch::Create {
                 save: write_data.join("probe.zip"),
                 map_gen: map_gen_path.clone(),
+                // One source of truth. The caller writes the seed once, into
+                // map_gen_settings, and it reaches the game through both the
+                // file and the flag. Which channel the game honours is not
+                // established, so they must not be able to disagree.
+                seed: request.map_gen_settings.get("seed").and_then(|s| s.as_u64()),
                 mod_dir: mod_dir.clone(),
                 config: config_path.clone(),
             }),

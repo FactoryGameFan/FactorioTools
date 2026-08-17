@@ -201,8 +201,28 @@ embeds it in its own Lua, which is what every probe does today.
 its `data.lua` may run before `space-age`'s and `data.raw.resource[...]` will not
 exist yet - a silent no-op. Prototype overrides belong in `data_final_fixes_lua`.
 
-**`map_gen_settings` is required for `create`** even when nothing reads it, or the
-run fails.
+**`map_gen_settings` is always passed for `create`.** FactorioMapWebUI's
+`buildFactorioArgs` has no way to omit it, so always-passed is a correct
+description of established practice. Whether the game *requires* it is
+**unmeasured** - nobody has run `--create` without it. Recorded as a claim about
+practice rather than about the game, pending a measurement.
+
+**The seed goes to both channels, from one field.** This is the subtle one. The
+game can be told the map seed twice: `seed` inside the map-gen settings JSON, and
+`--map-gen-seed` on the command line. FactorioMapWebUI sets both, from the same
+variable, so they have never disagreed - and consequently nothing establishes which
+one the game honours.
+
+So the spec takes a single `seed` and writes it to **both** channels. That makes
+the design correct whether the flag wins or the file does, and makes disagreement
+structurally impossible rather than merely unlikely.
+
+Collapsing to one channel would be a real hazard, and of the worst kind: if the
+flag beat the file, a CLI writing only the file would generate a different map from
+the same request, with nothing erroring and no sign in the output. That repo has
+already paid for a seed-provenance mistake once - a correct field compared against
+the wrong seed convention scored 0.5% overlap where the right convention scored
+99.9%, and nothing about the failing run looked like a seed problem.
 
 **The mod directory does both jobs.** For `create` and `interactive` it is an
 isolated directory the runner owns *containing* the generated mod. For `dump-data`

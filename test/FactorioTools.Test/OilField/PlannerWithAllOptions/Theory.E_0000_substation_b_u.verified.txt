@@ -1,30 +1,30 @@
-﻿  FBE* -> FBE* (effects: 0, beacons: 0, pipes: 5)
-S FBE* -> snug (effects: 2, beacons: 1, pipes: 5)
-  FBE* -> optimize -> FBE* (effects: 0, beacons: 0, pipes: 5)
-S FBE* -> optimize -> snug (effects: 2, beacons: 1, pipes: 5)
-  CC-DT -> FBE* (effects: 0, beacons: 0, pipes: 5)
-S CC-DT -> snug (effects: 2, beacons: 1, pipes: 5)
-  CC-DT -> optimize -> FBE* (effects: 0, beacons: 0, pipes: 5)
-S CC-DT -> optimize -> snug (effects: 2, beacons: 1, pipes: 5)
-  CC-DT-MST -> FBE* (effects: 0, beacons: 0, pipes: 5)
-S CC-DT-MST -> snug (effects: 2, beacons: 1, pipes: 5)
-  CC-DT-MST -> optimize -> FBE* (effects: 0, beacons: 0, pipes: 5)
-S CC-DT-MST -> optimize -> snug (effects: 2, beacons: 1, pipes: 5)
-  CC-FLUTE -> FBE* (effects: 0, beacons: 0, pipes: 5)
-S CC-FLUTE -> snug (effects: 2, beacons: 1, pipes: 5)
-  CC-FLUTE -> optimize -> FBE* (effects: 0, beacons: 0, pipes: 5)
-S CC-FLUTE -> optimize -> snug (effects: 2, beacons: 1, pipes: 5)
+﻿  FBE* -> FBE* (effects: 0, beacons: 0, pipes: 6)
+A FBE* -> snug (effects: 2, beacons: 1, pipes: 6)
+  FBE* -> optimize -> FBE* (effects: 0, beacons: 0, pipes: 6)
+A FBE* -> optimize -> snug (effects: 2, beacons: 1, pipes: 6)
+  CC-DT -> FBE* (effects: 0, beacons: 0, pipes: 8)
+  CC-DT -> snug (effects: 2, beacons: 1, pipes: 8)
+  CC-DT -> optimize -> FBE* (effects: 0, beacons: 0, pipes: 6)
+S CC-DT -> optimize -> snug (effects: 2, beacons: 1, pipes: 6)
+  CC-DT-MST -> FBE* (effects: 0, beacons: 0, pipes: 8)
+  CC-DT-MST -> snug (effects: 2, beacons: 1, pipes: 8)
+  CC-DT-MST -> optimize -> FBE* (effects: 0, beacons: 0, pipes: 6)
+S CC-DT-MST -> optimize -> snug (effects: 2, beacons: 1, pipes: 6)
+  CC-FLUTE -> FBE* (effects: 0, beacons: 0, pipes: 8)
+  CC-FLUTE -> snug (effects: 2, beacons: 1, pipes: 8)
+  CC-FLUTE -> optimize -> FBE* (effects: 0, beacons: 0, pipes: 6)
+S CC-FLUTE -> optimize -> snug (effects: 2, beacons: 1, pipes: 6)
 
-j j j < . . . . > o 
-j J j . . . . . . ^ 
 j j j . . . . . . . 
-. . . . . . . . . . 
+j J j . . . . . . . 
+j j j < . > o . . . 
+. . . . . . ^ . . . 
 . . . . . . . . . . 
 . . . . . b b b . . 
 . . . . . b B b . . 
 . . . . . b b b . . 
-. . . . . . E e . . 
-. . . . . . e e . v 
-. . . . . . . j j j 
+. . . . . . . E e . 
+. . . . . . v e e . 
+. . . . . . + j j j 
 . . . . . . . j J j 
 . . . . . . . j j j 

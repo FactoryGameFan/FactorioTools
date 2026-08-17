@@ -28,9 +28,9 @@ System.namespace("Knapcode.FactorioTools.OilField", function (namespace)
     static = function (this)
       local default = ListTuple()
       default:Add(System.Tuple(0 --[[Direction.Up]], KnapcodeOilField.Location(1, - 2)))
-      default:Add(System.Tuple(2 --[[Direction.Right]], KnapcodeOilField.Location(2, - 1)))
+      default:Add(System.Tuple(2 --[[Direction.Right]], KnapcodeOilField.Location(2, 1)))
       default:Add(System.Tuple(4 --[[Direction.Down]], KnapcodeOilField.Location(- 1, 2)))
-      default:Add(System.Tuple(6 --[[Direction.Left]], KnapcodeOilField.Location(- 2, 1)))
+      default:Add(System.Tuple(6 --[[Direction.Left]], KnapcodeOilField.Location(- 2, - 1)))
       TerminalOffsets = default
       this.TerminalOffsets = TerminalOffsets
     end

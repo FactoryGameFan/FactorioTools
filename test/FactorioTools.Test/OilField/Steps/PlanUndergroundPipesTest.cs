@@ -348,7 +348,9 @@ public class PlanUndergroundPipesTest
             AddPipes(pipes, minX: 1, maxX: 11, minY: 4, maxY: 4);
             AddPipe(pipes, x: 5, y: 3);
             var context = GetContext(pipes);
-            AddPumpjack(context, new Location(7, 2), Direction.Left);
+            // The terminal must land on (5, 3), beside the run rather than on it. A left-facing pumpjack
+            // can no longer reach that tile without covering the run itself, so this one faces right.
+            AddPumpjack(context, new Location(3, 2), Direction.Right);
 
             Run(context, pipes);
 
@@ -369,8 +371,8 @@ public class PlanUndergroundPipesTest
         {
             var pipes = new List<Location>();
             AddPipes(pipes, minX: 1, maxX: 5, minY: 3, maxY: 3);
-            var context = GetContext(pipes, width: 10);
-            AddPumpjack(context, new Location(7, 2), Direction.Left);
+            var context = GetContext(pipes, width: 10, height: 7);
+            AddPumpjack(context, new Location(7, 4), Direction.Left);
 
             Run(context, pipes);
 
@@ -384,7 +386,7 @@ public class PlanUndergroundPipesTest
         public void RunStartsWithTerminal()
         {
             var pipes = new List<Location>();
-            AddPipes(pipes, minX: 4, maxX: 8, minY: 1, maxY: 1);
+            AddPipes(pipes, minX: 4, maxX: 8, minY: 3, maxY: 3);
             var context = GetContext(pipes, height: 5);
             AddPumpjack(context, new Location(2, 2), Direction.Right);
 
@@ -392,8 +394,8 @@ public class PlanUndergroundPipesTest
 
             Assert.Equal(2, context.Grid.GetEntities().Count(e => e is Pipe));
 
-            Assert.Equal(Direction.Left, Assert.IsType<UndergroundPipe>(context.Grid[new Location(4, 1)]).Direction);
-            Assert.Equal(Direction.Right, Assert.IsType<UndergroundPipe>(context.Grid[new Location(8, 1)]).Direction);
+            Assert.Equal(Direction.Left, Assert.IsType<UndergroundPipe>(context.Grid[new Location(4, 3)]).Direction);
+            Assert.Equal(Direction.Right, Assert.IsType<UndergroundPipe>(context.Grid[new Location(8, 3)]).Direction);
         }
 
         [Fact]
@@ -402,8 +404,8 @@ public class PlanUndergroundPipesTest
             var pipes = new List<Location>();
             AddPipes(pipes, minX: 4, maxX: 8, minY: 3, maxY: 3);
             var context = GetContext(pipes, width: 13, height: 7);
-            AddPumpjack(context, new Location(2, 4), Direction.Right);
-            AddPumpjack(context, new Location(10, 2), Direction.Left);
+            AddPumpjack(context, new Location(2, 2), Direction.Right);
+            AddPumpjack(context, new Location(10, 4), Direction.Left);
 
             Run(context, pipes);
 

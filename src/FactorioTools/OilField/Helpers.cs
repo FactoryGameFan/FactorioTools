@@ -11,18 +11,33 @@ public static class Helpers
     public const int PumpjackHeight = 3;
 
     /// <summary>
+    /// Where the pipe goes for each pumpjack orientation, relative to the pumpjack's
+    /// center tile.
+    ///
     /// . . . + .
-    /// . j j j +
-    /// . j J j .
     /// + j j j .
+    /// . j J j .
+    /// . j j j +
     /// . + . . .
+    ///
+    /// Up is the top +, then clockwise: Right, Down, Left. The pattern is
+    /// rotationally symmetric because Factorio 2.1 gives every rotation its own
+    /// corner. Factorio 2.0 did not: east reused north's corner and west reused
+    /// south's, so the same picture had both right-hand + marks stacked at the top.
+    ///
+    /// These are measured, not derived. A probe mod placed pumpjacks in all four
+    /// rotations and read PipeConnection.target_position - the tile the connecting
+    /// pipe actually occupies - from the running game. On 2.0.77 the game returns
+    /// (1,-2), (2,-1), (-1,2), (-2,1), which is what this list used to hold. On
+    /// 2.1.14 it returns the values below. See issue #81, and FFF #442 for why it
+    /// changed (entity mirroring).
     /// </summary>
     public static readonly IReadOnlyList<Tuple<Direction, Location>> TerminalOffsets = new List<Tuple<Direction, Location>>
     {
         Tuple.Create(Direction.Up, new Location(1, -2)),
-        Tuple.Create(Direction.Right, new Location(2, -1)),
+        Tuple.Create(Direction.Right, new Location(2, 1)),
         Tuple.Create(Direction.Down, new Location(-1, 2)),
-        Tuple.Create(Direction.Left, new Location(-2, 1)),
+        Tuple.Create(Direction.Left, new Location(-2, -1)),
     };
 
     public static PumpjackCenter AddPumpjack(SquareGrid grid, Location center)

@@ -1,60 +1,60 @@
 ﻿Wins with beacons
 -----------------
-    CC-DT -> optimize -> snug : 111
-      FBE -> optimize -> snug : 111
-CC-DT-MST -> optimize -> snug : 83
-                  FBE -> snug : 79
-     FBE* -> optimize -> snug : 74
- CC-FLUTE -> optimize -> snug : 66
-                 FBE* -> snug : 59
-                CC-DT -> snug : 54
-                 FBE* -> FBE* : 40
-      FBE -> optimize -> FBE* : 38
-     FBE* -> optimize -> FBE* : 36
-            CC-DT-MST -> snug : 35
-      FBE* -> optimize -> FBE : 35
- CC-FLUTE -> optimize -> FBE* : 34
-             CC-FLUTE -> snug : 34
+      FBE -> optimize -> snug : 98
+    CC-DT -> optimize -> snug : 76
+     FBE* -> optimize -> snug : 73
+                 FBE* -> snug : 73
+CC-DT-MST -> optimize -> snug : 71
+                  FBE -> snug : 65
+ CC-FLUTE -> optimize -> snug : 64
+                CC-DT -> snug : 48
+      FBE -> optimize -> FBE* : 40
+                 FBE* -> FBE* : 39
+    CC-DT -> optimize -> FBE* : 37
                   FBE -> FBE* : 34
-             CC-FLUTE -> FBE* : 33
-                CC-DT -> FBE* : 31
-     CC-DT -> optimize -> FBE : 31
-    CC-DT -> optimize -> FBE* : 29
-CC-DT-MST -> optimize -> FBE* : 29
-  CC-FLUTE -> optimize -> FBE : 28
- CC-DT-MST -> optimize -> FBE : 23
-       FBE -> optimize -> FBE : 22
-                 CC-DT -> FBE : 20
-                  FBE* -> FBE : 18
-            CC-DT-MST -> FBE* : 17
-              CC-FLUTE -> FBE : 16
-                   FBE -> FBE : 14
+     FBE* -> optimize -> FBE* : 34
+ CC-FLUTE -> optimize -> FBE* : 33
+            CC-DT-MST -> FBE* : 32
+             CC-FLUTE -> FBE* : 28
+                  FBE* -> FBE : 28
+             CC-FLUTE -> snug : 25
+      FBE* -> optimize -> FBE : 21
+            CC-DT-MST -> snug : 20
+                CC-DT -> FBE* : 18
+CC-DT-MST -> optimize -> FBE* : 18
+       FBE -> optimize -> FBE : 17
+                   FBE -> FBE : 16
              CC-DT-MST -> FBE : 13
+  CC-FLUTE -> optimize -> FBE : 12
+                 CC-DT -> FBE : 10
+     CC-DT -> optimize -> FBE : 10
+ CC-DT-MST -> optimize -> FBE : 9
+              CC-FLUTE -> FBE : 9
 
 Wins without beacons
 --------------------
-    CC-DT -> optimize : 84
-                  FBE : 83
-      FBE -> optimize : 83
-CC-DT-MST -> optimize : 77
-     FBE* -> optimize : 63
- CC-FLUTE -> optimize : 60
-                 FBE* : 55
-                CC-DT : 40
-            CC-DT-MST : 24
+      FBE -> optimize : 99
+     FBE* -> optimize : 75
+CC-DT-MST -> optimize : 72
+ CC-FLUTE -> optimize : 65
+    CC-DT -> optimize : 64
+                  FBE : 64
+                 FBE* : 64
+                CC-DT : 28
              CC-FLUTE : 20
+            CC-DT-MST : 16
 
 | Electric pole        | Add beacons | Overlap beacons | Effects            | Beacons           | Pipes (UG)         | Pipes (no UG)     | Poles              |
 | -------------------- | ----------- | --------------- | ------------------ | ----------------- | ------------------ | ----------------- | ------------------ |
-| small-electric-pole  | yes         | yes             | 110.37704918032787 | 80.8688524590164  | 46.34426229508197  | 92.21311475409836 | 33.75409836065574  |
-| medium-electric-pole | yes         | yes             | 110.37704918032787 | 80.8688524590164  | 46.34426229508197  | 92.21311475409836 | 26.24590163934426  |
-| substation           | yes         | yes             | 110.37704918032787 | 80.8688524590164  | 46.34426229508197  | 92.21311475409836 | 8.098360655737705  |
-| big-electric-pole    | yes         | yes             | 106.19672131147541 | 78.57377049180327 | 49.704918032786885 | 95.06557377049181 | 35.377049180327866 |
-| small-electric-pole  | yes         | no              | 11.80327868852459  | 6.180327868852459 | 44.557377049180324 | 91.01639344262296 | 14.245901639344263 |
-| medium-electric-pole | yes         | no              | 11.80327868852459  | 6.180327868852459 | 44.557377049180324 | 91.01639344262296 | 11.59016393442623  |
-| substation           | yes         | no              | 11.80327868852459  | 6.180327868852459 | 44.557377049180324 | 91.01639344262296 | 4.377049180327869  |
-| big-electric-pole    | yes         | no              | 11.80327868852459  | 6.180327868852459 | 44.721311475409834 | 91.42622950819673 | 11.278688524590164 |
-| small-electric-pole  | no          | N/A             | 0                  | 0                 | 43.57377049180328  | 91.36065573770492 | 13.508196721311476 |
-| medium-electric-pole | no          | N/A             | 0                  | 0                 | 43.57377049180328  | 91.36065573770492 | 10.557377049180328 |
-| substation           | no          | N/A             | 0                  | 0                 | 43.57377049180328  | 91.36065573770492 | 3.9344262295081966 |
-| big-electric-pole    | no          | N/A             | 0                  | 0                 | 43.73770491803279  | 91.55737704918033 | 9.540983606557377  |
+| small-electric-pole  | yes         | yes             | 109.72131147540983 | 80.55737704918033 | 46.81967213114754  | 92.04918032786885 | 34.131147540983605 |
+| medium-electric-pole | yes         | yes             | 109.72131147540983 | 80.55737704918033 | 46.81967213114754  | 92.04918032786885 | 26                 |
+| substation           | yes         | yes             | 109.72131147540983 | 80.57377049180327 | 46.77049180327869  | 92.04918032786885 | 7.983606557377049  |
+| big-electric-pole    | yes         | yes             | 105.8360655737705  | 78.52459016393442 | 47.868852459016395 | 93.42622950819673 | 35.131147540983605 |
+| small-electric-pole  | yes         | no              | 11.770491803278688 | 6.065573770491803 | 44.21311475409836  | 90.68852459016394 | 14.19672131147541  |
+| medium-electric-pole | yes         | no              | 11.770491803278688 | 6.065573770491803 | 44.21311475409836  | 90.68852459016394 | 11.59016393442623  |
+| substation           | yes         | no              | 11.770491803278688 | 6.065573770491803 | 44.16393442622951  | 90.68852459016394 | 4.459016393442623  |
+| big-electric-pole    | yes         | no              | 11.770491803278688 | 6.081967213114754 | 44.459016393442624 | 90.93442622950819 | 11.065573770491802 |
+| small-electric-pole  | no          | N/A             | 0                  | 0                 | 43.622950819672134 | 90.63934426229508 | 13.311475409836065 |
+| medium-electric-pole | no          | N/A             | 0                  | 0                 | 43.622950819672134 | 90.63934426229508 | 10.508196721311476 |
+| substation           | no          | N/A             | 0                  | 0                 | 43.67213114754098  | 90.63934426229508 | 3.9672131147540983 |
+| big-electric-pole    | no          | N/A             | 0                  | 0                 | 43.75409836065574  | 90.75409836065573 | 9.573770491803279  |

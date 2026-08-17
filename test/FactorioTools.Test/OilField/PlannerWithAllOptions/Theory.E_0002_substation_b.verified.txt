@@ -1,19 +1,19 @@
-﻿  FBE* -> FBE* (effects: 9, beacons: 6, pipes: 107)
-  FBE* -> snug (effects: 10, beacons: 7, pipes: 107)
-  FBE* -> optimize -> FBE* (effects: 9, beacons: 6, pipes: 97)
-  FBE* -> optimize -> snug (effects: 10, beacons: 7, pipes: 97)
-  CC-DT -> FBE* (effects: 9, beacons: 6, pipes: 116)
-  CC-DT -> snug (effects: 10, beacons: 7, pipes: 116)
-  CC-DT -> optimize -> FBE* (effects: 9, beacons: 6, pipes: 97)
-  CC-DT -> optimize -> snug (effects: 10, beacons: 7, pipes: 97)
-  CC-DT-MST -> FBE* (effects: 9, beacons: 6, pipes: 108)
-  CC-DT-MST -> snug (effects: 10, beacons: 7, pipes: 108)
-  CC-DT-MST -> optimize -> FBE* (effects: 9, beacons: 6, pipes: 95)
-S CC-DT-MST -> optimize -> snug (effects: 10, beacons: 7, pipes: 95)
-  CC-FLUTE -> FBE* (effects: 9, beacons: 6, pipes: 106)
-  CC-FLUTE -> snug (effects: 10, beacons: 7, pipes: 106)
-  CC-FLUTE -> optimize -> FBE* (effects: 9, beacons: 6, pipes: 97)
-  CC-FLUTE -> optimize -> snug (effects: 10, beacons: 7, pipes: 97)
+﻿  FBE* -> FBE* (effects: 9, beacons: 6, pipes: 99)
+  FBE* -> snug (effects: 10, beacons: 7, pipes: 99)
+  FBE* -> optimize -> FBE* (effects: 9, beacons: 6, pipes: 96)
+  FBE* -> optimize -> snug (effects: 10, beacons: 7, pipes: 96)
+  CC-DT -> FBE* (effects: 9, beacons: 6, pipes: 104)
+  CC-DT -> snug (effects: 10, beacons: 7, pipes: 104)
+  CC-DT -> optimize -> FBE* (effects: 9, beacons: 6, pipes: 95)
+  CC-DT -> optimize -> snug (effects: 10, beacons: 7, pipes: 95)
+  CC-DT-MST -> FBE* (effects: 9, beacons: 6, pipes: 96)
+  CC-DT-MST -> snug (effects: 10, beacons: 7, pipes: 96)
+  CC-DT-MST -> optimize -> FBE* (effects: 9, beacons: 6, pipes: 93)
+S CC-DT-MST -> optimize -> snug (effects: 10, beacons: 7, pipes: 93)
+  CC-FLUTE -> FBE* (effects: 9, beacons: 6, pipes: 104)
+  CC-FLUTE -> snug (effects: 10, beacons: 7, pipes: 104)
+  CC-FLUTE -> optimize -> FBE* (effects: 9, beacons: 6, pipes: 95)
+  CC-FLUTE -> optimize -> snug (effects: 10, beacons: 7, pipes: 95)
 
 . . . . . . . . . . . . . . . . . . . . . . . . j j j . . . . . . . . . . . . . . . . . . . . . . 
 . . . . . . . . . . . . . . . . . . . . . . . . j J j . . . . . . . . . . . . . . . . . . . . . . 
@@ -37,19 +37,19 @@ S CC-DT-MST -> optimize -> snug (effects: 10, beacons: 7, pipes: 95)
 . . . . . . . . . . . . . . . . . . . . . . . . o . . . . . . . . . . . . . . . . . . . . . . . . 
 . . . . . . . . . . . . . . . . . . . . . . . . o . . . . . . . . . . . . . . . . . . . . . . . . 
 . . . . . . . . . . . . . . . . . . . . . . . . o . . . . . . . . . . . . . . . . . . . . . . . . 
-. . . . . . . . . . . . . . . . j j j + o o o o o . . . . . . . . . . . . . . . . . . . . . . . . 
+. . . . . . . . . . . . . . . . j j j . . . . . o . . . . . . . . . . . . . . . . . . . . . . . . 
 . . . . . . . . . . . . . . . . j J j . . . . . o . . . . . . . . . . . . . . . . . . . . . . . . 
-. . . . . . . . . . . b b b . . j j j . . . . . o . . . . . . . . . . . . . . . . . . . . . . . . 
+. . . . . . . . . . . b b b . . j j j + o o o o o . . . . . . . . . . . . . . . . . . . . . . . . 
 . . . . . . . . . . . b B b . . . . . . . . . . o . . . . . . . . . . . . . . . . . . . . . . . . 
 . . . . . . . . . . . b b b . . . . . . . . . . o . . . . . . . . . j j j . . . . . . . . . . . . 
 . . . . . . . . . . . . . . . . . . . . . . . . o . . . . . . . . . j J j . . . . . b b b . . . . 
-. . . . . . . . . . . . . . . . . . . . . . . . o . . . . . . . . + j j j . . b b b b B b . . . . 
-. . . . . . . j j j . . . . . . . . . . . . . . o . . . E e . . . o j j j . . b B b b b b . . . . 
-. . . . . . . j J j E e . . . . . . . . . . . . o . . . e e . . . o j J j E e b b b . . . . . . . 
-. . . . . . . j j j e e . . . . . . . . . . . . o . . . . . . . . o j j j e e . . . . . . . . . . 
-. . + o o o o + o o o o o o o o o o o o o o o o o o o o o o o o o o + o o o o o o o o + o o j j j 
-j j j . . . . . . . . . . o . . b b b . . . . . . . . . . o . . . . . . . . . . . j j j . o j J j 
-j J j . . . . . . . . . . o . . b B b . . . b b b . . . . o . . . . . . . . . . . j J j . + j j j 
+. . . . . . . . . . . . . . . . . . . . . . . . o . . . . . . . . . j j j + . b b b b B b . . . . 
+. . . . . . . j j j . . . . . . . . . . . . . . o . . . E e . . . . j j j o . b B b b b b . . . . 
+. . . . . . . j J j E e . . . . . . . . . . . . o . . . e e . . . . j J j o . b b b . . . . . . . 
+. . . . . . . j j j e e . . . . . . . . . . . . o . . . . . . . . . j j j o . . . . . . . . . . . 
+. . + o o o o + o o o o o o o o o o o o o o o o o o o o o o o o o o + o o o o o o o o + o + j j j 
+j j j . . . . . . . . . . o . . b b b . . . . . . . . . . o . . . . . . . E e . . j j j . . j J j 
+j J j . . . . . . . . . . o . . b B b . . . b b b . . . . o . . . . . . . e e . . j J j . . j j j 
 j j j . . . . . . . . . . o . . b b b . . . b B b . . . . o . . . . . . . . . . . j j j . . . . . 
 . . . . . . . . . . . . . o . . . . . . . . b b b . . . . o . . . . . . . . . . . . . . . . . . . 
 . . . . . . . . . . . . . + . . . . . . . . . . . . . . . o . . . . . . . . . . . . . . . . . . . 

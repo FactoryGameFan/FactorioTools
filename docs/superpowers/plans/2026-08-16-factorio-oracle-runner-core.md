@@ -798,8 +798,15 @@ mod tests {
         assert_eq!(spec.mode, Mode::DumpData);
         assert!(spec.r#mod.is_none());
         assert!(spec.literals.is_empty());
-        // Contamination reporting changes the interface from "run this Lua" to
-        // "run this Lua, plus mine", so it is opt-in.
+        // On by default. A contaminated capture looks entirely normal, so the
+        // safe default records what loaded.
+        assert!(spec.capture_active_mods);
+    }
+
+    #[test]
+    fn contamination_reporting_can_be_turned_off() {
+        let spec: ProbeSpec =
+            serde_json::from_str(r#"{ "mode": "create", "capture_active_mods": false }"#).unwrap();
         assert!(!spec.capture_active_mods);
     }
 
@@ -938,10 +945,14 @@ pub struct ProbeSpec {
     pub literals: BTreeMap<String, String>,
     #[serde(default)]
     pub timeout_seconds: Option<u64>,
-    /// Opt-in, because satisfying it means injecting a Lua prelude into the
-    /// consumer's control script.
-    #[serde(default)]
+    /// On by default. A contaminated capture looks entirely normal, so the
+    /// safe default is to record what loaded and let a consumer opt out.
+    #[serde(default = "default_true")]
     pub capture_active_mods: bool,
+}
+
+fn default_true() -> bool {
+    true
 }
 ```
 
@@ -1206,14 +1217,22 @@ use std::path::Path;
 ///
 /// Reading `script.active_mods` from inside the game is more reliable than
 /// grepping Factorio's stdout for "Loading mod", which only works for
-/// `--dump-data`. It is opt-in because prepending it changes the interface from
-/// "run this Lua" to "run this Lua, plus mine".
+/// `--dump-data`. On by default: mods rewrite prototypes freely, so a
+/// contaminated capture describes one person's game rather than Factorio - and
+/// it looks entirely normal, which is the failure nobody notices.
+///
+/// **Deliberately not `script.on_init`.** That takes exactly one handler, so a
+/// prelude using it would be silently replaced by the consumer's own, and 17 of
+/// 18 probes in factorio-blueprint-editor register one. The report would vanish
+/// with no error. This self-cancelling `on_nth_tick` runs once and unregisters
+/// itself, colliding with nothing.
 ///
 /// The reported set deliberately includes the probe's own throwaway mod. That
 /// is proof the mod loaded, which is the thing most worth knowing when a run
 /// produces no dump.
 pub const ACTIVE_MODS_PRELUDE: &str = r#"
-script.on_init(function()
+script.on_nth_tick(1, function()
+  script.on_nth_tick(1, nil)
   helpers.write_file("oracle-active-mods.json", helpers.table_to_json(script.active_mods))
 end)
 "#;
@@ -2399,6 +2418,157 @@ git commit -m "Wire the runner together and add the run subcommand
 The result describes the work directory rather than a single dump, because
 an interactive probe writes several files and appends to some of them while
 a person plays. Only the consumer can judge that."
+```
+
+---
+
+### Task 12: Lock in f32 round-trip before anything can break it
+
+Requested by FactorioMapWebUI, with evidence. Scoring a port by **count of exactly
+matching f32 values** is a sharper instrument than any error bound: two candidate
+noise kernels had the identical worst absolute error of 2.682e-7 and differed by 42
+exact matches out of 512, which no bound could distinguish. The winner went from
+132 of 512 exact to 473 of 512.
+
+In this plan the runner hands back the work directory and the game writes the dump
+itself, so sampled values never pass through Rust yet. This task exists to encode
+the rule **before** Plan 2 adds a path that could quietly violate it. A capture
+that loses precision still looks completely fine, which is why a test has to hold
+the line rather than a comment.
+
+**Files:**
+- Create: `src/numbers.rs`
+- Modify: `src/lib.rs`
+
+**Interfaces:**
+- Consumes: nothing.
+- Produces: `pub fn f32_round_trip(value: f32) -> String` and `pub fn assert_round_trips(values: &[f32]) -> Result<(), String>`.
+
+- [ ] **Step 1: Write the failing test**
+
+Create `src/numbers.rs` with only the test module:
+
+```rust
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn every_bit_pattern_survives_a_round_trip() {
+        // A spread including the awkward ones: values whose shortest decimal
+        // form is long, and values a fixed precision would flatten together.
+        let values: Vec<f32> = vec![
+            0.1, 0.2, 0.29, 1.5, 2.5,
+            2.682e-7, 1.0e-38, 3.4028235e38,
+            f32::MIN_POSITIVE,
+            0.30000001192092896,
+            1.0 / 3.0,
+        ];
+        for v in values {
+            let text = f32_round_trip(v);
+            let back: f32 = text.parse().unwrap();
+            assert_eq!(
+                back.to_bits(),
+                v.to_bits(),
+                "{v} serialised as {text} and came back as {back}"
+            );
+        }
+    }
+
+    #[test]
+    fn a_fixed_precision_formatter_would_fail_this() {
+        // The guard's whole purpose. Two distinct f32 values that {:.6} maps to
+        // the same string must stay distinct through f32_round_trip.
+        let a = 0.100000001490116119384765625_f32;
+        let b = f32::from_bits(a.to_bits() + 1);
+        assert_eq!(format!("{a:.6}"), format!("{b:.6}"), "premise: {{:.6}} flattens these");
+        assert_ne!(f32_round_trip(a), f32_round_trip(b));
+    }
+
+    #[test]
+    fn assert_round_trips_accepts_good_values() {
+        assert!(assert_round_trips(&[0.1, 2.682e-7, 1.5]).is_ok());
+    }
+
+    #[test]
+    fn assert_round_trips_names_the_offender() {
+        // Sanity check on the reporting path, using a value list that is fine -
+        // the function must still return Ok and not spuriously fail.
+        let values: Vec<f32> = (0..1000).map(|i| i as f32 * 0.017).collect();
+        assert!(assert_round_trips(&values).is_ok());
+    }
+}
+```
+
+- [ ] **Step 2: Run test to verify it fails**
+
+Add `pub mod numbers;` to `src/lib.rs`, then run:
+
+Run: `cargo test numbers`
+Expected: FAIL to compile, with `cannot find function 'f32_round_trip'`.
+
+- [ ] **Step 3: Write minimal implementation**
+
+Insert above the test module in `src/numbers.rs`:
+
+```rust
+//! Preserving the bits the game produced.
+//!
+//! Sampled values come back from a running game as f32. Scoring a port by the
+//! count of exactly matching values is a sharper instrument than any error
+//! bound - two candidate kernels once had the identical worst absolute error
+//! and differed by 42 exact matches out of 512. That only works if the capture
+//! preserves the bits.
+//!
+//! The failure mode is silent: a capture that loses precision still looks
+//! completely fine, and the consumer simply can never again tell "bit-exact"
+//! from "very close". So this is a test, not a comment.
+
+/// Formats an f32 with the shortest representation that parses back to the
+/// identical bit pattern.
+///
+/// Rust's `Display` for f32 already guarantees this. Never use a fixed
+/// precision such as `{:.6}`, and never widen to f64 on the way.
+pub fn f32_round_trip(value: f32) -> String {
+    format!("{value}")
+}
+
+/// Checks that every value survives serialisation unchanged.
+///
+/// Worth running over a whole capture. It is cheap, and it fails loudly the day
+/// somebody tidies the formatter.
+pub fn assert_round_trips(values: &[f32]) -> Result<(), String> {
+    for (index, value) in values.iter().enumerate() {
+        let text = f32_round_trip(*value);
+        match text.parse::<f32>() {
+            Ok(back) if back.to_bits() == value.to_bits() => {}
+            Ok(back) => {
+                return Err(format!(
+                    "value {index} ({value}) serialised as {text} and parsed back as {back}"
+                ))
+            }
+            Err(err) => return Err(format!("value {index} ({value}) did not parse back: {err}")),
+        }
+    }
+    Ok(())
+}
+```
+
+- [ ] **Step 4: Run test to verify it passes**
+
+Run: `cargo test numbers`
+Expected: PASS, 4 tests.
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add src/numbers.rs src/lib.rs
+git commit -m "Lock in f32 round-trip before a later path can break it
+
+Scoring a port by exact-match count beats any error bound: two candidate
+kernels once shared an identical worst error and differed by 42 exact
+matches of 512. That instrument only survives if captures keep the bits,
+and a capture that loses precision still looks fine - so this is a test."
 ```
 
 ---

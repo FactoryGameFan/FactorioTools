@@ -270,15 +270,24 @@ share that convention and nothing checks it, so it cannot currently distinguish
   One thing to verify during implementation rather than assume: that `--dump-data`
   honours `write-data` for `script-output`. If it does not, `dump-data` keeps the
   discovery path and the mtime check is load-bearing for that mode alone.
-- **Contamination.** Report which mods actually loaded, and fail if the set is not
-  the expected one. Two mechanisms exist and neither is universal: FactorioTools
-  greps stdout for `Loading mod`, which works for `dump-data`; six
-  factorio-blueprint-editor probes read `script.active_mods` from inside Lua, which
-  is more reliable. Reading it from Lua means the runner injects a prelude into the
-  consumer's `control.lua`, which changes the interface from "run this Lua" to "run
-  this Lua, plus mine". That is why it is `capture_active_mods`, opt-in and
-  explicit. Note the reported set should include the probe's own throwaway mod - it
-  is proof the mod loaded.
+- **Contamination. On by default.** Report which mods actually loaded, and fail if
+  the set is not the expected one. Mods rewrite prototypes freely, so a capture
+  that loads them describes one person's game rather than Factorio - and it looks
+  completely normal, which is why this defaults on rather than being opt-in. Today
+  six factorio-blueprint-editor probes capture it, FactorioTools only greps stdout
+  for `Loading mod` (which works for `dump-data` alone), and FactorioMapWebUI
+  captures none.
+
+  **The mechanism must not be `script.on_init`.** Factorio's `on_init` takes
+  exactly one handler, so a prelude registering it would be silently replaced by
+  the consumer's own - and 17 of 18 factorio-blueprint-editor probes register one.
+  The report would just vanish, with no error. Use a self-cancelling
+  `script.on_nth_tick(1, ...)` that unregisters itself on first run, which is the
+  pattern in `terite/factorio-data-dumper` and collides with nothing. Cost is one
+  tick against a 1.7 second launch.
+
+  The reported set should include the probe's own throwaway mod - it is proof the
+  mod loaded, which is the thing most worth knowing when a run produces no dump.
 - **Binary exists** before spawning.
 - **Large output buffer** always, so a big dump cannot truncate the diagnostic.
 
@@ -395,6 +404,36 @@ nondeterminism turns it into a permanent false alarm.
 
 Acceptance test: the Rust tool must reproduce the current committed
 `factorio-oracle.json` byte for byte before it replaces anything.
+
+### Sampled values must round-trip f32 exactly
+
+This is a separate requirement from the one above, on a separate path. Prototype
+values are trimmed from a dump and have to match Python's printer. **Sampled
+numeric values come back from the running game and have to survive as the exact
+bits the game produced.**
+
+Requested by FactorioMapWebUI, and it is not a preference. Scoring a port by
+**count of exactly matching f32 values** is a sharper instrument than any error
+bound, and it only works if the capture preserves the bits. The evidence: two
+candidate noise kernels had the *identical* worst absolute error, 2.682e-7, and
+differed by 42 exact matches out of 512. An error bound could not tell them apart
+at all. The winning variant went from 132 of 512 exact to 473 of 512.
+
+So:
+
+- Emit each value with a **shortest round-trip** representation. Rust's `{}` on
+  `f32` does this; `ryu` if it should be explicit. Never a fixed precision -
+  `{:.6}` or `%.9g` destroys the instrument.
+- **Never widen f32 to f64** anywhere along the path. If the game produced an f32,
+  the output says so and keeps it.
+- Self-test: capture, re-read, and assert `parse(serialize(v)) == v` bitwise for
+  every value. Cheap, and it fails loudly the day somebody tidies the formatter.
+
+The failure mode is what makes this worth spelling out: a capture that loses
+precision still looks completely fine. Nothing errors. The consumer simply can
+never again distinguish "bit-exact" from "very close". On the consumer side the
+check is one line - `Math.fround(v) === v` across the fixture - which
+FactorioMapWebUI now asserts before scoring anything.
 
 ## What the tool must never do
 
@@ -531,11 +570,36 @@ Steps 1 to 4 are the part that has to be right. Everything after is additive.
    pushed since 2024-10-26. factorio-blueprint-editor is a fork too but has no open
    upstream PR, so it carries none of that risk. No Cloudflare Git integration
    exists in any repo, so no deploy breaks either way.
-2. **Whether the runner injects a Lua prelude by default** for `script.active_mods`,
-   or leaves it opt-in. This spec says opt-in. The argument for default is that
-   contamination is the failure nobody notices.
+2. ~~Whether the runner injects a Lua prelude by default for
+   `script.active_mods`.~~ **Decided 2026-08-16: on by default**, using a
+   self-cancelling `on_nth_tick` rather than `on_init`. See the contamination
+   guard above.
 3. **Whether `--instrument-mod` is a better launch path than `--create` plus
-   `helpers.write_file`** for some probes. Not investigated.
+   `helpers.write_file`** for some probes. The flag is real - verified in the
+   2.1.14 binary as "Name of a mod to enable Instrument Mode" - but whether it
+   gives an earlier or cleaner hook than `on_init` is not investigated. **Agreed
+   to spike this before Plan 2**, because `on_init` is exactly where the handler
+   collision above bites.
+
+## First customer
+
+FactorioMapWebUI#234 is the first real consumer, and it is a **new** probe, so it
+sits on the right side of the "new probes only" rule.
+
+After that repo's #214, `basisNoise` is 473 of 512 bit-exact and the remaining 39
+points come from the game's own gradient table, produced by a minimax polynomial
+inside `Noise::Noise(bool)` rather than by libm. No formula recovers them. A
+capture does: with `input_scale = 1`, sampling at `(I + 1/256, J)` leaves exactly
+one cell corner contributing, so the value inverts directly to that slot's
+gradient x component, and `(I, J + 1/256)` gives y. 256 slots, both components,
+one capture.
+
+It needs nothing but "run this noise expression at these points and return the
+numbers", which is the `create` mode shape. It is also the reason the f32
+round-trip rule above is not optional: the entire point is recovering exact f32
+constants.
+
+Sequencing: that repo's #220 takes priority, so there is no rush.
 
 ## Decision log
 

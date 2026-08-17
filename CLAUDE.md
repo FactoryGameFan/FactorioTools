@@ -124,7 +124,8 @@ Use the script rather than your own `luac`. Homebrew no longer ships Lua 5.2, so
 - Runtime API: <https://lua-api.factorio.com/latest/index-runtime.html>
 - Libraries/functions Factorio adds or modifies (incl. `require()` restrictions): <https://lua-api.factorio.com/latest/auxiliary/libraries.html>
 - Lua 5.2 manual: <https://www.lua.org/manual/5.2/>
-- Prefer official Factorio docs over forum/blog/wiki advice when changing runtime behavior.
+- Friday Facts blog (Wube's own, so it counts as official): <https://factorio.com/blog/>. Best source for *why* a behavior changed. See the oracle section below for how to use it and its limits.
+- Prefer official Factorio docs over forum/blog/wiki advice when changing runtime behavior. The Friday Facts blog is written by Wube, so it is on the official side of that line.
 
 ### The Factorio oracle (re-capture after a game update)
 
@@ -138,7 +139,14 @@ So don't trust memory or the wiki. The game is the only authority on what the ga
 | `data/*/migrations/*.json` | Every rename, as a table. This is a complete list, not a guess |
 | `doc-html/runtime-api.json` | The `defines.*` tables, version-stamped to the install. See the caveat below: it publishes a documentation index, not the values |
 
-A fourth source, `data/changelog.txt`, records behavior changes per patch. It is worth reading after an update, but nothing automates it - no code in `tools/` touches it.
+Those three are *authoritative*: they say what the game accepts, they ship with the install, and a capture reads them offline and gets the same bytes every time.
+
+Two more sources are *reference* rather than authoritative. They say **why** something changed, which is what tells you which captured value now needs review. Nothing automates either one, and nothing should.
+
+- **`data/changelog.txt`** records behavior changes per patch, terse, in the install. No code in `tools/` touches it.
+- **The Friday Facts blog, <https://factorio.com/blog/>**, is Wube's own writing, so it outranks forum, wiki and third-party blog advice. It is still not authoritative in the sense above - it describes intent, and the shipped game can differ, so check any claim from it against a capture. The feed is Atom at <https://factorio.com/blog/rss> and carries the **10 most recent posts only**, so it cannot answer "what shipped in version X" by itself; older posts live at `https://factorio.com/blog/post/fff-<number>`. It is also the only source here that needs the network, which is why it can never gate a capture.
+
+  Worked example: the pumpjack change behind issue #81 shows up in a dump as `output_fluid_box` pipe connections going from `[[1,-1],[1,-1],[-1,1],[-1,1]]` to `[[1,-1],[1,1],[-1,1],[-1,-1]]`. The dump does not say why. FFF #442, "Flip, Flow, and Fresh Paint", does, and the same release added `use_mirroring` and `migrate_horizontal_mirroring` to that prototype - which is how you learn the change is about entity mirroring rather than a typo fix.
 
 `tools/capture-factorio-oracle.sh` pulls those three into `test/FactorioTools.Test/OilField/factorio-oracle.json`:
 

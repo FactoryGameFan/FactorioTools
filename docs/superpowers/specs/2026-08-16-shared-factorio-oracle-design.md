@@ -319,6 +319,15 @@ share that convention and nothing checks it, so it cannot currently distinguish
   `helpers.write_file` works at `control.lua` toplevel with no event, and
   `script.active_mods` is populated there. So the whole prelude is one line.
 
+  **Toplevel is for metadata, not for sampling, and the distinction matters.**
+  `game.surfaces[1]` does not exist at control-stage toplevel, so anything calling
+  `calculate_tile_properties` or `get_tile` still needs `on_init`. That is why
+  every sampling probe in FactorioMapWebUI registers one, and why those
+  registrations are load-bearing rather than habit. The two requirements compose
+  rather than compete: the prelude registers nothing, a sampling probe registers
+  exactly one `on_init`, and nothing contests the single slot. Do not read the
+  toplevel finding as "probes should stop using `on_init`".
+
   That matters because `script.on_init` takes exactly one handler, which the same
   measurement proved rather than assumed: an `instrument-control.lua` registering
   `on_init` had its handler silently discarded once `control.lua` registered one
@@ -626,7 +635,15 @@ Steps 1 to 4 are the part that has to be right. Everything after is additive.
    But `instrument-control.lua`'s `script.on_init` handler **never fired**,
    because `control.lua` registered one too and the later registration replaced
    it. So Instrument Mode gives a probe an earlier hook whose event registration
-   the consumer then silently destroys - strictly worse than the plain path.
+   the consumer then silently destroys.
+
+   That makes it **actively dangerous for a probe runner, not merely unhelpful.**
+   A tool built on Instrument Mode would appear to work on every probe that does
+   not register `on_init`, and fail silently on every probe that does. Keep this
+   entry even though the feature is not being adopted: "we watched the earlier
+   handler get destroyed by the later one" is a much stronger claim than "we
+   inferred the rule from the docs", and it is the one that survives somebody
+   proposing Instrument Mode again in a year.
 
    One quirk worth recording: `instrument-control.lua`'s toplevel logged twice in
    the same run. Not investigated further, since the mode is not being adopted.

@@ -31,24 +31,29 @@
 {
   $schema: "https://docs.renovatebot.com/renovate-schema.json",
 
-  extends: [
-    "config:recommended",
-    // Pin every GitHub Action to a commit SHA rather than a moving tag, and keep
-    // the trailing `# vX.Y.Z` comment beside it updated. All four actions in this
-    // repo - actions/checkout, actions/setup-node, actions/setup-dotnet and
-    // cloudflare/wrangler-action - were converted from moving tags to SHAs by the
-    // preset's first PR (#61). Adopting the preset makes pinned-vs-tag the rule for
-    // anything added later, so the choice cannot drift action by action.
-    //
-    // WORTH KNOWING WHEN REVIEWING THE RE-PIN PRs THIS NOW PRODUCES: a digest update
-    // carries no release timestamp, so `minimumReleaseAge` below has nothing to
-    // measure and `renovate/stability-days` sits PENDING rather than ever going
-    // green. Waiting does not clear it. #61 was merged with that check outstanding,
-    // after verifying each SHA against the live tag ref by hand - which is the check
-    // that actually matters here, since a wrong SHA is the whole risk that pinning
-    // exists to remove. Expect to do the same on every re-pin.
-    "helpers:pinGitHubActionDigests",
-  ],
+  // The org preset supplies what used to be spelled out here: config:recommended,
+  // helpers:pinGitHubActionDigests, the America/Los_Angeles timezone, the
+  // "before 6am on monday" batch, automerge:false, prConcurrentLimit/prHourlyLimit,
+  // dependencyDashboard, osvVulnerabilityAlerts, the rule that security fixes skip
+  // the weekly window, and the github-actions grouping.
+  // Source: https://github.com/FactoryGameFan/.github/blob/main/renovate-config.json
+  //
+  // Renovate cannot read a preset it has no access to, so FactoryGameFan/.github
+  // must stay ticked in the app installation. With "Require config file" set, a
+  // preset that fails to resolve reads as "no updates available" rather than as an
+  // error - if PRs simply stop arriving, check that before anything else.
+  //
+  // WORTH KNOWING ABOUT THE ACTION SHA PINNING THE PRESET NOW SUPPLIES, because the
+  // knowledge is repo-specific even though the setting is not. All four actions here
+  // - actions/checkout, actions/setup-node, actions/setup-dotnet and
+  // cloudflare/wrangler-action - were converted from moving tags to SHAs by #61.
+  // A digest update carries no release timestamp, so `minimumReleaseAge` below has
+  // nothing to measure and `renovate/stability-days` sits PENDING rather than ever
+  // going green. Waiting does not clear it. #61 was merged with that check
+  // outstanding, after verifying each SHA against the live tag ref by hand - which
+  // is the check that actually matters, since a wrong SHA is the whole risk pinning
+  // exists to remove. Expect to do the same on every re-pin.
+  extends: ["local>FactoryGameFan/.github:renovate-config"],
 
   // Let a release sit before proposing it - cheap protection against a compromised
   // or immediately-yanked publish, which matters most for the npm build tooling.
@@ -63,8 +68,10 @@
   // diff as proof the PR is wrong.
   minimumReleaseAge: "3 days",
 
-  // NOTHING MERGES UNREAD. There are no exceptions below, including GitHub Action
-  // digest re-pins, and this is a decision on record rather than an omission.
+  // NOTHING MERGES UNREAD. `automerge: false` now comes from the org preset, but the
+  // reasoning stays here because the PREREQUISITES for ever carving an exception are
+  // specific to this repo. There are no exceptions below, including GitHub Action
+  // digest re-pins, and that is a decision on record rather than an omission.
   //
   // A green CI run proves this repo is CONSISTENT, not that a bump is CORRECT. The
   // counterexample on record is from a sibling project: pako 3.0.0 flipped a hash
@@ -95,27 +102,11 @@
   //      the PR itself - the weaker path, because GitHub is no longer the thing
   //      gating the merge. The symptom is a PR sitting unmerged while its body
   //      cheerfully reads "Automerge: Enabled".
-  automerge: false,
 
-  // One dashboard issue is the cheapest way to see everything Renovate is holding
-  // back and why - the `description` on each rule below shows up there.
-  dependencyDashboard: true,
+  // The preset turns the dashboard on. Only the title is set here - it is the one
+  // part that differs from the org default, and the `description` on each rule
+  // below is what shows up in it.
   dependencyDashboardTitle: "Dependency dashboard",
-
-  // Without this the schedule below is UTC, so "before 6am Monday" fires around
-  // midnight Sunday local and reads as a bot running at random times.
-  timezone: "America/Los_Angeles",
-
-  // One weekly batch instead of a trickle. To pull a run forward without editing
-  // this file, tick the "Check this box to trigger a request for Renovate to run
-  // again" checkbox on the dependency dashboard issue.
-  schedule: ["before 6am on monday"],
-
-  // Cap the burst. The first run after enabling the app sees every pending update
-  // at once; without limits that is a dozen PRs in one morning, each triggering
-  // three CI jobs that take ~6 minutes.
-  prConcurrentLimit: 3,
-  prHourlyLimit: 2,
 
   // DELIBERATELY ENABLED, and this is the one place this config departs from the
   // sibling project's, so the reasoning for both sides is recorded here.
@@ -143,9 +134,13 @@
     schedule: ["before 5am on monday"],
   },
 
-  // Security fixes must not wait for the weekly window. Without this block a CVE
-  // fix could sit ~10 days: up to 3 for the age floor, then up to 7 for Monday.
-  // `schedule: []` clears the weekly restriction for these PRs only.
+  // The preset already clears the weekly window for security PRs, so a CVE fix does
+  // not sit up to 7 days waiting for Monday. What is set here is the AGE FLOOR,
+  // which is repo-specific and deliberately not zero.
+  //
+  // (`vulnerabilityAlerts` is one of Renovate's mergeable options, so adding
+  // `minimumReleaseAge` here keeps the preset's schedule override rather than
+  // replacing the whole block. Verified against renovate's config/utils.js.)
   //
   // The age floor drops to 25 hours rather than to zero. A same-day publish is the
   // worst case for a compromised-package attack, and an advisory is not a reason to
@@ -154,15 +149,11 @@
   // about 1. (25 rather than 24 is also the value that would clear pnpm 11's
   // cooldown with an hour to spare, should this repo ever switch package managers.)
   vulnerabilityAlerts: {
-    schedule: [],
     minimumReleaseAge: "25 hours",
     prBodyNotes: [
       "Security update - this deliberately bypassed the weekly schedule. Still read it. Advisory version ranges are frequently flat and over-broad, so `npm audit` being red is not by itself evidence that the proposed bump is the fix.",
     ],
   },
-
-  // GitHub's own advisories miss ecosystem-only reports; OSV catches more.
-  osvVulnerabilityAlerts: true,
 
   // The submodules (FluteSharp, delaunator-sharp, CSharp.lua) are pinned to specific
   // commits and are upstream repos, not ours to bump. Renovate disables this manager
@@ -174,14 +165,12 @@
   packageRules: [
     // ---------------------------------------------------------------------------
     // Grouping
+    //
+    // The "github actions" group that used to head this list now comes from the org
+    // preset, which contributes its rules FIRST - Renovate concatenates mergeable
+    // arrays parent-then-child, and later rules win. So anything below can still
+    // override it for a narrower match.
     // ---------------------------------------------------------------------------
-    {
-      // Includes the SHA re-pins produced by `helpers:pinGitHubActionDigests`
-      // above, which recur forever - one PR for all of them, not four.
-      description: "Group all GitHub Actions bumps into one PR - they share a single CI gate.",
-      matchManagers: ["github-actions"],
-      groupName: "github actions",
-    },
     {
       description: "Group the Vue/Vite front-end toolchain; these move together in practice.",
       matchManagers: ["npm"],

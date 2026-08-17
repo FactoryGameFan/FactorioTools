@@ -91,4 +91,24 @@ public class ParseBlueprintTest : BaseTest
 
         Assert.Contains(raw.ToString(), ex.Message);
     }
+
+    /// <summary>
+    /// Exported from Factorio 2.1.14: four pumpjacks facing north, east, south, west.
+    /// This is the case the corpus cannot cover, because the corpus is 1.1-encoded.
+    /// It is the test that would have caught the original bug report.
+    /// </summary>
+    private const string FourCardinalPumpjacks = "0eNqN0csKwyAQBdB/mbWU+Eho/JVSSh5Dsa1G1JSG4L/XJIsWkkBWg3rvWTgj1K8erVMmgBxBNZ3xIC8jeHU31Wu6M5VGkGB7bR9V84RIQJkWPyBpvBJAE1RQuLTmw3Azva7RpQBZtQnYzqdCZyY7IdkpJzDMM0ayItgBgv4bBFrlsFmexYbID4hsVzxviOKAyHdFyqZvVAF1An7bIPBG5+dEXrAyF0yUPCso5TF+Abr9jgg=";
+
+    [Fact]
+    public void ReadsEveryCardinalFromARealFactorio21Blueprint()
+    {
+        var blueprint = ParseBlueprint.Execute(FourCardinalPumpjacks);
+
+        Assert.Collection(
+            blueprint.Entities,
+            e => Assert.Equal(Direction.Up, e.Direction ?? Direction.Up),
+            e => Assert.Equal(Direction.Right, e.Direction),
+            e => Assert.Equal(Direction.Down, e.Direction),
+            e => Assert.Equal(Direction.Left, e.Direction));
+    }
 }

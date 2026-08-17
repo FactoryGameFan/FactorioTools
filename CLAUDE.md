@@ -107,7 +107,16 @@ The `transpile-lua` CI job runs that script, fails if the committed `src/lua` no
 
 - Avoid C# constructs the existing code avoids in hot paths under Lua settings: `yield return`, LINQ, named tuples, try/catch, and struct dictionary keys have all been removed for Lua performance. LINQ is worse than a perf problem: `CoreSystem.lua` does not load `Collections.Linq`, so `Invoke-LuaBuild.ps1` never copies `Linq.lua` and LINQ transpiles into calls on a module that was never shipped - a runtime failure inside Factorio, not a build error.
 - Keep control flow deterministic: Factorio modifies `pairs()` and `math.random()` for determinism, so prefer simple, stable iteration and avoid order-dependent assumptions.
-- Syntax-check generated Lua with `for f in src/lua/**/*.lua; luac5.2 -p $f; end` (fish). `luac5.2`/`lua5.2` only validate syntax, not Factorio runtime APIs.
+### Checking the generated Lua locally
+
+Run `tools/check-lua.sh`. It does exactly what the `transpile-lua` CI job does, against the same Lua version, in Docker:
+
+1. syntax-checks every generated file with `luac` 5.2.4
+2. runs `sample.lua`, which is the step that actually matters
+
+Those two are not redundant. LINQ transpiles cleanly *and* parses cleanly - it emits `local Linq = System.Linq.Enumerable`, which is nil because `Collections.Linq` is not in the CoreSystem load list. It only fails when the module loads (`attempt to index field 'Linq'`), so the check has to run the planner, not just parse it. That takes well under a second.
+
+Use the script rather than your own `luac`. Homebrew no longer ships Lua 5.2, so a Mac checkout typically has 5.4 or newer, and parsing 5.2-targeted code with a 5.5 parser proves very little. The image (`nickblah/lua:5.2-alpine`, ~11MB) is Lua 5.2.4 - the exact version the performance log above was measured against. Needs Docker (OrbStack or Docker Desktop); regenerate first with `pwsh src/lua/Invoke-LuaBuild.ps1` if you changed the core.
 
 ### Factorio reference
 

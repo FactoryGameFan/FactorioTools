@@ -61,6 +61,8 @@ The oracle also **ruled things out**, which narrows the work considerably. Every
 
 **D4 - The corpus encodes 1.1 directions.** Left alone, it would keep hiding D2.
 
+**D5 - The normalize path never doubled directions at all.** `ToOutputDirection` (the multiply-by-2 step) lived only in `GridToBlueprintString.Execute`, the planner's own serialization path. `PlanOrchestrator.Normalize` and `NormalizeBlueprints` call `SerializeBlueprint` directly, skipping `Execute` entirely, so the normalize path was emitting internal 1.1-style direction values (`0, 2, 4, 6`) unconverted, and stamping them with `version: 0` on top - a blueprint that looks unversioned-1.1 but is not one, silently wrong for any consumer that trusts the version field. This is a real, user-visible bug: anyone who ran `oil-field normalize` (or the API's `normalize` route) got back a blueprint Factorio would misread. It was found and fixed alongside D2/C3, by moving the direction-doubling loop out of `GridToBlueprintString.Execute` and into `SerializeBlueprint` itself, so every caller - the planner's own path and normalize alike - goes through the same conversion and the same version stamp. It was not called out as its own defect until this correction, because it surfaced while fixing D2 rather than from a separate bug report.
+
 ## Design
 
 ### C1 - Oracle capture (landed in `bfef7ba`)
@@ -138,6 +140,8 @@ North being omitted rather than written as `0` matters: `Entity.Direction` is al
 **A rename alone is not enough.** `src/vue/src/stores/OilFieldStore.ts` persists settings to `localStorage`. A user who ever picked an efficiency module has `effectivity-module-3` saved, and will keep sending that dead name after the fix ships. The store needs a one-time migration on load that rewrites any persisted `effectivity-*` value to `efficiency-*`.
 
 The fixture's `renames` table is the source for that mapping, so the migration should not hand-type the pairs where it can avoid it.
+
+**Deviation, as shipped:** `src/vue/src/stores/OilFieldStore.ts` hand-types all three pairs in a `RENAMED_MODULES` map instead of reading them from the fixture's `renames` table. This is a deliberate decision, not an oversight: it is three pairs, both directions are covered by `persistence.test.ts`, and reading the fixture from a Vite/TypeScript build would mean either bundling `factorio-oracle.json` (a maintainer-only artifact, not meant to ship) or adding a build step to generate a TypeScript module from it, for a mapping that only grows when Factorio renames another item. If a future rename makes the hand-typed list unwieldy, generating it from the fixture (the same way `plannerDefaults.verified.json` is generated from `OilFieldOptions`) is the natural next step.
 
 ### C5 - Mirror
 

@@ -587,18 +587,27 @@ In `ParseBlueprint.Execute`, just before `return root.Blueprint;`, add:
         }
 ```
 
-Then, in `src/FactorioTools.Serialization/OilField/Steps/GridToBlueprintString.cs`, at the top of `SerializeBlueprint` (before the FBE offset block), add:
+Then, in `src/FactorioTools.Serialization/OilField/Steps/GridToBlueprintString.cs`, move the direction-doubling loop into `SerializeBlueprint` itself and stamp the version there, rather than only adding a version stamp:
 
 ```csharp
-        // ToOutputDirection always emits Factorio 2.0's 16-way values, so the stamp has to
-        // say 2.0 or later. Otherwise a normalized blueprint carries 2.x directions under
-        // whatever version the source had, and reparsing it halves values that were already
-        // converted. The planner's own path (see the Blueprint built above) already sets
-        // this; normalize reaches SerializeBlueprint with a cleaned blueprint that does not.
-        blueprint.Version = FormatVersion(2, 0, 32, 0);
+        // Every blueprint string this class produces goes through here, so this is the one
+        // place that converts internal directions to Factorio 2.0's 16-way values and the one
+        // place that stamps the version saying so. Keeping them together means they can never
+        // disagree. Before, only the planner path converted, so the normalize path (see
+        // NormalizeBlueprints and PlanOrchestrator, which serialize a CleanBlueprint result)
+        // emitted internal 1.1-style directions under version 0.
+        blueprint.Version = OutputVersion;
+        for (var i = 0; i < blueprint.Entities.Length; i++)
+        {
+            var entity = blueprint.Entities[i];
+            if (entity.Direction.HasValue)
+            {
+                entity.Direction = ToOutputDirection(entity.Direction.Value);
+            }
+        }
 ```
 
-`CleanBlueprint.cs` is deliberately left alone; see the note under Files.
+Moving the doubling here, not just the stamp, is what actually fixes D5 (see the spec): the normalize path called `SerializeBlueprint` directly and never went through the planner's own doubling step, so it had been emitting un-doubled 1.1-style direction values under `version: 0` the whole time. `CleanBlueprint.cs` is deliberately left alone; see the note under Files.
 
 - [ ] **Step 6: Re-normalize both corpus files**
 

@@ -106,7 +106,10 @@ public class ParseBlueprintTest : BaseTest
 
         Assert.Collection(
             blueprint.Entities,
-            e => Assert.Equal(Direction.Up, e.Direction ?? Direction.Up),
+            // North is written as an omitted field, not as 0, so Direction is always null here.
+            // Callers default a null Direction to Up elsewhere (see InitializeContext); this
+            // test only pins what the fixture actually contains.
+            e => Assert.Null(e.Direction),
             e => Assert.Equal(Direction.Right, e.Direction),
             e => Assert.Equal(Direction.Down, e.Direction),
             e => Assert.Equal(Direction.Left, e.Direction));

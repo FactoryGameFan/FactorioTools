@@ -49,7 +49,7 @@ while [[ $# -gt 0 ]]; do
     --out) OUT="$2"; shift 2 ;;
     --user-data-dir) USER_DATA_DIR="$2"; shift 2 ;;
     --check) CHECK_ONLY=1; shift ;;
-    -h|--help) sed -n '2,38p' "${BASH_SOURCE[0]}"; exit 0 ;;
+    -h|--help) sed -n '2,36p' "${BASH_SOURCE[0]}"; exit 0 ;;
     *) echo "unknown argument: $1" >&2; exit 2 ;;
   esac
 done
@@ -121,6 +121,10 @@ echo "Factorio $VERSION at $FACTORIO_APP"
 mkdir -p "$WORK/mods"
 printf '{"mods":[{"name":"base","enabled":true}]}\n' > "$WORK/mods/mod-list.json"
 
+# Recorded before launching Factorio, so the dump file found below can be proven to be one
+# this run actually wrote, rather than a stale one left over from an earlier capture.
+DUMP_START="$(date +%s)"
+
 echo "Dumping data.raw (mods disabled)..."
 DUMP_LOG="$WORK/dump.log"
 if ! "$BIN" --dump-data --mod-directory "$WORK/mods" > "$DUMP_LOG" 2>&1; then
@@ -146,6 +150,20 @@ fi
 DUMP="$USER_DATA_DIR/script-output/data-raw-dump.json"
 if [[ ! -f "$DUMP" ]]; then
   echo "Could not find data-raw-dump.json. Pass --user-data-dir <path>." >&2
+  exit 1
+fi
+
+# A dump whose modification time predates this run was not written by the --dump-data call
+# above - it is left over from some earlier capture, possibly of a different Factorio version,
+# sitting in a directory this run happened to search. Trimming it anyway would silently stamp
+# stale prototype data with the version string of the game that just ran, which is exactly the
+# silent pass this tool exists to prevent. BSD stat (macOS) and GNU stat (Linux) take the
+# modification time differently, hence the fallback.
+DUMP_MTIME="$(stat -f %m "$DUMP" 2>/dev/null || stat -c %Y "$DUMP")"
+if [[ "$DUMP_MTIME" -lt "$DUMP_START" ]]; then
+  echo "Found $DUMP, but its modification time predates this run." >&2
+  echo "It looks like a stale dump left over from an earlier capture, not one this run wrote." >&2
+  echo "Delete it and re-run, or pass --user-data-dir to point at the directory this run used." >&2
   exit 1
 fi
 

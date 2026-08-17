@@ -2682,6 +2682,49 @@ and a capture that loses precision still looks fine - so this is a test."
 
 One consistency note for the implementer: Task 11's tests construct `ProbeSpec` with struct literal syntax, so every field added to `ProbeSpec` in Task 5 must appear there. If a field is added later, those tests break at compile time, which is the intended behaviour.
 
+## Corrections found while executing this plan
+
+Executed 2026-08-17. All twelve tasks are built, and the result was then run
+against a real 2.1.14 install for the first time.
+
+**The task bodies above are left as written.** They are the record of what was
+planned, not a description of the code. Three of them contain a wrong premise, and
+anyone re-reading or re-running this plan needs to know which:
+
+1. **Task 9 and Task 11 read the sentinel off stderr.** Factorio writes nothing to
+   stderr. A `create` run whose control script calls `error("DUMPED-OK")` prints
+   the whole Lua traceback to stdout and leaves stderr at zero bytes, and the same
+   held for a data-stage error and an unknown command line flag. Check both
+   streams, and read stdout first.
+
+2. **Task 10's fake game writes the sentinel to stderr.** This is the reason the
+   defect above survived. Sixty unit tests agreed with the bug, because the fake
+   made the same wrong assumption the code did. The fake now matches the
+   measurement. A fake that cannot be wrong the way the real thing is wrong is not
+   testing much.
+
+3. **Task 7's `build_mod_list` docstring says naming only `base` leaves only base
+   enabled.** It does not. Factorio rewrites `mod-list.json` and adds back every
+   bundled mod the file omits, with `enabled: true`. An explicit `enabled: false`
+   is honoured, so the spec grew a `disable_mods` list. The default stays "load
+   what a default install loads", because that is what the committed fixtures were
+   captured against.
+
+Two additions the plan did not call for, both justified by the above:
+
+- **`seed` and `map_gen_settings` on `ProbeSpec`.** Task 11 hardcoded
+  `{"seed": 123456}` in `main`, so every `create` run made the same map and a
+  consumer had no way to change it. Resolving both in one place is what keeps the
+  settings file and `--map-gen-seed` from disagreeing.
+- **`tests/real_game.rs`.** The spec always called for one integration test behind
+  an install check; it is what found all three defects, and it runs in under two
+  seconds.
+
+**For Plan 2:** the acceptance test compares against a fixture captured with the
+full bundled mod set. Now that `disable_mods` exists, a run that sets it produces a
+legitimately different dump. The byte-for-byte comparison is only meaningful
+against the default.
+
 ## Execution Handoff
 
 Plan complete. Two execution options:

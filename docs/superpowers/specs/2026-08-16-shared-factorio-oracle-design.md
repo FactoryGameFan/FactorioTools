@@ -284,10 +284,23 @@ a regression. The best failure message pairs the tail with the derived
 `factorio_version` and the binary's own version line, because a mismatch between
 them is the most common cause of an empty dump.
 
-`sentinelSeen` reports whether `DUMPED-OK` appeared in stderr. Seventeen probes
-share that convention and nothing checks it, so it cannot currently distinguish
-"the mod ran and finished" from "the mod crashed". The runner can append the
-`error()` call itself and check for it.
+**Read stdout. Factorio writes nothing to stderr.** Measured 2026-08-17 on 2.1.14
+across three cases: a `create` run whose control script called
+`error("DUMPED-OK")`, a mod with an error in its `data.lua`, and an unknown
+command line flag. All three printed to stdout and left stderr at zero bytes. The
+stderr tail is still worth returning, in case a later version changes its mind,
+but an empty one means nothing on its own.
+
+`sentinelSeen` reports whether `DUMPED-OK` appeared in the game's output.
+Seventeen probes share that convention and nothing checks it, so it cannot
+currently distinguish "the mod ran and finished" from "the mod crashed". The
+runner can append the `error()` call itself and check for it.
+
+That check is worth more than it looks. A `create` run keys success off the dump
+existing, so a probe that writes its dump and then dies on a later line still
+counts as a pass. The sentinel is the only thing that catches it - which is why
+reading it off the wrong stream is worse than not reporting it at all. Reported as
+`false`, it looks like an answer.
 
 ### Guards
 
@@ -304,9 +317,13 @@ share that convention and nothing checks it, so it cannot currently distinguish
   and it is **optional**: `probe-zoom-limits.mjs` deliberately reuses a named
   directory and appends across a session, so a mandatory check would break it.
 
-  One thing to verify during implementation rather than assume: that `--dump-data`
-  honours `write-data` for `script-output`. If it does not, `dump-data` keeps the
-  discovery path and the mtime check is load-bearing for that mode alone.
+  ~~One thing to verify during implementation rather than assume: that
+  `--dump-data` honours `write-data` for `script-output`.~~ **Verified 2026-08-17
+  on 2.1.14: it does.** A `--dump-data` run with an isolated `config.ini` wrote
+  `data-raw-dump.json` and `mod-settings-dump.json` into the scratch directory's
+  own `script-output`, and nothing landed in the shared user data directory. So
+  every mode gets the isolation, and the mtime check is belt and braces
+  everywhere rather than load-bearing anywhere. The whole run took 2.9 seconds.
 - **Contamination. On by default.** Report which mods actually loaded, and fail if
   the set is not the expected one. Mods rewrite prototypes freely, so a capture
   that loads them describes one person's game rather than Factorio - and it looks
@@ -337,6 +354,25 @@ share that convention and nothing checks it, so it cannot currently distinguish
 
   The reported set should include the probe's own throwaway mod - it is proof the
   mod loaded, which is the thing most worth knowing when a run produces no dump.
+
+  **An empty mod directory keeps out user mods, and nothing else.** Measured
+  2026-08-17 on 2.1.14, and it corrects an assumption that had gone unstated:
+  Factorio rewrites `mod-list.json` during startup and adds back every mod bundled
+  with the install that the file does not mention, with `enabled: true`. A file
+  naming only `base` came back naming base, elevated-rails, quality, recycler and
+  space-age, and all five loaded. **Omission means enabled.**
+
+  A control arm proved both halves in one run: elevated-rails, quality and
+  space-age were listed with `enabled: false` and stayed out of the load order,
+  while recycler, left unmentioned in the same file, was added and loaded. So an
+  explicit `enabled: false` is honoured, and naming a mod is the only way to get a
+  smaller game than the install ships with.
+
+  Loading the full bundled set is the right default, because that is what the
+  consumers' committed fixtures were captured against - FactorioTools' fixture
+  records exactly those six, counting `core`. The point is that it should be a
+  decision rather than a side effect, and that "the mod directory is empty" must
+  not be read as "only base is loaded".
 - **Binary exists** before spawning.
 - **Large output buffer** always, so a big dump cannot truncate the diagnostic.
 
@@ -527,10 +563,26 @@ Mirror the split MapWebUI already proves works. The pure builders - `info.json`,
 control-Lua assembly, `config.ini`, the argv vector, dump parsing, provenance
 serialisation - are unit-tested with no Factorio present. The spawn boundary is
 injectable, so a fake can assert the argv, write the dump the real game would have
-written, and return a non-zero exit with `DUMPED-OK` on stderr.
+written, and return a non-zero exit with `DUMPED-OK` on **stdout**, which is where
+the game puts it.
 
-One integration test runs only when an install is found. CI stays offline, matching
-all four consumers.
+**Make the fake wrong in the same way the real game is, or the tests confirm the
+bug.** The first version of the fake wrote the sentinel to stderr because the
+design said stderr. Sixty unit tests passed against a `sentinelSeen` check that
+was false on every real run. The fake had made the mistake unfalsifiable.
+
+**The integration test that runs only when an install is found is not optional.**
+It caught three defects that the full unit suite passed: the sentinel read off the
+wrong stream, a `mod-list.json` believed to load only `base`, and a seed hardcoded
+in `main` so a spec's value went nowhere. It skips itself when no install is
+present, so CI stays offline, matching all four consumers. Against 2.1.14 it runs
+in under two seconds, which is cheap enough that there is no argument for
+skipping it locally.
+
+Assert on things only a running game can answer: `defines.direction.east` is 4 and
+came from the game rather than a docs index; the seed the spec asked for came back
+off the surface; a consumer literal survived the trip into Lua; the probe's own mod
+appears in the active-mods report, which is the proof it loaded at all.
 
 ## Repo setup
 
@@ -704,3 +756,33 @@ Settled, and not worth relitigating without new information:
 - Read factorio-data at a tag; never move `HEAD` in a shared clone.
 - Provenance beside the fixtures, with an evidence grade and an `unknown` ratchet.
 - Migration is new probes only.
+- Read the game's output from stdout. Measured: stderr is always empty.
+- Omission in `mod-list.json` means enabled, so a mod is only kept out by naming
+  it with `enabled: false`.
+- One `seed` field on the spec, delivered through both channels.
+
+## What the first real run corrected
+
+Build-order steps 1 to 3 were implemented, and then run against a real 2.1.14
+install for the first time. Three things this document asserted turned out to be
+wrong. All three had passed sixty unit tests.
+
+1. **The sentinel is on stdout, not stderr.** Factorio writes nothing to stderr at
+   all, in any of the three cases tried. `sentinelSeen` was therefore false on
+   every real run.
+2. **A `mod-list.json` naming only `base` does not give a base-only game.** The
+   game adds back every bundled mod the file omits, enabled.
+3. **The seed was hardcoded in `main`.** The design called for one `seed` field
+   feeding both channels, and the field did not exist, so every `create` run
+   generated the same map.
+
+Two of the three were invisible to the unit tests by construction, because the
+fake game encoded the same wrong belief the code did. That is the lesson worth
+carrying into the remaining plans: a fake can only be wrong in the ways its author
+already considered, so any claim about what the game does has to be settled by
+running it. The tool's own premise, which is that the game is the only authority,
+applies to the tool.
+
+Three claims did survive contact and are now measured rather than assumed:
+`--dump-data` honours `write-data` for `script-output`; `--create` runs with no
+settings file; and a seed given once reaches the surface intact.

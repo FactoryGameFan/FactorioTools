@@ -41,9 +41,49 @@ public class ParseBlueprintTest : BaseTest
         Assert.Equal(expected, ParseBlueprint.ToInternalDirection((Direction)raw, version));
     }
 
+    /// <summary>
+    /// A 2.1.14-stamped blueprint holding one east-facing pumpjack (direction 4) and two rails
+    /// at 2.x diagonal directions (2 and 14), which no pumpjack could ever have.
+    /// </summary>
+    private const string PumpjackWithDiagonalRails = "0eNqN0N0KwiAUB/B3OdcW6j4gXyUi3HZY1nSiLhrDd29zEI110dVRz/F34D9B1Q1onTIBxASq7o0HcZ5PpsEXCEbAq9bIbukaqREE2EHbu6wfQCCMdnlRATXEeCGAJqigcDXSZbyaQVfokrUXbO/nD71Z/HkfPRYExlQjgUY5rNduHskO5B/QBydVewuHuXR7ldGEMro1+Q8z+9vkq8m3JsuXGFIg4itbAk90Pk0UJT8VOc9PGS0Zy2J8A6LMfy4=";
+
+    [Fact]
+    public void LeavesTheDirectionOfEntitiesThatAreNotPumpjacksAlone()
+    {
+        var blueprint = ParseBlueprint.Execute(PumpjackWithDiagonalRails);
+
+        Assert.Collection(
+            blueprint.Entities,
+            // Converted, because the planner reads this one.
+            e =>
+            {
+                Assert.Equal(EntityNames.Vanilla.Pumpjack, e.Name);
+                Assert.Equal(Direction.Right, e.Direction);
+            },
+            // Untouched. Halving these would reject them, and the blueprint with them.
+            e =>
+            {
+                Assert.Equal("straight-rail", e.Name);
+                Assert.Equal(2, (int)e.Direction!.Value);
+            },
+            e =>
+            {
+                Assert.Equal("straight-rail", e.Name);
+                Assert.Equal(14, (int)e.Direction!.Value);
+            });
+    }
+
     [Theory]
-    [InlineData(2)]   // northeast in 2.x, not a cardinal
-    [InlineData(6)]   // southeast in 2.x, not a cardinal
+    [InlineData(2)]    // northeast in 2.x, not a cardinal
+    [InlineData(6)]    // southeast in 2.x, not a cardinal
+    [InlineData(10)]   // southwest in 2.x, not a cardinal
+    [InlineData(14)]   // northwest in 2.x, not a cardinal
+    // Odd values are malformed. Halving them would round down to a cardinal, so a pumpjack
+    // would come out silently rotated instead of the blueprint being rejected.
+    [InlineData(1)]
+    [InlineData(5)]
+    [InlineData(9)]
+    [InlineData(13)]
     public void RejectsDirectionsAPumpjackCannotHave(int raw)
     {
         var ex = Assert.Throws<FactorioToolsException>(

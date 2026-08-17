@@ -33,7 +33,19 @@ public static class ParseBlueprint
     public static Direction ToInternalDirection(Direction direction, ulong version)
     {
         var raw = (int)direction;
-        var internalValue = version == 0 || version >= FirstSixteenWayVersion ? raw / 2 : raw;
+        var internalValue = raw;
+
+        if (version == 0 || version >= FirstSixteenWayVersion)
+        {
+            // Halving turns a 16-way value into an internal one, but only for even values.
+            // Integer division would quietly round an odd value down to the cardinal below it
+            // - 1 to Up, 13 to Left - so leave odd values alone and let the check below reject
+            // them, the same way it rejects the even non-cardinals 2, 6, 10 and 14.
+            if (raw % 2 == 0)
+            {
+                internalValue = raw / 2;
+            }
+        }
 
         if (internalValue != (int)Direction.Up
             && internalValue != (int)Direction.Right
@@ -123,7 +135,13 @@ public static class ParseBlueprint
         for (var i = 0; i < root.Blueprint.Entities.Length; i++)
         {
             var entity = root.Blueprint.Entities[i];
-            if (entity.Direction.HasValue)
+
+            // Only pumpjack directions are converted, because only pumpjack directions are read
+            // downstream - InitializeContext and CleanBlueprint both keep the pumpjacks and
+            // discard every other entity. Converting the rest would also reject any blueprint
+            // holding a diagonal entity, such as a rail at 2.x direction 2, 6, 10 or 14, which
+            // parsed fine before.
+            if (entity.Direction.HasValue && entity.Name == EntityNames.Vanilla.Pumpjack)
             {
                 entity.Direction = ToInternalDirection(entity.Direction.Value, root.Blueprint.Version);
             }

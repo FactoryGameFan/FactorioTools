@@ -661,7 +661,10 @@ public class PlannerIssueTest : BasePlannerTest
         var options = OilFieldOptions.ForMediumElectricPole;
         options.ValidateSolution = true;
         options.PipeStrategies = new List<PipeStrategy> { PipeStrategy.FbeOriginal };
-        var blueprintString = "0eNqN1dtuhCAQBuB3mWsuZAAFX6VpNnsgDe3KGg9NNxvfvSq9aLsk/JcifgwOf3jQ6Tr7fghxovZB4XyLI7UvDxrDWzxet7F47Dy11M9d/348f5Cg6d5vI2HyHS2CQrz4L2rl8irIxylMwSdjf7gf4tyd/LBOEBmrv43rB7e4rbQiigXd16lqdS9h8Of0rlrEE8cAJ+vE1WVOARw3ibNlTiOcTpwrcwbZrNs5rspcjbQiVceyzDXIZlNnmf9yOsNZhHNZLledQ/6dTZwqVycrxDPJM+XypMSPCuQhweAqeUAwJJIMJZPXAB4SjW3RzbNAP5Bs8I8HRE0i4WCLew1+XhQQNmnx/ap/8bA5D8kH11kv1w+ucE8/xXe9Q/Z7pf11MQn69MO4TzA1O+2cMUZaXetl+Qa0MDUU";
+        // Big-list index 827. The blueprint that used to sit here stopped reaching this fallback once the
+        // Factorio 2.1 terminal offsets moved the east and west pipe corners, so it was replaced with a field
+        // that still does. Found by making this branch throw and scanning both corpus lists for the hit.
+        var blueprintString = "0eJyU1MFuwyAMANB/8ZlDIEADvzJNU5qiia4hKCHTooh/H4HLqrbCOwLmAcL2DufbavxsXQC9gx0mt4B+22Gxn66/HXOuHw1o8Ovor/3wBQTC5o8ZG8wIkYB1F/MDmsZ3AsYFG6wpRh5sH24dz2ZOAeSJ5aclbZjccVJCGCOwge4Se7GzGcpSE8mDxhAaFVlTda3FaAqrcYx2yhpl9xx/wgkMxwvX1m8nEVx5KuV17YT51RbNdRiuKZyscwrBdUVD5Bxt/vGxGA9VEuW1rEF4qKKQxaP1xKOYsiipwhCJR1F10b7wUnfJHUf/aVkEvs285AAhmeJKCSFoxyWP8RcAAP//AwC8p5dm";
 
         var blueprint = ParseBlueprint.Execute(blueprintString);
 

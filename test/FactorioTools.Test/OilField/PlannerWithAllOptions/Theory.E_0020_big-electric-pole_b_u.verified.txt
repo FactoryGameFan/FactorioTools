@@ -15,10 +15,10 @@ S CC-FLUTE -> snug (effects: 3, beacons: 2, pipes: 8)
   CC-FLUTE -> optimize -> FBE* (effects: 2, beacons: 1, pipes: 8)
 S CC-FLUTE -> optimize -> snug (effects: 3, beacons: 2, pipes: 8)
 
-. . . j j j + o . . . 
-. . . j J j . ^ . . . 
 . . . j j j . . . . . 
-. . . . E e . . . . . 
+. . . j J j . . . . . 
+. . . j j j + o . . . 
+. . . . E e . ^ . . . 
 . . . . e e . . . . . 
 b b b . . . . . . . . 
 b B b . . . . . j j j 

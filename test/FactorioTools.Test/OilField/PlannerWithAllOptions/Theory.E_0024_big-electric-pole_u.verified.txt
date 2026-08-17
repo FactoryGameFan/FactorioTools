@@ -1,27 +1,27 @@
-﻿A FBE* (pipes: 13)
-A FBE* -> optimize (pipes: 13)
-  CC-DT (pipes: 14)
-S CC-DT -> optimize (pipes: 13)
-  CC-DT-MST (pipes: 14)
-S CC-DT-MST -> optimize (pipes: 13)
-  CC-FLUTE (pipes: 14)
-S CC-FLUTE -> optimize (pipes: 13)
+﻿S FBE* (pipes: 9)
+  FBE* -> optimize (pipes: 14)
+  CC-DT (pipes: 12)
+  CC-DT -> optimize (pipes: 12)
+  CC-DT-MST (pipes: 12)
+  CC-DT-MST -> optimize (pipes: 12)
+  CC-FLUTE (pipes: 12)
+  CC-FLUTE -> optimize (pipes: 12)
 
-j j j + o o . . . . . . . . . . . . . 
-j J j E e ^ . . . . . . . . . . . . . 
-j j j e e . j j j . . . . . . . . . . 
-. . . . . v j J j . . . . . . . . . . 
-. . . . . + j j j . . . . . . . . . . 
-. . . . . o < E e . . . . . . . > o o 
-. . . . . . . e e . . . . . . . . . ^ 
+j j j . . . . . . . . . . . . . . . . 
+j J j . . . . . . . . . . . . . . . . 
+j j j + o + j j j . . . . . . . . . . 
+. E e ^ . . j J j . . . . . . . . . . 
+. e e . . . j j j . . . . . . . . . . 
+. . . . . . . E e . . . . . . . . . . 
+. . . . . . . e e . . . . . . . . . . 
 . . . . . . . . . . . . . . . . . . . 
 . . . . . . . . . . . . . . . . . . . 
 . . . . . . . . . . . . . . . . . . . 
 . . . . . . . . . . . . . . . . . . . 
 . . . . . . . . . . . . . . . . . . . 
 . . . . . . . . . . . . . . . . . . . 
-. . . . . . . . . . . . . . . . . . v 
-. . . . . . . . . . . . . . . . j j j 
+. . . v . . . . . . . . . . . . . . . 
+. . . o < . . . . . . . . . > + j j j 
 . . . . . . . . . . . . . . . . j J j 
 . . . . . . . . . . . . . . . . j j j 
 . . . . . . . . . . . . . . . . . E e 

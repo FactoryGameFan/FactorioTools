@@ -23,8 +23,8 @@ b b b X X X X X X X b b b .
 b B b X X . . X X X b B b . 
 b b b X X j j j X X b b b . 
 . . . X X j J j . X . . . . 
-b b b X X j j j . . b b b . 
-b B b . E + . . . . b B b E 
+b b b X X j j j + . b b b . 
+b B b . E . . . . . b B b E 
 b b b . . . . . . X b b b . 
 b b b b b b . b b b b b b . 
 b B b b B b . b B b b B b . 

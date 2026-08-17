@@ -73,6 +73,45 @@ public class FactorioOracleTest : BaseTest
         Assert.True(missing.Count == 0, $"Not a Factorio module: {string.Join(", ", missing)}. {ReCaptureHint}");
     }
 
+    /// <summary>
+    /// Helpers.TerminalOffsets says which tile a pumpjack's pipe occupies, one entry per rotation. The
+    /// fixture records the prototype's output_fluid_box.pipe_connections positions, also one per rotation
+    /// in north, east, south, west order. Those are two different things: the position is the connection
+    /// point inside the entity, and the pipe sits one tile further out in the direction the entity faces.
+    ///
+    /// The step-one-tile-outward rule linking them is measured rather than assumed. A probe mod read
+    /// PipeConnection.target_position - the tile the connecting pipe actually occupies - out of two running
+    /// games, and the rule reproduced the game's answer on both 2.0.77 and 2.1.14. Reproducing the older
+    /// version, whose numbers the planner already had, is what makes it trustworthy about the newer one.
+    ///
+    /// Factorio 2.1 gave each rotation its own output corner where 2.0 had east reuse north's and west
+    /// reuse south's (FFF #442), which is why the east and west offsets moved. See issue #81.
+    /// </summary>
+    [Theory]
+    [InlineData(0, Direction.Up, 0, -1)]
+    [InlineData(1, Direction.Right, 1, 0)]
+    [InlineData(2, Direction.Down, 0, 1)]
+    [InlineData(3, Direction.Left, -1, 0)]
+    public void TerminalOffsetsMatchTheFactorioOutputCorners(int rotation, Direction direction, int stepX, int stepY)
+    {
+        var positions = Oracle()
+            .GetProperty("entities")
+            .GetProperty(EntityNames.Vanilla.Pumpjack)
+            .GetProperty("output_fluid_box")
+            .GetProperty("pipe_connections")[0]
+            .GetProperty("positions");
+
+        var position = Coordinates(positions[rotation]);
+        var expected = new Location((int)position[0] + stepX, (int)position[1] + stepY);
+
+        var actual = Helpers.TerminalOffsets.Single(x => x.Item1 == direction).Item2;
+
+        Assert.True(
+            expected == actual,
+            $"Factorio puts the {direction} pumpjack's pipe at {expected}, but Helpers.TerminalOffsets says "
+            + $"{actual}. Every plan would attach the pipe to the wrong corner. {ReCaptureHint}");
+    }
+
     [Theory]
     [InlineData(Direction.Up, "north")]
     [InlineData(Direction.Right, "east")]

@@ -410,3 +410,7 @@ pump_2.2.0.zip
 
 # Wrangler local dev state (Cloudflare Pages/Workers CLI cache, incl. miniflare)
 .wrangler/
+
+# Subagent-driven-development scratch: per-plan ledgers, task briefs, review
+# packages. Working state for an in-flight plan, not a record - git history is.
+.superpowers/

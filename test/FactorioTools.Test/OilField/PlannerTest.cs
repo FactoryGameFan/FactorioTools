@@ -9,9 +9,9 @@ public class PlannerTest : BasePlannerTest
 
     public static IReadOnlyList<string> BlueprintsWithIsolatedAreas = new[]
     {
-        "0eJyU1ctugzAQheF3mbUXeGwg8CpVVRFiVW6Dg7hURYh3L2BX6sUSh2WI82Xi8OOZrvfRtJ11A5Uz2frheiqfZurtq6vu2zVXNYZKasemfavqdxI0TO12xQ6moUWQdTfzSaVcngUZN9jBGm/sL6YXNzZX060LRMRqH/36gYfbvmlFWAua1qVqdW+2M7V/L1nEP44BTjHMKYTLYU4jXOK57DfHES49MR3AZQAnA5cf/9gc4HTmucsxd0FulDBdccwVyN4pmJMJsnne4wTwTnTBEvCgMBLcO1EGM+AhaXCYDyhNIm2E24U14CFxfO+fPm5NInUojc+H5KHj80U9pA+Nz8dIHxz6AB4ujPShiqgX+z8Y6YPT3VNAHwz1wbgHHR3+aarSv956Bu/ncvnjYBf0Ybo+LFi+AAAA//8DAEf3mj4=",
-        "0eJyM1ctuhCAUBuB3OWsWcvD+Kk0zcRzS0I6M8dLUGN+9KCzaGRL/pYifh8sPK13vs+4HYyeqVzLtw45Uv600mg/b3Pc223Saaurnrv9s2i8SNC393mIm3dEmyNib/qFabu+CtJ3MZLQ3joflYufuqgfXQUSs/jG6Dx52/5NDFAtaXFfl3JsZdOvfJZt44RjgZO65/JxTAMeF58pzLkW41HPVOZchg60OjpNzLkeWwlfH8pwrkMH6lWX+z6URrkS4LMrFqqsQroI5mSBrUXrvaR9zzENyIcNwM6A+JBhh6z170fqgZCTeA4ImoWgUuIdkQ0nvFYCHhGOflN0rgfmD0hE84CiQUDxK3EPyEfafAg4DRvIRxquA04CRfHAe9WLrwVA+vJe+nAfujjvuvfrPxSnoWw9j6LD9AgAA//8DAGH8ZjU=",
-        "0eJyUl11vgjAUQP9Ln3mgvS0If2VZFj+ahW0iEVxmDP99aGsyJwmnjyIe29577r29qM3XyXfHph1UfVHN9tD2qn65qL55b9df12fteu9VrbrTvvtYbz9VpoZzd33SDH6vxkw17c7/qFqPr5ny7dAMjQ+M24fzW3vab/xxeiGbYXWHfvrBob3+0wSRIlPn6VWZuLvm6Lfhu3zMnnCG40y+jBOC0wGnl3EW4EzEmWWcIzgbcODsCoIrA84u48qEUADcKuHs3CPOzuCqhMi65dXpHPB03G0BeMSLezDKR56Z4xExjATeCqyPmGGqG0+AaJqoIcJ5yI0QX9Hg/JAcLvCAa5rYYUzgkXwhesR8RjzkR8g/KUFdJn7E/JMK8BL6hs2X42sS/LCkDyE/Qr5Ysl/kh+Y84keMrwO+GeJHrH8OdEqD/NCcR/ywkUfiS/yIvdeB/iHIjxXnIT8S1kf80HF9oL5IwmTlQH2RhNHKgf4mqH+Us7y5+iLED6n4+pAfMb6gHgjxQ4d6VZDBGfWPfJY3d36W+BHzmazPJsxXxb/6MjdO2oT+UYD6YokfOvLA9GyRH6E+F8BfS/y45wvw16L5Ku73yY/pjnm7d9Z/Lq6Z+vbHPr4w/gIAAP//AwAiyNgo",
+        "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",
     };
 
     public static IEnumerable<object[]> BlueprintsWithIsolatedAreasIndexes = Enumerable
@@ -471,7 +471,7 @@ public class PlannerTest : BasePlannerTest
         // Arrange
         var options = OilFieldOptions.ForMediumElectricPole;
         options.ValidateSolution = true;
-        var blueprintString = "0eJyU1M1ugzAMB/B38TkH8sGgeZWqmii1pmwlRBCmIcS7L9QcNhUp7pFgfhiSvxe43icMg/MR7AKu7f0I9rzA6D58c9/WfNMhWAhTFz6b9gsExDlsKy5iB6sA52/4A1auFwHoo4sOyXhczO9+6q44pAJxYIV+TA/0fntTQowRMKdSndybG7Cle8UqnjjF4WriTJ7TDK6UxNV5zjA4Rd2pIs+VDE7unMxzbwxOK+IYW1FxuquIq/JczeE0cYytOHE4Onda5TlZ8L+W5XFyoUu+xwoG/T7NCIbkJEPu/ZX/PXXkcaKh5aF32N8L2TBPhznNrMccs38GoYBvHMa9YP0FAAD//wMAiTWvrw==";
+        var blueprintString = "0eNqV1EtugzAQBuC7zNoL/OLhq1RVRYgVuQ0GgamKkO9ew2SRKkieLjHDx4D9zwaX+2LHyfkAZgPXDX4G87bB7G6+ve9rvu0tGBiXfvxsuy9gENZxX3HB9hAZOH+1P2B4fGdgfXDBWTSOi/XDL/3FTqmAnVjjMKcHBr+/KSFKMVhTqUzu1U22w3tFZC+coHA1cirPSQKnOXJ1nlMETmB3oshzmsDxB8fzXEngpECOsBUVpbsKuSrP1RROIkfYiobC4bmTIs/xgv61JI+SC6npHikY+PskIRickgz+6E//9dSZR4mG5KfeaX//yIZ6OcxpZh1zzDwNQgbfdpqPAl2KRjWN1prXqlQx/gI1j7Kj";
         var blueprint = ParseBlueprint.Execute(blueprintString);
 
         // Act

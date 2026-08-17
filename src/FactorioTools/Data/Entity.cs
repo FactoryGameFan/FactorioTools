@@ -17,6 +17,13 @@ public class Entity
     [JsonPropertyName("direction")]
     public Direction? Direction { get; set; }
 
+    // Factorio 2.1.7 added pumpjack and burner mining drill flipping, and a flipped entity
+    // carries "mirror": true (confirmed by round-tripping a blueprint through 2.1.14).
+    // Parsed so the flag is not silently lost. The planner re-chooses every pumpjack
+    // orientation itself, so nothing reads this and it is never emitted.
+    [JsonPropertyName("mirror")]
+    public bool? Mirror { get; set; }
+
     // Either a Dictionary<string, int> (Factorio 1.1 "items" object) or a List<ModuleInsertPlan> (Factorio 2.0 "items"
     // array). The shape is handled by EntityItemsConverter in the serialization project so the core library stays free
     // of serialization logic. See GridToBlueprintString for how each version is produced.

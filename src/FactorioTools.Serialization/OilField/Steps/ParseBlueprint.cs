@@ -10,6 +10,56 @@ namespace Knapcode.FactorioTools.OilField;
 
 public static class ParseBlueprint
 {
+    /// <summary>
+    /// The blueprint version at which Factorio widened directions from 8-way to 16-way.
+    /// GridToBlueprintString.FormatVersion(2, 0, 0, 0). Confirmed against a real 2.1.14
+    /// export, whose version is 562954249306113 (2.1.14.1).
+    /// </summary>
+    private const ulong FirstSixteenWayVersion = 562949953421312UL;
+
+    /// <summary>
+    /// Converts a blueprint's direction to the internal 1.1-style four-way
+    /// <see cref="Direction"/> (N=0, E=2, S=4, W=6).
+    ///
+    /// Factorio 2.0 widened directions to 16-way (N=0, E=4, S=8, W=12). The old values are
+    /// still legal, so a 2.x east read as 1.1 is not an error, it is a silently rotated
+    /// pumpjack. Sniffing the values cannot resolve it either: a blueprint whose directions
+    /// are all in {0, 4} is valid under both readings with different meanings. The version
+    /// is the only sound signal.
+    ///
+    /// A missing or zero version is treated as modern, because that is what users paste
+    /// today. The trade-off is spelled out in the design doc.
+    /// </summary>
+    public static Direction ToInternalDirection(Direction direction, ulong version)
+    {
+        var raw = (int)direction;
+        var internalValue = raw;
+
+        if (version == 0 || version >= FirstSixteenWayVersion)
+        {
+            // Halving turns a 16-way value into an internal one, but only for even values.
+            // Integer division would quietly round an odd value down to the cardinal below it
+            // - 1 to Up, 13 to Left - so leave odd values alone and let the check below reject
+            // them, the same way it rejects the even non-cardinals 2, 6, 10 and 14.
+            if (raw % 2 == 0)
+            {
+                internalValue = raw / 2;
+            }
+        }
+
+        if (internalValue != (int)Direction.Up
+            && internalValue != (int)Direction.Right
+            && internalValue != (int)Direction.Down
+            && internalValue != (int)Direction.Left)
+        {
+            throw new FactorioToolsException(
+                $"Blueprint direction {raw} is not one of the four directions a pumpjack can face.",
+                badInput: true);
+        }
+
+        return (Direction)internalValue;
+    }
+
     public static List<string> ReadBlueprintFile(string fileName)
     {
         return File
@@ -80,6 +130,21 @@ public static class ParseBlueprint
         if (root.Blueprint is null)
         {
             throw new FactorioToolsException("No blueprint was found in the deserialized JSON.", badInput: true);
+        }
+
+        for (var i = 0; i < root.Blueprint.Entities.Length; i++)
+        {
+            var entity = root.Blueprint.Entities[i];
+
+            // Only pumpjack directions are converted, because only pumpjack directions are read
+            // downstream - InitializeContext and CleanBlueprint both keep the pumpjacks and
+            // discard every other entity. Converting the rest would also reject any blueprint
+            // holding a diagonal entity, such as a rail at 2.x direction 2, 6, 10 or 14, which
+            // parsed fine before.
+            if (entity.Direction.HasValue && entity.Name == EntityNames.Vanilla.Pumpjack)
+            {
+                entity.Direction = ToInternalDirection(entity.Direction.Value, root.Blueprint.Version);
+            }
         }
 
         return root.Blueprint;

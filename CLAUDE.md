@@ -107,7 +107,16 @@ The `transpile-lua` CI job runs that script, fails if the committed `src/lua` no
 
 - Avoid C# constructs the existing code avoids in hot paths under Lua settings: `yield return`, LINQ, named tuples, try/catch, and struct dictionary keys have all been removed for Lua performance. LINQ is worse than a perf problem: `CoreSystem.lua` does not load `Collections.Linq`, so `Invoke-LuaBuild.ps1` never copies `Linq.lua` and LINQ transpiles into calls on a module that was never shipped - a runtime failure inside Factorio, not a build error.
 - Keep control flow deterministic: Factorio modifies `pairs()` and `math.random()` for determinism, so prefer simple, stable iteration and avoid order-dependent assumptions.
-- Syntax-check generated Lua with `for f in src/lua/**/*.lua; luac5.2 -p $f; end` (fish). `luac5.2`/`lua5.2` only validate syntax, not Factorio runtime APIs.
+### Checking the generated Lua locally
+
+Run `tools/check-lua.sh`. It does exactly what the `transpile-lua` CI job does, against the same Lua version, in Docker:
+
+1. syntax-checks every generated file with `luac` 5.2.4
+2. runs `sample.lua`, which is the step that actually matters
+
+Those two are not redundant. LINQ transpiles cleanly *and* parses cleanly - it emits `local Linq = System.Linq.Enumerable`, which is nil because `Collections.Linq` is not in the CoreSystem load list. It only fails when the module loads (`attempt to index field 'Linq'`), so the check has to run the planner, not just parse it. That takes well under a second.
+
+Use the script rather than your own `luac`. Homebrew no longer ships Lua 5.2, so a Mac checkout typically has 5.4 or newer, and parsing 5.2-targeted code with a 5.5 parser proves very little. The image (`nickblah/lua:5.2-alpine`, ~11MB) is Lua 5.2.4 - the exact version the performance log above was measured against. Needs Docker (OrbStack or Docker Desktop); regenerate first with `pwsh src/lua/Invoke-LuaBuild.ps1` if you changed the core.
 
 ### Factorio reference
 
@@ -116,6 +125,44 @@ The `transpile-lua` CI job runs that script, fails if the committed `src/lua` no
 - Libraries/functions Factorio adds or modifies (incl. `require()` restrictions): <https://lua-api.factorio.com/latest/auxiliary/libraries.html>
 - Lua 5.2 manual: <https://www.lua.org/manual/5.2/>
 - Prefer official Factorio docs over forum/blog/wiki advice when changing runtime behavior.
+
+### The Factorio oracle (re-capture after a game update)
+
+The planner hardcodes entity names, item names, direction values, and entity sizes. When Factorio changes any of those, nothing here notices - plans keep generating, they are just wrong. Factorio 2.0 renamed `effectivity-module-N` to `efficiency-module-N` and widened directions from 8-way to 16-way, and both went unnoticed for a long time.
+
+So don't trust memory or the wiki. The game is the only authority on what the game accepts, and it ships four machine-readable sources:
+
+| Source | Answers |
+| --- | --- |
+| `factorio --dump-data` | Every prototype: names, collision boxes, pipe connections, pole supply and wire reach, beacon stats |
+| `data/*/migrations/*.json` | Every rename, as a table. This is a complete list, not a guess |
+| `doc-html/runtime-api.json` | `defines.*` values, version-stamped to the install |
+| `data/changelog.txt` | Behavior changes per patch |
+
+`tools/capture-factorio-oracle.sh` pulls all four into `test/FactorioTools.Test/OilField/factorio-oracle.json`:
+
+```bash
+tools/capture-factorio-oracle.sh                        # auto-detects a Steam or /Applications install
+tools/capture-factorio-oracle.sh --check                # report drift, change nothing, exit 1 on mismatch
+tools/capture-factorio-oracle.sh --factorio /path/to/factorio.app
+```
+
+Notes on using it:
+
+- **The committed fixture targets the experimental branch**, currently 2.1.14, not stable. That is deliberate: the bug reports come from 2.1 and that is where the game is heading. `captureInfo.factorioVersion` in the fixture records which build it came from.
+- **Stable and experimental are not identical.** Comparing 2.0.77 stable against 2.1.14 experimental, everything the planner reads is byte-identical except one thing: the pumpjack's output fluid box went from 2 distinct corners to 4, one per rotation (FFF #442). That difference may mean the hardcoded terminal offsets in `Helpers.cs` are wrong for 2.1 - see issue #81. Capture any second version with `--factorio <path>` and `--out <path>` to compare.
+- **Re-capture after every Factorio update and commit the diff.** A changed fixture is the signal that a hardcoded constant needs review. `--check` answers "has the game moved past what we committed?" without dirtying the tree.
+- **The installed binary is the authority** on which version gets captured. Steam updates it without asking, so it decides and everything else follows. Same convention as `scripts/sync-factorio-refs.sh` in FactorioMapWebUI.
+- **It runs with user mods disabled** (`--mod-directory` pointed at an empty directory). Mods rewrite prototypes freely, so a capture that loads them describes one person's modded game rather than Factorio. The script prints which mods loaded; expect only `core base elevated-rails quality recycler space-age`.
+- **CI never runs the capture** and needs no Factorio install - it reads the committed fixture. That is why the fixture is committed rather than generated on demand.
+- Capture needs `python3` (for JSON trimming) and a Factorio install. Neither is needed to build or test.
+- `EntityNames.AaiIndustry` names come from a mod, so they are deliberately absent from a vanilla capture. That is expected, not drift.
+- Output is deterministic: two captures of the same install are byte-identical.
+
+Two related sources, for when the game binary is not the easiest thing to reach:
+
+- **`wube/factorio-data`** (cloned at `~/GitHub/factorio-data`) is the official prototype source, tagged per version. Its `*/migrations/*.json` files are byte-identical to the installed game's, so renames can be checked with no Factorio install at all. Only the resolved geometry from `--dump-data` genuinely needs the binary.
+- **A throwaway mod is the way to generate blueprint fixtures.** Docs describe prototypes, not what the blueprint exporter writes. A mod whose `on_init` calls `stack.set_blueprint_entities{...}` then `helpers.write_file(name, stack.export_stack())`, run headless via `factorio --create <save> --mod-directory <dir>`, produces a real blueprint string stamped with the real game version. This is how the direction values and the `mirror` field were established rather than assumed. Check runtime API names against `doc-html/runtime-api.json` first - `game.write_file` became `helpers.write_file` in 2.0.
 
 ## Testing notes
 

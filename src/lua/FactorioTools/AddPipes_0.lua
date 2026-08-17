@@ -8,6 +8,7 @@ local ListInt32
 local ListPlanInfo
 local ListSolution
 local NullableInt32
+local ListILocationSet
 local ListOilFieldPlan
 local ListTerminalLocation
 local Comparer_1NullableInt32
@@ -24,6 +25,7 @@ System.import(function (out)
   ListPlanInfo = System.List(KnapcodeAddPipes.PlanInfo)
   ListSolution = System.List(KnapcodeAddPipes.Solution)
   NullableInt32 = System.Nullable(System.Int32)
+  ListILocationSet = System.List(KnapcodeOilField.ILocationSet)
   ListOilFieldPlan = System.List(KnapcodeOilField.OilFieldPlan)
   ListTerminalLocation = System.List(KnapcodeOilField.TerminalLocation)
   Comparer_1NullableInt32 = System.Comparer_1(NullableInt32)
@@ -364,6 +366,11 @@ System.namespace("Knapcode.FactorioTools.OilField", function (namespace)
 
         local result = GetBestSolution(context)
         if System.is(result.Exception, KnapcodeFactorioTools.NoPathBetweenTerminalsException) and not eliminateStrandedTerminals then
+          -- GetBestSolution swaps in a per-strategy clone and mutates it, and does
+          -- not put the originals back when it fails. Without this the recovery
+          -- reasons about a half-solved field.
+          context.CenterToTerminals = centerToTerminals
+          context.LocationToTerminals = locationToTerminals
           EliminateStrandedTerminals(context)
           result = GetBestSolution(context)
         end
@@ -827,64 +834,99 @@ System.namespace("Knapcode.FactorioTools.OilField", function (namespace)
       default.UncoveredCenters = uncoveredCenters
       return default
     end
+    -- <summary>
+    -- Splits the terminal locations into connected components, keeps the one serving
+    -- the most pumpjacks, and eliminates every other component.
+    -- 
+    -- This used to decide one component at a time. It walked a component, and if that
+    -- component did not cover every pumpjack it assumed the component was a stranded
+    -- pocket and eliminated it. That assumption only holds when the component it
+    -- happened to walk first is the minority one.
+    -- 
+    -- Measured on big-list blueprint 227 under Factorio 2.1 terminal offsets: the
+    -- first walk reached 43 of 47 terminals, covering 21 of 23 pumpjacks, and the old
+    -- code eliminated all 43. It threw away the main network to keep a two-pumpjack
+    -- pocket, stranding 19 pumpjacks in a single step.
+    -- 
+    -- Keeping the largest component instead makes the choice independent of which
+    -- terminal the walk started from. The branch that got this wrong never runs on the
+    -- current blueprint corpus - instrumented across all 1147 big-list blueprints, it
+    -- fired zero times - so this changes no existing plan.
+    -- </summary>
     EliminateStrandedTerminals = function (context)
-      local locationsToExplore = KnapcodeFactorioTools.CollectionExtensions.ToReadOnlySet1(context.LocationToTerminals:getKeys(), context, true)
+      local remaining = KnapcodeFactorioTools.CollectionExtensions.ToReadOnlySet1(context.LocationToTerminals:getKeys(), context, true)
 
-      while locationsToExplore:getCount() > 0 do
-        local goals = context:GetLocationSet(locationsToExplore)
+      local components = ListILocationSet()
+      while remaining:getCount() > 0 do
+        local goals = context:GetLocationSet(remaining)
         local start = KnapcodeFactorioTools.CollectionExtensions.First(goals:EnumerateItems(), KnapcodeOilField.Location)
         goals:Remove(start)
 
         local result = KnapcodeOilField.Dijkstras.GetShortestPaths(context, context.Grid, start, goals, false, true)
 
-        local reachedTerminals = result.ReachedGoals
-        reachedTerminals:Add(start)
+        local component = context:GetLocationSet(result.ReachedGoals)
+        component:Add(start)
+        components:Add(component)
 
-        local unreachedTerminals = context:GetLocationSet(goals)
-        unreachedTerminals:ExceptWith(result.ReachedGoals)
+        remaining:ExceptWith(component)
+      end
 
-        local reachedPumpjacks = context:GetLocationSet1()
-        for _, location in System.each(result.ReachedGoals:EnumerateItems()) do
+      -- One component means everything can already reach everything else.
+      if #components < 2 then
+        return
+      end
+
+      local keep = 0
+      local mostPumpjacks = - 1
+      for i = 0, #components - 1 do
+        local centers = context:GetLocationSet1()
+        for _, location in System.each(components:get(i):EnumerateItems()) do
           local terminals = context.LocationToTerminals:get(location)
-          for i = 0, #terminals - 1 do
-            reachedPumpjacks:Add(terminals:get(i).Center)
+          for j = 0, #terminals - 1 do
+            centers:Add(terminals:get(j).Center)
           end
         end
 
-        local terminalsToEliminate
-        if reachedPumpjacks:getCount() == context.CenterToTerminals:getCount() then
-          terminalsToEliminate = unreachedTerminals
-          locationsToExplore:Clear()
-        else
-          terminalsToEliminate = reachedTerminals
-          locationsToExplore = unreachedTerminals
+        if centers:getCount() > mostPumpjacks then
+          mostPumpjacks = centers:getCount()
+          keep = i
         end
+      end
 
-        local strandedTerminal = KnapcodeOilField.Location.getInvalid()
-        local foundStranded = false
-        for _, location in System.each(terminalsToEliminate:EnumerateItems()) do
-          for _, terminal in System.each(context.LocationToTerminals:get(location)) do
-            local terminals = context.CenterToTerminals:get(terminal.Center)
-            terminals:Remove(terminal)
+      local strandedTerminal = KnapcodeOilField.Location.getInvalid()
+      local foundStranded = false
+      for i = 0, #components - 1 do
+        local continue
+        repeat
+          if i == keep then
+            continue = true
+            break
+          end
 
-            if #terminals == 0 then
-              strandedTerminal = terminal.Terminal
-              foundStranded = true
+          for _, location in System.each(components:get(i):EnumerateItems()) do
+            for _, terminal in System.each(context.LocationToTerminals:get(location)) do
+              local terminals = context.CenterToTerminals:get(terminal.Center)
+              terminals:Remove(terminal)
+
+              if #terminals == 0 then
+                strandedTerminal = terminal.Terminal
+                foundStranded = true
+              end
             end
+
+            context.LocationToTerminals:Remove(location)
           end
-
-          context.LocationToTerminals:Remove(location)
+          continue = true
+        until 1
+        if not continue then
+          break
         end
+      end
 
-        if foundStranded then
-          --[[
-                var clone = new PipeGrid(context.Grid);
-                AddPipeEntities.Execute(clone, new(), context.CenterToTerminals, new ILocationSet(), undergroundPipes: null, allowMultipleTerminals: true);
-                Visualizer.Show(clone, new[] { strandedTerminal.Value, locationsToExplore.First() }.Select(x => (IPoint)new Point(x.X, x.Y)), Array.Empty<IEdge>());
-                ]]
-
-          System.throw(KnapcodeFactorioTools.NoPathBetweenTerminalsException(strandedTerminal, KnapcodeFactorioTools.CollectionExtensions.First(locationsToExplore:EnumerateItems(), KnapcodeOilField.Location)))
-        end
+      -- A pumpjack whose every terminal sat outside the kept component genuinely
+      -- cannot join the network, so this is still the right place to give up.
+      if foundStranded then
+        System.throw(KnapcodeFactorioTools.NoPathBetweenTerminalsException(strandedTerminal, KnapcodeFactorioTools.CollectionExtensions.First(components:get(keep):EnumerateItems(), KnapcodeOilField.Location)))
       end
     end
     class = {

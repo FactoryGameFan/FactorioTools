@@ -38,7 +38,8 @@ System.namespace("Knapcode.FactorioTools.OilField", function (namespace)
   -- Teoxoy came up with the idea to use Delaunay triangulation for this problem. Awesome!
   -- </summary>
   namespace.class("AddPipesFbe", function (namespace)
-    local Execute, DelaunayTriangulation, GetNextLine, LineContainsAnAddedPumpjack, GetPathBetweenGroups, ConnectTwoGroups, class
+    local Execute, DelaunayTriangulation, GetNextLine, LineContainsAnAddedPumpjack, GetPathBetweenGroups, ConnectTwoGroups, IndexGroup, AddPartners, 
+    class
     namespace.class("FbeResult", function (namespace)
       local __members__, __ctor__
       __ctor__ = function (this, Pipes, FinalStrategy)
@@ -462,23 +463,37 @@ System.namespace("Knapcode.FactorioTools.OilField", function (namespace)
             break
           end
 
-          local locationToGroup = KnapcodeFactorioTools.CollectionExtensions.ToDictionary(groups, context, function (x)
-            return x.Location
-          end, function (x)
-            return x
-          end, class.Group, class.Group)
-          locationToGroup:Add(group.Location, group)
+          -- A group's Location is the rounded centroid of its pumpjack centers, so
+          -- two different groups can land on the same tile. Keying a dictionary by it
+          -- therefore has to allow more than one group per key. It used to use Add,
+          -- which throws ArgumentException on the second one and takes the whole plan
+          -- down. That is rare - it happens on none of the 1147 big-list blueprints
+          -- as they are grouped today - but it is reachable, and a crash is the worst
+          -- possible way to find out.
+          local locationToGroups = context:GetLocationDictionary1(#groups + 1, ListGroup)
+          for i = 0, #groups - 1 do
+            IndexGroup(locationToGroups, groups:get(i))
+          end
 
-          local groupLines = KnapcodeOilField.Helpers.PointsToLines(locationToGroup:getKeys())
+          IndexGroup(locationToGroups, group)
+
+          local groupLines = KnapcodeOilField.Helpers.PointsToLines(locationToGroups:getKeys())
           local par = ListGroup(#groupLines)
           for i = 0, #groupLines - 1 do
             local line = groupLines:get(i)
             if KnapcodeOilField.Location.op_Equality(line.A, group.Location) then
-              par:Add(locationToGroup:get(line.B))
+              AddPartners(par, locationToGroups:get(line.B), group)
             elseif KnapcodeOilField.Location.op_Equality(line.B, group.Location) then
-              par:Add(locationToGroup:get(line.A))
+              AddPartners(par, locationToGroups:get(line.A), group)
             end
           end
+
+          -- The triangulation sees one point for every group sharing this group's own
+          -- centroid, so those groups can never turn up as the far end of a line. They
+          -- are also the closest partners there are, so add them directly. When no two
+          -- groups share a centroid this adds nothing, which is why the change leaves
+          -- every existing plan untouched.
+          AddPartners(par, locationToGroups:get(group.Location), group)
 
           local result = GetPathBetweenGroups(context, par, group, 2 + maxTries - tries, strategy)
           if result.Exception ~= nil then
@@ -895,6 +910,52 @@ System.namespace("Knapcode.FactorioTools.OilField", function (namespace)
       end
 
       return KnapcodeFactorioTools.Result.NewData(class.TwoConnectedGroups(lines, minCount, a), class.TwoConnectedGroups)
+    end
+    -- <summary>
+    -- Files a group under its centroid, creating the bucket on first use. Several
+    -- groups can share a centroid, so the value is a list rather than a single group.
+    -- </summary>
+    IndexGroup = function (locationToGroups, group)
+      local default, list = locationToGroups:TryGetValue(group.Location)
+      if not default then
+        list = ListGroup(1)
+        locationToGroups:Add(group.Location, list)
+      end
+
+      list:Add(group)
+    end
+    -- <summary>
+    -- Appends every candidate that is not the group being connected and is not already
+    -- present. The duplicate check matters because a group can be reached both through a
+    -- triangulation line and through sharing a centroid.
+    -- </summary>
+    AddPartners = function (partners, candidates, self)
+      for i = 0, #candidates - 1 do
+        local continue
+        repeat
+          local candidate = candidates:get(i)
+          if candidate == self then
+            continue = true
+            break
+          end
+
+          local alreadyAdded = false
+          for j = 0, #partners - 1 do
+            if partners:get(j) == candidate then
+              alreadyAdded = true
+              break
+            end
+          end
+
+          if not alreadyAdded then
+            partners:Add(candidate)
+          end
+          continue = true
+        until 1
+        if not continue then
+          break
+        end
+      end
     end
     class = {
       Execute = Execute

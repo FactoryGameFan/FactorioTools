@@ -219,23 +219,42 @@ public static class AddPipesFbe
                 break;
             }
 
-            var locationToGroup = groups.ToDictionary(context, x => x.Location, x => x);
-            locationToGroup.Add(group.Location, group);
+            // A group's Location is the rounded centroid of its pumpjack centers, so
+            // two different groups can land on the same tile. Keying a dictionary by it
+            // therefore has to allow more than one group per key. It used to use Add,
+            // which throws ArgumentException on the second one and takes the whole plan
+            // down. That is rare - it happens on none of the 1147 big-list blueprints
+            // as they are grouped today - but it is reachable, and a crash is the worst
+            // possible way to find out.
+            var locationToGroups = context.GetLocationDictionary<List<Group>>(groups.Count + 1);
+            for (var i = 0; i < groups.Count; i++)
+            {
+                IndexGroup(locationToGroups, groups[i]);
+            }
 
-            var groupLines = PointsToLines(locationToGroup.Keys);
+            IndexGroup(locationToGroups, group);
+
+            var groupLines = PointsToLines(locationToGroups.Keys);
             var par = new List<Group>(groupLines.Count);
             for (var i = 0; i < groupLines.Count; i++)
             {
                 var line = groupLines[i];
                 if (line.A == group.Location)
                 {
-                    par.Add(locationToGroup[line.B]);
+                    AddPartners(par, locationToGroups[line.B], group);
                 }
                 else if (line.B == group.Location)
                 {
-                    par.Add(locationToGroup[line.A]);
+                    AddPartners(par, locationToGroups[line.A], group);
                 }
             }
+
+            // The triangulation sees one point for every group sharing this group's own
+            // centroid, so those groups can never turn up as the far end of a line. They
+            // are also the closest partners there are, so add them directly. When no two
+            // groups share a centroid this adds nothing, which is why the change leaves
+            // every existing plan untouched.
+            AddPartners(par, locationToGroups[group.Location], group);
 
             var result = GetPathBetweenGroups(
                 context,
@@ -670,6 +689,53 @@ public static class AddPipesFbe
     private record TwoConnectedGroups(List<List<Location>> Lines, int MinDistance, Group FirstGroup);
 
     private record PathAndTurns(Endpoints Endpoints, List<Location> Path, int Turns, int OriginalIndex);
+
+    /// <summary>
+    /// Files a group under its centroid, creating the bucket on first use. Several
+    /// groups can share a centroid, so the value is a list rather than a single group.
+    /// </summary>
+    private static void IndexGroup(ILocationDictionary<List<Group>> locationToGroups, Group group)
+    {
+        if (!locationToGroups.TryGetValue(group.Location, out var list))
+        {
+            list = new List<Group>(1);
+            locationToGroups.Add(group.Location, list);
+        }
+
+        list.Add(group);
+    }
+
+    /// <summary>
+    /// Appends every candidate that is not the group being connected and is not already
+    /// present. The duplicate check matters because a group can be reached both through a
+    /// triangulation line and through sharing a centroid.
+    /// </summary>
+    private static void AddPartners(List<Group> partners, List<Group> candidates, Group self)
+    {
+        for (var i = 0; i < candidates.Count; i++)
+        {
+            var candidate = candidates[i];
+            if (candidate == self)
+            {
+                continue;
+            }
+
+            var alreadyAdded = false;
+            for (var j = 0; j < partners.Count; j++)
+            {
+                if (partners[j] == candidate)
+                {
+                    alreadyAdded = true;
+                    break;
+                }
+            }
+
+            if (!alreadyAdded)
+            {
+                partners.Add(candidate);
+            }
+        }
+    }
 
     private class Group
     {

@@ -612,14 +612,34 @@ Steps 1 to 4 are the part that has to be right. Everything after is additive.
 
 ## Open questions
 
-1. **The org move.** `FactoryGameFan` exists, is empty, and is admin-owned. Moving
-   the consumers there is proposed and not decided. The blocker is specific to
-   FactorioTools: `joelverhagen/FactorioTools#10` is open and cross-repository with
-   head `wormeyman:main` and 466 files, and GitHub documents what happens to a fork
-   on *deletion* and *detachment* but never on *transfer*. Upstream has not been
-   pushed since 2024-10-26. factorio-blueprint-editor is a fork too but has no open
-   upstream PR, so it carries none of that risk. No Cloudflare Git integration
-   exists in any repo, so no deploy breaks either way.
+1. ~~**The org move.**~~ **Done 2026-08-16/17. All six repos now live under
+   `FactoryGameFan`**, so a new shared tool starting anywhere else would be the odd
+   one out from its first commit. See "Repo setup" above.
+
+   The blocker was specific to FactorioTools: `joelverhagen/FactorioTools#10` was
+   open and cross-repository with head `wormeyman:main` and 466 files, and GitHub
+   documents what happens to a fork on *deletion* and *detachment* but never on
+   *transfer*. It was closed first, deliberately, and then the repo moved.
+
+   The move answered the question, and the answer is worth keeping because GitHub
+   does not document it: **a transfer rewrites a cross-repo pull request's head to
+   the new owner and preserves the pull request.** Verified afterwards - PR #10
+   reads `head: FactoryGameFan:main`, still closed, both comments intact. Caveat:
+   it was closed before the transfer, so this establishes the closed case only.
+
+   Everything else survived too: issues, fork links (FactorioTools still shows
+   parent `joelverhagen/FactorioTools`, factorio-blueprint-editor still shows
+   `teoxoy/factorio-blueprint-editor`), Actions secrets, private flags and branch
+   rulesets. No repo has a Cloudflare Git integration, so no deploy broke.
+
+   Two operational notes. **The transfer API is asynchronous**:
+   `POST repos/{owner}/{repo}/transfer` returns the repo's pre-transfer state, so
+   verify with a follow-up read rather than trusting the response. And **old URLs
+   301 correctly, so stale `wormeyman/` references survive silently** and still
+   need a sweep - the ones with teeth are each repo's `CLAUDE.md`, which is loaded
+   into every session and can point a future session at the old path. Do not blind
+   find-and-replace: the **Cloudflare account** is also called `wormeyman` and did
+   not move, so each hit has to be read for which one it means.
 2. ~~Whether the runner injects a Lua prelude by default for
    `script.active_mods`.~~ **Decided 2026-08-16: on by default**, using a
    self-cancelling `on_nth_tick` rather than `on_init`. See the contamination

@@ -41,7 +41,7 @@
       front-end, so the migration's cost/risk is not justified right now. Revisit only if
       the API is hosted again or the OpenAPI contract needs to change.
     -->
-    <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="8.0.29" />
+    <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="8.0.30" />
     <PackageReference Include="Swashbuckle.AspNetCore" Version="6.9.0" />
   </ItemGroup>
 

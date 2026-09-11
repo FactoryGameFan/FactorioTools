@@ -1,5 +1,5 @@
 // Dependency automation for this repo. Renovate, not Dependabot: this project has
-// six deliberate HOLDS whose reasoning lives in prose - in .csproj comments and
+// seven deliberate HOLDS whose reasoning lives in prose - in .csproj comments and
 // CLAUDE.md - and Dependabot's `ignore` entries cannot express any of them. The
 // point of everything below is to stop a bot cheerfully re-proposing, every week,
 // the exact bump this project has already considered and rejected; and, where a
@@ -206,6 +206,7 @@
     //   plan lives in an issue and the rule points at it:
     //     typescript ............... #49  (upstream-gated: vue-tsc vs TS 7)
     //     WebApp OpenAPI stack ..... #47  (OpenApi 10.x + Swashbuckle 10.x)
+    //     xunit-dotnet monorepo .... #111 (migrate to the new `dotnet test`)
     //
     //   The Verify family used to be listed here against #44. That migration
     //   landed - the test project is on xunit v3 + Verify.XunitV3 - so the version
@@ -329,6 +330,33 @@
       prBodyNotes: [
         "This family's failure mode BUILDS CLEANLY and dies at runtime, so a compiling branch is not evidence. Run the full `dotnet test` before believing any bump here.",
       ],
+    },
+    {
+      // Tracking issue: #111. Migration-shaped, and unlike the Verify rule above
+      // this one fails LOUDLY at build time, which is the easier kind. Renovate
+      // proposed v4 in #108 and both .NET test jobs failed identically on CI and
+      // on a local Mac:
+      //
+      //   Microsoft.Testing.Platform.MSBuild.targets(320,5): error : Testing with
+      //   VSTest target is no longer supported by Microsoft.Testing.Platform on
+      //   .NET 10 SDK and later. If you use dotnet test, you should opt-in to the
+      //   new dotnet test experience.
+      //
+      // The chain is xunit.v3 4.0.0 -> xunit.v3.mtp-v2 [4.0.0, 4.0.0] ->
+      // Microsoft.Testing.Platform 2.x, which drops the VSTest bridge on the .NET
+      // 10 SDK. So this is not a bump, it is a test-host migration: the project
+      // has to opt into the new `dotnet test`, and ci.yml's two .NET jobs both
+      // pass `--logger "console;verbosity=normal"`, which is VSTest syntax that
+      // MTP does not accept. #111 has the full checklist.
+      //
+      // Ceiling is <4.0.0 rather than `enabled: false` so patches inside 3.x keep
+      // flowing while the migration waits. Raise it as part of #111, not before.
+      description:
+        "HOLD the xunit-dotnet monorepo on 3.x. xunit.v3 4.0.0 pulls xunit.v3.mtp-v2 and Microsoft.Testing.Platform 2.x, which no longer supports the VSTest target on the .NET 10 SDK, so `dotnet test` fails at build time. Lifting this means migrating the test project to the new dotnet test experience and replacing the VSTest-only arguments in ci.yml - tracked in #111. Patches within 3.x still flow; the hold is on the major.",
+      matchManagers: ["nuget"],
+      matchPackageNames: ["xunit.v3", "xunit.runner.visualstudio"],
+      groupName: "xunit-dotnet monorepo",
+      allowedVersions: "<4.0.0",
     },
     {
       // No tracking issue by design - this is a "not worth the review" call rather

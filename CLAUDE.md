@@ -69,6 +69,42 @@ If the machine only has a different SDK than the `global.json` pin, run the buil
 
 A full-solution `dotnet build` also builds `BrowserWasm`/`BlazorWebApp`, which need the wasm-tools workload - prepend a workload restore for that: `./docker-build.sh bash -c "dotnet workload restore && dotnet build -c Release"`.
 
+### Devcontainer
+
+`.devcontainer/` builds a Linux container carrying every toolchain this repo needs, which is more than the SDK: **dotnet 10.0.401 plus wasm-tools, Node 24.21.0, PowerShell 7.6.5, Lua 5.2.4 and python3**. Before it, a full local loop meant five separate host installs, one of which (`tools/check-lua.sh`) started a second container of its own.
+
+It is not a replacement for `docker-build.sh`. That script is the quick way to run one `dotnet` command in the pinned SDK; this is the whole environment, with an editor attached.
+
+**The Dockerfile pins the SDK from `global.json` by digest**, which is the point. `rollForward: latestMajor` only rolls forward, so a host whose package manager trails the pin cannot build the repo at all - that is what happened on 2026-09-21 when the pin moved to 10.0.401 and Homebrew still shipped 10.0.400. **When `global.json` moves, the `FROM` line must move with it.** The Devcontainer CI job compares `dotnet --version` against `global.json` and fails if they disagree, so a forgotten re-pin is a red check rather than a container that quietly contradicts the repo.
+
+Measured 2026-09-21 in the built image on macOS arm64 (OrbStack), against a real clone with tags:
+
+| step | result |
+| --- | --- |
+| `dotnet --version` inside the repo | 10.0.401, matching `global.json` |
+| `dotnet test` on the test project | 4302 passed |
+| `pwsh -File src/lua/Invoke-LuaBuild.ps1` | 88 files, reproduced the committed `src/lua` byte-for-byte |
+| `luac5.2 -p` over the generated Lua | all 127 files parse |
+| `lua5.2 sample.lua` | runs, prints the grid |
+| `npm ci && npm run build && npm test` in `src/vue` | build OK, 51 tests passed |
+| `npm run build-wasm` | AOT publish OK, bundle lands at `public/framework/dotnet.js` |
+
+Two notes on why specific things are the way they are:
+
+- **Lua comes from apt, not source.** Ubuntu 24.04's `lua5.2` package is 5.2.4 - the exact version the README's Lua performance log was measured against, and the same package `ci.yml` installs. It provides `lua5.2` and `luac5.2`, the names the `transpile-lua` job uses.
+- **No .NET 7 runtime is needed**, despite the CSharp.lua launcher targeting net7.0. `Invoke-LuaBuild.ps1` sets `DOTNET_ROLL_FORWARD=Major` so it runs on the .NET 10 runtime.
+
+**`npm run dev` needs `--host`.** Vite binds `localhost` only, so a port forwarder dialling `127.0.0.1` gets a connection reset. Measured in the container: bare `npm run dev` printed `Network: use --host to expose` and the host got `HTTP 000` (connection reset by peer); with `npm run dev -- --host` the same request returned `HTTP 200`. So:
+
+```bash
+cd src/vue && npm run dev -- --host
+```
+
+**It does not do two things**, both of which need the host:
+
+- **Capture the Factorio oracle.** `tools/capture-factorio-oracle.sh` reads a real Factorio install - `--dump-data` from the game binary, the bundled `migrations/*.json`, and `doc-html/runtime-api.json`. There is no Factorio in the container, and the installed binary is the authority on which version gets captured. The `python3` in the image covers the trim half only.
+- **Run benchmarks.** `src/Benchmark` is BenchmarkDotNet, and container timings are too noisy to compare against the README's performance log. Run those on the host.
+
 ## Architecture
 
 ### Core library: `src/FactorioTools` (`Knapcode.FactorioTools`)

@@ -1,0 +1,63 @@
+// A Linux container for the whole dev loop: dotnet build/test, the Lua
+// transpile and its 5.2 checks, and the Vue front-end including the WASM
+// bundle. CLAUDE.md's "Devcontainer" section says what it covers and what
+// still needs the host - benchmarks and the Factorio oracle capture.
+//
+// The Dockerfile pins the SDK from global.json by digest. That is the reason
+// this exists: `rollForward: latestMajor` only rolls forward, so a host whose
+// package manager trails the pin cannot build the repo at all.
+{
+    "name": "FactorioTools",
+    "build": { "dockerfile": "Dockerfile" },
+    // uid 1000 in the base image, so bind-mounted files are not root-owned.
+    "remoteUser": "ubuntu",
+    "containerEnv": {
+        // Outside the bind mount, so a Linux restore never fights the host's
+        // own NuGet cache. docker-build.sh puts this on the host at
+        // ~/.cache/factorio-nuget; here it is a named volume instead, so it
+        // survives a rebuild without being shared with the host's SDK.
+        "NUGET_PACKAGES": "/home/ubuntu/.cache/nuget"
+    },
+    "mounts": [
+        // src/vue/node_modules holds platform-native binaries - esbuild,
+        // @parcel/watcher, fsevents on a Mac. Sharing the host's copy would
+        // leave whichever side installed last broken for the other, so the
+        // container gets its own.
+        {
+            "source": "factoriotools-vue-node-modules-${devcontainerId}",
+            "target": "${containerWorkspaceFolder}/src/vue/node_modules",
+            "type": "volume"
+        },
+        {
+            "source": "factoriotools-nuget-${devcontainerId}",
+            "target": "/home/ubuntu/.cache/nuget",
+            "type": "volume"
+        }
+    ],
+    // Vite's dev server. Reaching it from the host needs `--host`, and that is
+    // not optional - see the Devcontainer section in CLAUDE.md for the
+    // measurement. Vite's default binds localhost only, and a port forwarder
+    // dialling 127.0.0.1 gets a connection reset.
+    "forwardPorts": [5173],
+    "portsAttributes": {
+        "5173": { "label": "Vite (needs --host)" }
+    },
+    // A new volume is root-owned, hence the chown. Submodules are required to
+    // build at all - FluteSharp and delaunator-sharp are referenced by the core
+    // library, CSharp.lua by the transpile - and a fresh clone has none of them.
+    // The safe.directory line is a no-op under OrbStack, where the mount already
+    // appears owned by uid 1000; it is insurance on a Linux host whose own uid
+    // is not 1000, where git otherwise refuses with "dubious ownership" and
+    // vite.config.ts's `git describe` call takes the build down with it.
+    "postCreateCommand": "sudo chown ubuntu:ubuntu src/vue/node_modules /home/ubuntu/.cache/nuget && git config --global --add safe.directory \"${containerWorkspaceFolder}\" && git submodule update --init --recursive && npm --prefix src/vue ci",
+    "customizations": {
+        "vscode": {
+            "extensions": [
+                "ms-dotnettools.csdevkit",
+                "Vue.volar",
+                "ms-vscode.powershell",
+                "sumneko.lua"
+            ]
+        }
+    }
+}

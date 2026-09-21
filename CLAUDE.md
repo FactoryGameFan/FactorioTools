@@ -8,7 +8,11 @@ FactorioTools is a Factorio oil-field (outpost) blueprint planner. Given a bluep
 
 ## Prerequisites
 
-- **.NET SDK 10.0.400** (pinned in `global.json`, `rollForward: latestMajor`). This is a floor, not an exact pin - `latestMajor` means any newer 10.x SDK works, but an *older* one now fails, so raising this number raises the bar for every contributor. Keep it in sync with `global.json`; CI installs exactly this version via `setup-dotnet`'s `global-json-file`.
+- **.NET SDK 10.0.401** (pinned in `global.json`, `rollForward: latestMajor`). This is a floor, not an exact pin - `latestMajor` means any newer 10.x SDK works, but an *older* one now fails, so raising this number raises the bar for every contributor. Keep it in sync with `global.json`; CI installs exactly this version via `setup-dotnet`'s `global-json-file`.
+
+  **Renovate bumps `global.json` and cannot see this line**, so the two drift apart silently every time it does. #103 raised the pin 10.0.400 -> 10.0.401 and left this paragraph reading 10.0.400. After any SDK bump, `grep -rn` the old version string and fix whatever the bot could not reach.
+
+  **Expect Homebrew to trail the pin.** Measured 2026-09-21, right after #103: `brew info dotnet` was still 10.0.400 while the pin had moved to 10.0.401, and `dotnet --version` inside the checkout failed outright with "A compatible .NET SDK was not found" - `rollForward` only ever rolls *forward*. That is not a broken checkout, it is the bar being raised ahead of the package manager. Until Homebrew catches up, build through `./docker-build.sh` (its `mcr.microsoft.com/dotnet/sdk:10.0` tag floats and already carries the newer SDK), or install the exact SDK from Microsoft.
 - **Git submodules are required** (`FluteSharp`, `delaunator-sharp`, `CSharp.lua`). Clone/update with `git submodule update --init --recursive`. CI checks out with `submodules: recursive`.
 - Node 24 (Active LTS) for the Vue front-end.
 - The browser-WASM project needs `dotnet workload restore`.

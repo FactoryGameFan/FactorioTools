@@ -97,8 +97,8 @@ jobs:
         # Pull requests build and verify, but never deploy. This also keeps the
         # repository's only credential-bearing step off the PR path.
         #
-        # `wrangler deploy` reads src/vue/wrangler.jsonc, which names the Worker,
-        # its script (worker/index.js), the asset directory (dist) and the
+        # `wrangler deploy` reads src/vue/wrangler.jsonc, which names the Worker
+        # (assets only, no script), the asset directory (dist) and the
         # oilfieldplanner.factorygamefan.com Custom Domain. Running from
         # BUILD_PATH lets it find that file with no --config flag, and makes the
         # action use the wrangler that `npm install` put in node_modules (pinned

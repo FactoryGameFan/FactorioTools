@@ -1,5 +1,6 @@
 {
-  // Cloudflare Worker with static assets for oilfieldplanner.factorygamefan.com.
+  // Static-assets Worker for oilfieldplanner.factorygamefan.com. There is no
+  // Worker script: every request is served straight from the asset directory.
   // Replaces the old Cloudflare Pages project "factoriotools". See issue #126.
   "$schema": "node_modules/wrangler/config-schema.json",
 
@@ -7,20 +8,24 @@
   "name": "oilfieldplanner-factorygamefan-com",
   "compatibility_date": "2026-09-25",
 
-  // Runs only for requests that match no file in dist/. It returns the SPA
-  // shell (404.html) with status 404, so client-side routes like /oil-field
-  // work on a hard load. See the comment at the top of the script.
-  "main": "./worker/index.js",
-
   "assets": {
     // Output of `npm run build`. Run `npm run build-wasm` first, or the
     // planner's WASM bundle (dist/framework/) is missing.
     "directory": "./dist",
-    "binding": "ASSETS",
+
+    // A path with no file serves dist/404.html with status 404. That file is
+    // the SPA shell (`npm run build` copies index.html to it), so a hard load
+    // of a client route like /oil-field still starts the app. This matches
+    // what Pages returned. "single-page-application" would serve index.html
+    // with status 200 instead, which changes what crawlers see.
+    "not_found_handling": "404-page",
   },
 
   // The only public hostname. Attaching it as a Custom Domain makes Cloudflare
   // own its DNS record. Touch no other factorygamefan.com hostname here.
+  // The old factoriotools-5jg.pages.dev redirect is not handled here: a Worker
+  // never sees pages.dev requests. It lives in the Pages project's redirect
+  // stub, tools/pages-redirect-stub/_redirects.
   "routes": [{ "pattern": "oilfieldplanner.factorygamefan.com", "custom_domain": true }],
 
   // Off so the site has one public hostname, not a second copy on workers.dev.

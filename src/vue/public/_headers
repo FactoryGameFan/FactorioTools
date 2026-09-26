@@ -1,0 +1,16 @@
+# Response headers for the Workers static assets. Vite copies this file to
+# dist/_headers, and Cloudflare reads it there without serving it as a file.
+#
+# Only content-hashed files get a long cache. Vite puts a hash of each file's
+# contents in its name under /assets/ (index-SHUCZ6FL.js), so a changed file
+# always has a new URL and a cached copy can never go stale.
+#
+# /framework/ is left on the default on purpose. The .NET WASM bundle keeps
+# fixed names (dotnet.native.wasm, dotnet.js) from build to build, so a long
+# cache there would keep serving an old planner after a deploy.
+#
+# HTML also stays on the Workers default (max-age=0, must-revalidate), so a new
+# deploy shows up on the next page load.
+
+/assets/*
+  Cache-Control: public, max-age=31536000, immutable

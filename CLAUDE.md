@@ -47,9 +47,9 @@ npm run build-wasm     # publish BrowserWasm and copy the bundle (incl. dotnet.j
   `dotnet.js` at the root, the `framework/dotnet.js` import 404s, and the site
   loads but cannot plan. `build-wasm` does `mkdir -p public` first to guarantee
   that. (Only `src/vue/public/framework/` is gitignored, not all of
-  `src/vue/public/`; the directory itself exists in a fresh checkout because
-  `_worker.js` is tracked in it, so the `mkdir -p` is belt-and-braces rather
-  than load-bearing.) `deploy-cloudflare.yml` runs `build-wasm` and asserts the
+  `src/vue/public/`. But nothing in `public/` is tracked any more - the Worker
+  script moved out to `src/vue/worker/` - so a fresh checkout has no `public/`
+  directory at all, and the `mkdir -p` is load-bearing.) `deploy-cloudflare.yml` runs `build-wasm` and asserts the
   resulting shape, on pull requests as well as on deploys, so this is now
   checked rather than trusted. Requires the .NET 10 SDK plus the wasm-tools
   workload; without a local .NET 10 SDK, publish via `./docker-build.sh` (the SDK image
@@ -85,11 +85,36 @@ Blueprint string parsing and emitting live here, separate from the core lib: `Pa
 
 ### Front-ends and hosts
 - `src/WebApp` - ASP.NET Core API (`OilFieldController`, routes under `api/v1/oil-field`: `normalize`, `plan`; the actions delegate to `PlanOrchestrator`). Produces `swagger.json` consumed by the Vue client's `swagger-gen`. No longer deployed (the Azure target was retired when the front-end moved to in-browser WASM); kept for local API use, swagger generation, and the `Dockerfile` if self-hosting is wanted.
-- `src/vue` - the primary front-end (Vue 3 + Vite + Pinia, persisted settings). This is what's deployed to Cloudflare Pages (the `factoriotools` project, via `.github/workflows/deploy-cloudflare.yml`); it plans in-browser via the WASM bundle and no longer calls a hosted API. Planner constants (pole presets, geometry defaults, strategy defaults, quality levels) are not retyped in TypeScript - they come from `src/vue/src/lib/plannerDefaults.verified.json`, which `PlannerDefaultsTest` generates from `OilFieldOptions` (most fields) and the `Quality` enum (`qualityLevels`). Change a default in the C# and `dotnet test` rewrites that file; commit it with your change.
+- `src/vue` - the primary front-end (Vue 3 + Vite + Pinia, persisted settings). This is what's deployed, as a Cloudflare Worker with static assets (see "Deployment" below); it plans in-browser via the WASM bundle and no longer calls a hosted API. Planner constants (pole presets, geometry defaults, strategy defaults, quality levels) are not retyped in TypeScript - they come from `src/vue/src/lib/plannerDefaults.verified.json`, which `PlannerDefaultsTest` generates from `OilFieldOptions` (most fields) and the `Quality` enum (`qualityLevels`). Change a default in the C# and `dotnet test` rewrites that file; commit it with your change.
 - `src/BrowserWasm` - runs the planner fully client-side via .NET WASM AOT (trimmed). Lets the SPA plan without the API.
 - `src/BlazorWebApp` - alternate Blazor host.
 - `src/FactorioTools.Cli` (`System.CommandLine`) - `oil-field` subcommands `sample`, `normalize`, `sandbox`. Output assembly is `Knapcode.FactorioTools.Sandbox`.
 - `src/Benchmark` - BenchmarkDotNet harness.
+
+## Deployment
+
+The Vue app runs at `https://oilfieldplanner.factorygamefan.com` as a Cloudflare **Worker with static assets**, named `oilfieldplanner-factorygamefan-com`. It moved there from the Cloudflare Pages project `factoriotools` in issue #126.
+
+- **Config:** `src/vue/wrangler.jsonc`. It points the Worker at `dist/` for assets and at `src/vue/worker/index.js` for the script, and attaches the hostname as a Custom Domain. `workers_dev` and `preview_urls` are off, so the site has one public hostname.
+- **CI deploys on every push to `main`.** `deploy-cloudflare.yml` runs `wrangler deploy` from `src/vue`, using the `wrangler` pinned in `package-lock.json`. Pull requests build and check the bundle but never deploy. So merging a PR that touches the site is a live deploy.
+- **The script only runs when no file matches.** Cloudflare serves anything in `dist/` without running it. For every other path the script returns the SPA shell, `404.html`, with status 404. That is how a hard load of a client route like `/oil-field` works, and the 404 status is what Pages returned too. Do not swap this for `"not_found_handling": "single-page-application"` without meaning to: that serves `index.html` with status 200, which changes what crawlers see.
+- **No Pages default headers.** Pages added `x-content-type-options: nosniff`, `referrer-policy: strict-origin-when-cross-origin` and `access-control-allow-origin: *` to every response. A Worker adds none of them. To bring any back, add a `_headers` file to `src/vue/public/`, which Workers static assets also read.
+- **The old Pages host still redirects.** The Pages project `factoriotools` stays alive only to 301 `factoriotools-5jg.pages.dev` to the new hostname, keeping the path. Its whole deploy is `tools/pages-redirect-stub/_redirects`. CI never touches it. Never deploy it while `oilfieldplanner.factorygamefan.com` is still attached to the Pages project, or that hostname redirects to itself. To redeploy it, from `src/vue`:
+
+  ```bash
+  npx wrangler pages deploy ../../tools/pages-redirect-stub --project-name factoriotools --branch main
+  ```
+
+Test locally against a real build (run `npm run build-wasm` first, or `dist/framework/` is missing):
+
+```bash
+cd src/vue
+npm run build
+npx wrangler dev                 # serves dist/ through the Worker on http://localhost:8787
+npx wrangler deploy --dry-run    # checks the config and bundles the script, uploads nothing
+```
+
+`wrangler dev` writes a `.wrangler/` state folder, which is gitignored.
 
 ## Performance build flags (and Lua compatibility)
 

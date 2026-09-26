@@ -1,4 +1,4 @@
-name: Deploy to Cloudflare Pages
+name: Deploy to Cloudflare Workers
 
 on:
   # Do not filter branches on "*". In Actions filter patterns a single star does
@@ -93,12 +93,26 @@ jobs:
             fi
           done
           echo "dist/framework/ contains the expected bundle entry points."
-      - name: Deploy to Cloudflare Pages
+      - name: Deploy to Cloudflare Workers
         # Pull requests build and verify, but never deploy. This also keeps the
         # repository's only credential-bearing step off the PR path.
+        #
+        # `wrangler deploy` reads src/vue/wrangler.jsonc, which names the Worker,
+        # its script (worker/index.js), the asset directory (dist) and the
+        # oilfieldplanner.factorygamefan.com Custom Domain. Running from
+        # BUILD_PATH lets it find that file with no --config flag, and makes the
+        # action use the wrangler that `npm install` put in node_modules (pinned
+        # by package-lock.json) rather than installing its own.
+        #
+        # The API token needs Workers permissions, not just Pages ones: at least
+        # Account > Workers Scripts: Edit, plus zone access to factorygamefan.com
+        # (Zone: Read, Workers Routes: Edit) for the Custom Domain. Cloudflare's
+        # "Edit Cloudflare Workers" token template covers all of it. A token made
+        # for the old `pages deploy` step may only have Cloudflare Pages: Edit.
         if: github.event_name != 'pull_request'
         uses: cloudflare/wrangler-action@ebbaa1584979971c8614a24965b4405ff95890e0 # v4
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: pages deploy ${{ env.BUILD_PATH }}/dist --project-name=factoriotools
+          workingDirectory: ${{ env.BUILD_PATH }}
+          command: deploy

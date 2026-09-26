@@ -1,0 +1,30 @@
+{
+  // Cloudflare Worker with static assets for oilfieldplanner.factorygamefan.com.
+  // Replaces the old Cloudflare Pages project "factoriotools". See issue #126.
+  "$schema": "node_modules/wrangler/config-schema.json",
+
+  // Named after the hostname it serves. Worker names cannot contain dots.
+  "name": "oilfieldplanner-factorygamefan-com",
+  "compatibility_date": "2026-09-25",
+
+  // Runs only for requests that match no file in dist/. It returns the SPA
+  // shell (404.html) with status 404, so client-side routes like /oil-field
+  // work on a hard load. See the comment at the top of the script.
+  "main": "./worker/index.js",
+
+  "assets": {
+    // Output of `npm run build`. Run `npm run build-wasm` first, or the
+    // planner's WASM bundle (dist/framework/) is missing.
+    "directory": "./dist",
+    "binding": "ASSETS",
+  },
+
+  // The only public hostname. Attaching it as a Custom Domain makes Cloudflare
+  // own its DNS record. Touch no other factorygamefan.com hostname here.
+  "routes": [{ "pattern": "oilfieldplanner.factorygamefan.com", "custom_domain": true }],
+
+  // Off so the site has one public hostname, not a second copy on workers.dev.
+  // The deploy workflow only deploys main, so per-branch preview URLs are off too.
+  "workers_dev": false,
+  "preview_urls": false,
+}

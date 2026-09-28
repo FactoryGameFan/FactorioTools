@@ -1,0 +1,92 @@
+name: Devcontainer
+
+on:
+  pull_request:
+    paths:
+      - '.devcontainer/**'
+      - '.github/workflows/devcontainer.yml'
+      - 'global.json'
+  # Weekly, because two of this image's pins rot without anything under
+  # .devcontainer/ changing, so the paths filter above cannot catch either:
+  #   - the Node tarball and its two checksums, if a release is ever re-cut
+  #   - the SDK digest, once global.json moves (that one IS covered by the
+  #     paths filter now, but only if the bump goes through a pull request)
+  # A rotted pin fails the build for everyone who opens the container, so it is
+  # better found here.
+  schedule:
+    - cron: '23 12 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          submodules: recursive
+          # vite.config.ts stamps the build with `git describe`, so the Vue
+          # build needs tags and real history, not a shallow checkout.
+          fetch-depth: 0
+
+      - name: Create the development container
+        run: npx --yes @devcontainers/cli@0.89.0 up --workspace-folder "$GITHUB_WORKSPACE"
+
+      - name: Every toolchain resolves, and the SDK matches global.json
+        run: |
+          npx --yes @devcontainers/cli@0.89.0 exec --workspace-folder "$GITHUB_WORKSPACE" bash -ec '
+            # The check that matters: global.json pins an exact SDK and
+            # rollForward only rolls forward, so a Dockerfile left behind after
+            # a global.json bump fails right here rather than confusing someone
+            # later. Compare what dotnet resolves against what the file asks for.
+            pinned=$(python3 -c "import json;print(json.load(open(\"global.json\"))[\"sdk\"][\"version\"])")
+            actual=$(dotnet --version)
+            echo "global.json pins $pinned, container resolves $actual"
+            [ "$pinned" = "$actual" ] || {
+              echo "::error::The devcontainer SDK ($actual) does not match global.json ($pinned). Re-pin .devcontainer/Dockerfile."
+              exit 1
+            }
+            node --version
+            npm --version
+            pwsh --version
+            python3 --version
+            # CI installs the apt package "lua5.2" and calls these two names;
+            # the container has to agree, or tools/check-lua.sh and the
+            # transpile-lua job diverge.
+            luac5.2 -v
+            lua5.2 -v
+            dotnet workload list | grep -q wasm-tools || {
+              echo "::error::wasm-tools workload missing - BrowserWasm cannot publish."
+              exit 1
+            }
+          '
+
+      - name: The core dev loop runs
+        run: |
+          npx --yes @devcontainers/cli@0.89.0 exec --workspace-folder "$GITHUB_WORKSPACE" \
+            dotnet test test/FactorioTools.Test/FactorioTools.Test.csproj -c Release
+
+      - name: The Lua transpile reproduces the committed output
+        run: |
+          npx --yes @devcontainers/cli@0.89.0 exec --workspace-folder "$GITHUB_WORKSPACE" bash -ec '
+            pwsh -File src/lua/Invoke-LuaBuild.ps1
+            if [ -n "$(git status --porcelain -- src/lua)" ]; then
+              echo "::error::src/lua drifted when transpiled inside the container."
+              git status --porcelain -- src/lua
+              exit 1
+            fi
+            find src/lua -name "*.lua" -print0 | xargs -0 -n1 luac5.2 -p
+            cd src/lua && lua5.2 sample.lua > /dev/null
+            echo "Transpile reproduced the committed output, and it parses and runs under 5.2."
+          '
+
+      - name: The front-end builds and tests
+        run: |
+          npx --yes @devcontainers/cli@0.89.0 exec --workspace-folder "$GITHUB_WORKSPACE" bash -ec '
+            cd src/vue
+            npm run build
+            npm run test
+          '

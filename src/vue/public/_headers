@@ -11,6 +11,17 @@
 #
 # HTML also stays on the Workers default (max-age=0, must-revalidate), so a new
 # deploy shows up on the next page load.
+#
+# The /* block puts back two headers Cloudflare Pages added to every response on
+# its own and Workers static assets do not: nosniff stops a browser guessing a
+# file's type from its contents, and the Referrer-Policy is the one Pages used,
+# which sends only the origin to other sites. Cloudflare's static assets docs
+# recommend both. Rules that match the same path combine, so /assets/* keeps
+# its Cache-Control as well.
+
+/*
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
 
 /assets/*
   Cache-Control: public, max-age=31536000, immutable

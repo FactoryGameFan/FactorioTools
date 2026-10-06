@@ -87,7 +87,7 @@ Measured 2026-09-21 in the built image on macOS arm64 (OrbStack), against a real
 | `luac5.2 -p` over the generated Lua | all 127 files parse |
 | `lua5.2 sample.lua` | runs, prints the grid |
 | `npm ci && npm run build && npm test` in `src/vue` | build OK, 51 tests passed |
-| `npm run build-wasm` | AOT publish OK, bundle lands at `public/framework/dotnet.js` |
+| `npm run build-wasm` | Release publish OK, bundle lands at `public/framework/dotnet.js` |
 
 Two notes on why specific things are the way they are:
 
@@ -122,7 +122,9 @@ Blueprint string parsing and emitting live here, separate from the core lib: `Pa
 ### Front-ends and hosts
 - `src/WebApp` - ASP.NET Core API (`OilFieldController`, routes under `api/v1/oil-field`: `normalize`, `plan`; the actions delegate to `PlanOrchestrator`). Produces `swagger.json` consumed by the Vue client's `swagger-gen`. No longer deployed (the Azure target was retired when the front-end moved to in-browser WASM); kept for local API use, swagger generation, and the `Dockerfile` if self-hosting is wanted.
 - `src/vue` - the primary front-end (Vue 3 + Vite + Pinia, persisted settings). This is what's deployed, as a Cloudflare Worker with static assets (see "Deployment" below); it plans in-browser via the WASM bundle and no longer calls a hosted API. Planner constants (pole presets, geometry defaults, strategy defaults, quality levels) are not retyped in TypeScript - they come from `src/vue/src/lib/plannerDefaults.verified.json`, which `PlannerDefaultsTest` generates from `OilFieldOptions` (most fields) and the `Quality` enum (`qualityLevels`). Change a default in the C# and `dotnet test` rewrites that file; commit it with your change.
-- `src/BrowserWasm` - runs the planner fully client-side via .NET WASM AOT (trimmed). Lets the SPA plan without the API.
+- `src/BrowserWasm` - runs the planner fully client-side via .NET WASM (trimmed). Lets the SPA plan without the API.
+
+  **It runs on the .NET interpreter, not AOT.** `BrowserWasm.csproj` sets `RunAOTCompilation=false`, a deliberate choice in `docs/superpowers/specs/2026-06-18-in-browser-wasm-planner-design.md` (decision 2) for a smaller download and faster CI. Measured 2026-10-06 in issue #139, it plans 17x slower than native .NET. Turning AOT on alone only gets to 14x, because Mono's AOT falls back to the interpreter for generic code over value types, and `Location` is a struct by default. AOT plus `LocationAsStruct=false` removes that fallback and gets to 4.3x, at 2.5 MiB brotli instead of 1.35 MiB. Read #139 before changing either flag, and measure again after.
 - `src/BlazorWebApp` - alternate Blazor host.
 - `src/FactorioTools.Cli` (`System.CommandLine`) - `oil-field` subcommands `sample`, `normalize`, `sandbox`. Output assembly is `Knapcode.FactorioTools.Sandbox`.
 - `src/Benchmark` - BenchmarkDotNet harness.

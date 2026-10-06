@@ -53,7 +53,8 @@ npm run build-wasm     # publish BrowserWasm and copy the bundle (incl. dotnet.j
   resulting shape, on pull requests as well as on deploys, so this is now
   checked rather than trusted. Requires the .NET 10 SDK plus the wasm-tools
   workload; without a local .NET 10 SDK, publish via `./docker-build.sh` (the SDK image
-  also needs `python3` on PATH for the emscripten native relink step) and copy
+  also needs `python3` on PATH for the emscripten native relink step), passing
+  `--property:LocationAsStruct=false` the way `build-wasm` does, and copy
   `src/BrowserWasm/bin/Release/net10.0/browser-wasm/AppBundle/_framework` into
   `src/vue/public/framework`. `npm run dev` / `npm run build` serve those assets.
 
@@ -124,7 +125,15 @@ Blueprint string parsing and emitting live here, separate from the core lib: `Pa
 - `src/vue` - the primary front-end (Vue 3 + Vite + Pinia, persisted settings). This is what's deployed, as a Cloudflare Worker with static assets (see "Deployment" below); it plans in-browser via the WASM bundle and no longer calls a hosted API. Planner constants (pole presets, geometry defaults, strategy defaults, quality levels) are not retyped in TypeScript - they come from `src/vue/src/lib/plannerDefaults.verified.json`, which `PlannerDefaultsTest` generates from `OilFieldOptions` (most fields) and the `Quality` enum (`qualityLevels`). Change a default in the C# and `dotnet test` rewrites that file; commit it with your change.
 - `src/BrowserWasm` - runs the planner fully client-side via .NET WASM (trimmed). Lets the SPA plan without the API.
 
-  **It runs on the .NET interpreter, not AOT.** `BrowserWasm.csproj` sets `RunAOTCompilation=false`, a deliberate choice in `docs/superpowers/specs/2026-06-18-in-browser-wasm-planner-design.md` (decision 2) for a smaller download and faster CI. Measured 2026-10-06 in issue #139, it plans 17x slower than native .NET. Turning AOT on alone only gets to 14x, because Mono's AOT falls back to the interpreter for generic code over value types, and `Location` is a struct by default. AOT plus `LocationAsStruct=false` removes that fallback and gets to 4.3x, at 2.5 MiB brotli instead of 1.35 MiB. Read #139 before changing either flag, and measure again after.
+  **It ships as AOT with `Location` as a class, and the two flags only work together.** `BrowserWasm.csproj` sets `RunAOTCompilation=true`, and `build-wasm` passes `--property:LocationAsStruct=false`. That flag must stay on the command line: it is a global property that has to reach the referenced projects, and setting it in the `.csproj` does not. Measured 2026-10-06 in issue #139, against native .NET on the same machine:
+
+  | Build | Planning speed | Time to first plan | Download (brotli) |
+  | --- | --- | --- | --- |
+  | Interpreter (shipped until #139) | 17x slower | 1.22 s | 1.35 MiB |
+  | AOT, `Location` a struct | 14x slower | 0.78 s | 2.6 MiB |
+  | **AOT, `Location` a class (shipped)** | **4.3x slower** | **0.54 s** | **2.5 MiB** |
+
+  AOT alone barely helps because Mono's AOT falls back to the interpreter for generic code over value types, and `Location` is a struct by default. A `dotnet publish` of `BrowserWasm` without the property quietly gives you that middle row. The interpreter was first chosen in `docs/superpowers/specs/2026-06-18-in-browser-wasm-planner-design.md` (decision 2) for a smaller download and faster CI; the AOT publish takes about 64 s against 23 s. The `test-location-as-class` CI job tests the shipped setting on its own. Read #139 before changing either flag, and measure again after.
 - `src/BlazorWebApp` - alternate Blazor host.
 - `src/FactorioTools.Cli` (`System.CommandLine`) - `oil-field` subcommands `sample`, `normalize`, `sandbox`. Output assembly is `Knapcode.FactorioTools.Sandbox`.
 - `src/Benchmark` - BenchmarkDotNet harness.

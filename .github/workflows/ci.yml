@@ -163,6 +163,46 @@ jobs:
           fi
           echo "No Verify snapshots drifted."
 
+  # The browser bundle ships with LocationAsStruct=false (see build-wasm in
+  # src/vue/package.json and issue #139), so that combination must be tested on
+  # its own, not only built. UseLuaSettings also turns it off, but changes five
+  # other flags with it.
+  test-location-as-class:
+    name: Test .NET with Location as a class (the shipped WASM setting)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          submodules: recursive
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6
+        with:
+          global-json-file: global.json
+
+      - name: Restore workloads
+        run: dotnet workload restore
+
+      - name: Restore dependencies
+        run: dotnet restore
+
+      - name: Build release, Location as a class
+        run: dotnet build --configuration Release /p:LocationAsStruct=false
+
+      - name: Test with Location as a class
+        run: dotnet test --no-build --configuration Release --logger "console;verbosity=normal"
+
+      - name: Check no Verify snapshots drifted
+        run: |
+          if [ -n "$(git status --porcelain -- '*.verified.*')" ]; then
+            echo "::error::A Verify snapshot changed during the test run. The committed snapshot does not match current behavior - regenerate locally and commit, or fix the regression."
+            git status --porcelain -- '*.verified.*'
+            git diff -- '*.verified.*'
+            exit 1
+          fi
+          echo "No Verify snapshots drifted."
+
   test-default:
     name: Test .NET with default settings
     runs-on: ubuntu-latest

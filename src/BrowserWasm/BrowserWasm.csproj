@@ -6,7 +6,13 @@
     <OutputType>Exe</OutputType>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
 
-    <RunAOTCompilation>false</RunAOTCompilation>
+    <!-- AOT on, but only pays off together with LocationAsStruct=false, which
+         `npm run build-wasm` passes on the command line. It cannot live here:
+         it is a global property that must reach the referenced projects, and
+         a property set in this file does not. With Location as a struct, Mono's
+         AOT falls back to the interpreter for generic code over it and plans
+         14x slower than native; as a class, 4.3x. See issue #139. -->
+    <RunAOTCompilation>true</RunAOTCompilation>
 
     <WasmEnableES6>true</WasmEnableES6>
     

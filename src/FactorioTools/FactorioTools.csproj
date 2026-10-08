@@ -74,7 +74,7 @@
       license-key management isn't worth it. Revisit only if someone registers a Six Labors
       license key (free for OSS qualifies).
     -->
-    <PackageReference Include="SixLabors.ImageSharp" Version="3.1.12" />
+    <PackageReference Include="SixLabors.ImageSharp" Version="4.1.2" />
     <PackageReference Include="SixLabors.ImageSharp.Drawing" Version="2.1.7" />
   </ItemGroup>
 

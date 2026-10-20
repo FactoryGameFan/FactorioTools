@@ -46,7 +46,7 @@
       changed, run the suite, and keep Verify.XunitV3 and Verify.DiffPlex aligned on
       the same Verify core rather than bumping one alone.
     -->
-    <PackageReference Include="Verify.DiffPlex" Version="3.3.1" />
+    <PackageReference Include="Verify.DiffPlex" Version="3.4.0" />
     <PackageReference Include="Verify.XunitV3" Version="32.0.1" />
     <PackageReference Include="xunit.v3" Version="3.2.2" />
     <PackageReference Include="xunit.runner.visualstudio" Version="3.1.5">

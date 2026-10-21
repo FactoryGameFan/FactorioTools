@@ -36,9 +36,10 @@ pub fn repo_root() -> PathBuf {
         .expect("the repository root exists")
 }
 
-/// `test/FactorioTools.Test/OilField`.
+/// `testdata/oil-field`: the test blueprint lists, the Factorio oracle fixture and the
+/// committed snapshots.
 pub fn oil_field_test_dir() -> PathBuf {
-    repo_root().join("test/FactorioTools.Test/OilField")
+    repo_root().join("testdata/oil-field")
 }
 
 /// Set to `1` to write the snapshots rather than compare against them.

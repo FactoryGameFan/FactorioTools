@@ -63,7 +63,7 @@ fn plan_request_round_trips_with_string_enums() {
 }
 
 fn oil_field_test_dir() -> PathBuf {
-    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../test/FactorioTools.Test/OilField")
+    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../testdata/oil-field")
 }
 
 /// `CleanBlueprintTest.VerifySameBlueprint`: the corpus is already normalized, so cleaning a

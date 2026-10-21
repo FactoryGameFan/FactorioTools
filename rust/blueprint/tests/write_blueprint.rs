@@ -11,7 +11,7 @@ use planner::quality::Quality;
 
 fn first_small_list_blueprint() -> planner::data::Blueprint {
     let path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .join("../../test/FactorioTools.Test/OilField/small-list.txt");
+        .join("../../testdata/oil-field/small-list.txt");
     let lines = blueprint::read_blueprint_file(path).unwrap();
     parse_blueprint(&lines[0]).unwrap()
 }

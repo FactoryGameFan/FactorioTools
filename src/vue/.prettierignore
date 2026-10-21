@@ -1,4 +1,3 @@
 node_modules/
 dist/
-public/framework/
 src/lib/plannerDefaults.verified.json

@@ -1,16 +1,15 @@
 // Dependency automation for this repo. Renovate, not Dependabot: this project has
-// seven deliberate HOLDS whose reasoning lives in prose - in .csproj comments and
-// CLAUDE.md - and Dependabot's `ignore` entries cannot express any of them. The
+// deliberate HOLDS whose reasoning lives in prose - here and in CLAUDE.md - and
+// Dependabot's `ignore` entries cannot express any of them. The
 // point of everything below is to stop a bot cheerfully re-proposing, every week,
 // the exact bump this project has already considered and rejected; and, where a
 // bump IS wanted, to make the reason travel attached to the proposal.
 //
-// THIS FILE IS INERT UNTIL THE RENOVATE GITHUB APP IS INSTALLED. Adding it starts
-// no automation by itself (see https://github.com/apps/renovate). As of this
-// writing the app has never run here: no bot PRs, no bot commits, and no
-// Dependency Dashboard issue despite `dependencyDashboard: true` below.
+// THIS FILE IS INERT WITHOUT THE RENOVATE GITHUB APP. The file starts no automation
+// by itself (see https://github.com/apps/renovate). The app is installed here now:
+// it opens the bot PRs and keeps the dependency dashboard, issue #41.
 //
-// The app is intended to be installed with "Automated PRs", "Require config file"
+// The app is installed with "Automated PRs", "Require config file"
 // and "Create onboarding PRs". Two consequences worth knowing:
 //   - "Require config file" means Renovate does NOTHING, SILENTLY, if this file is
 //     absent or unparseable ON THE DEFAULT BRANCH. That is indistinguishable from
@@ -33,7 +32,7 @@
 
   // The org preset supplies what used to be spelled out here: config:recommended,
   // helpers:pinGitHubActionDigests, the America/Los_Angeles timezone, the
-  // "before 6am on monday" batch, automerge:false, prConcurrentLimit/prHourlyLimit,
+  // weekly Monday batch, automerge:false, prConcurrentLimit/prHourlyLimit,
   // dependencyDashboard, osvVulnerabilityAlerts, the rule that security fixes skip
   // the weekly window, and the github-actions grouping.
   // Source: https://github.com/FactoryGameFan/.github/blob/main/renovate-config.json
@@ -44,9 +43,10 @@
   // error - if PRs simply stop arriving, check that before anything else.
   //
   // WORTH KNOWING ABOUT THE ACTION SHA PINNING THE PRESET NOW SUPPLIES, because the
-  // knowledge is repo-specific even though the setting is not. All four actions here
-  // - actions/checkout, actions/setup-node, actions/setup-dotnet and
-  // cloudflare/wrangler-action - were converted from moving tags to SHAs by #61.
+  // knowledge is repo-specific even though the setting is not. The actions here -
+  // actions/checkout, actions/setup-node and cloudflare/wrangler-action, plus
+  // actions/setup-dotnet until the .NET code was removed - were converted from
+  // moving tags to SHAs by #61.
   // A digest update carries no release timestamp, so `minimumReleaseAge` below has
   // nothing to measure and `renovate/stability-days` sits PENDING rather than ever
   // going green. Waiting does not clear it. #61 was merged with that check
@@ -60,7 +60,7 @@
   //
   // This value is a JUDGEMENT CALL, not a constraint inherited from a package
   // manager. This repo is npm (src/vue/package-lock.json, lockfileVersion 3) plus
-  // NuGet; there is no pnpm anywhere, so none of pnpm 11's `minimum-release-age`
+  // Cargo (rust/Cargo.lock); there is no pnpm anywhere, so none of pnpm 11's `minimum-release-age`
   // cooldown behaviour - and its habit of writing a `minimumReleaseAgeExclude:`
   // bypass when asked to install something younger - is in play here. If this repo
   // ever moves to pnpm, revisit this line and the `vulnerabilityAlerts` one below
@@ -78,24 +78,26 @@
   // default in a way that passes a green suite while silently breaking a
   // byte-exactness invariant, and the resulting wrong belief survived about a year.
   // The same shape of failure is available here - the planner's correctness lives
-  // in Verify snapshots, and a dependency that changed planner output subtly would
-  // show up as a snapshot diff to be accepted rather than as an obvious failure.
+  // in the committed snapshots under testdata/oil-field, and a dependency that
+  // changed planner output subtly would show up as a snapshot diff to be accepted
+  // rather than as an obvious failure.
   //
   // IF THIS IS EVER REVISITED, automerge has two prerequisites that are easy to
   // miss and neither is satisfied today:
-  //   1. Branch protection on `main` with a CI check REQUIRED, `bypass_actors`
-  //      empty, and `strict_required_status_checks_policy: true`. Without all
-  //      three a PR can merge red, or merge having been tested against a different
-  //      `main` than the one it lands on. Note this repo's CI is FOUR separate
-  //      checks ("Build front-end", "Transpile to Lua", "Test .NET with
-  //      Lua-compatible settings", "Test .NET with default settings"), so all four
-  //      have to be required, not just one.
+  //   1. A rule on `main` with CI checks REQUIRED, `bypass_actors` empty, and
+  //      `strict_required_status_checks_policy: true`. Without all three a PR can
+  //      merge red, or merge having been tested against a different `main` than
+  //      the one it lands on. Today nothing is required: the only ruleset,
+  //      ProtectMain, blocks deletion and force pushes and has no status-check
+  //      rule (checked 2026-10-21). This repo's CI is TWO separate checks from
+  //      ci.yml ("Build front-end" and "Rust port"), so both have to be required,
+  //      not just one.
   //
-  //      There is also a fifth, "Build and deploy" from deploy-cloudflare.yml,
-  //      which runs on pull requests behind a `paths` filter. Do NOT make that one
-  //      required: a paths-filtered check does not report at all on a PR it does
-  //      not match, which leaves a required check permanently pending and blocks
-  //      the merge outright.
+  //      There is also "Build and deploy" from deploy-cloudflare.yml, and
+  //      "smoke" from devcontainer.yml. Both run on pull requests behind a
+  //      `paths` filter. Do NOT make either one required: a paths-filtered check
+  //      does not report at all on a PR it does not match, which leaves a
+  //      required check permanently pending and blocks the merge outright.
   //   2. Repo-level "Allow auto-merge" enabled (`allow_auto_merge` in the repo
   //      settings API). Renovate's `platformAutomerge` cannot do anything without
   //      it, and when it is off Renovate silently falls back to polling and merging
@@ -155,13 +157,6 @@
     ],
   },
 
-  // The submodules (FluteSharp, delaunator-sharp, CSharp.lua) are pinned to specific
-  // commits and are upstream repos, not ours to bump. Renovate disables this manager
-  // by default; stated explicitly so nobody "fixes" it later.
-  "git-submodules": {
-    enabled: false,
-  },
-
   packageRules: [
     // ---------------------------------------------------------------------------
     // Grouping
@@ -191,7 +186,7 @@
     },
 
     // ---------------------------------------------------------------------------
-    // Documented holds. Each mirrors a comment in the code; keep the two in sync.
+    // Documented holds. Each carries its reason and when to revisit it.
     // `allowedVersions` is used rather than `enabled: false` so patches within the
     // held line still flow - the hold is on the major, not on maintenance.
     //
@@ -205,23 +200,18 @@
     //   Migration-shaped - there is real work that would lift the hold, so the
     //   plan lives in an issue and the rule points at it:
     //     typescript ............... #49  (upstream-gated: vue-tsc vs TS 7)
-    //     WebApp OpenAPI stack ..... #47  (OpenApi 10.x + Swashbuckle 10.x)
-    //     xunit-dotnet monorepo .... #111 (migrate to the new `dotnet test`)
-    //     Verify 33 ................ #111 (Verify.XunitV3 33 needs xunit.v3 4)
     //
-    //   The Verify family was listed here against #44 until the move to xunit v3
-    //   + Verify.XunitV3 landed. It is held again since 2026-10-20, for a
-    //   different reason: every 33.x release requires xunit.v3 4.x (#155).
+    //   The NuGet holds that used to be listed here went with the .NET code in
+    //   stage 13b of the Rust port (#138).
     //
     //   Conditional - nothing to plan until an external circumstance changes, so
     //   there is deliberately NO issue and the revisit condition is stated in the
     //   rule itself. Filing issues for these would just create things to close:
     //     @types/node .............. tracks CI's Node, not the registry
-    //     ApplicationInsights ...... only matters if WebApp is hosted again
     //
     // The live inventory of everything held back is dependency dashboard #41,
     // which is a better place to look than reading manifests by hand - it is how
-    // the missing swashbuckle.aspnetcore.cli hold was found (#43).
+    // a missing hold was found once before (#43).
     // ---------------------------------------------------------------------------
     {
       // Tracking issue: #49. Upstream-gated - nothing here unblocks it. Expected to
@@ -246,183 +236,25 @@
       ],
     },
     {
-      // Tracking issue: #47 - the OpenApi 10.x + Swashbuckle 10.x migration that
-      // lifts this whole group. Read it before touching any ceiling here; the two
-      // halves have different ones and the reasons are not interchangeable.
+      // The only Dockerfile is .devcontainer/Dockerfile (src/WebApp/Dockerfile
+      // went with the .NET code). Its FROM line is an Ubuntu 24.04 image pinned
+      // by digest, so Renovate re-pins the digest as the image picks up OS
+      // security fixes. Not narrowed with matchFileNames: there is exactly one
+      // such file, and a path guess that stops matching after a move would fail
+      // silently.
       //
-      // THE CLI IS PART OF THIS STACK AND WAS MISSING FROM THE FIRST VERSION OF
-      // THIS RULE. `swashbuckle.aspnetcore.cli` lives in
-      // src/WebApp/.config/dotnet-tools.json (currently 6.9.0), not in any .csproj,
-      // so reading the project files alone does not reveal it - and because it is a
-      // separate package name, matching "Swashbuckle.AspNetCore" never covered it.
-      // Renovate promptly queued a jump straight to v10 for it. That CLI is what
-      // WebApp.csproj's PostBuild target runs to generate the committed
-      // swagger.json, which in turn generates the Vue client, so a v10 generator
-      // against a 6.x library is exactly the piecemeal move the csproj comment
-      // forbids. It is held here with the rest of the stack.
-      //
-      // CEILING IS <7.0.0, not the <9.0.0 originally guessed. Installed today are
-      // Swashbuckle.AspNetCore 6.9.0 and swashbuckle.aspnetcore.cli 6.9.0, and
-      // nothing in the csproj comment establishes that 7.x or 8.x is safe against
-      // Microsoft.AspNetCore.OpenApi 8.0.x - it reasons only about 6.x (current)
-      // and 10.x (the compatible target). <9.0.0 would have waved through a
-      // Swashbuckle v8 major on that unexamined basis. Patches within 6.x still
-      // flow; the hold is on the major.
+      // Majors used to be skipped here, because they only reached an undeployed
+      // WebApp and an SDK image that moved with global.json. Neither is true now.
+      // A major here is the next Ubuntu LTS, and it comes through as its own PR
+      // like any other update, with the note below. Nothing automerges, so it
+      // still waits for a read.
       description:
-        "HOLD the WebApp OpenAPI stack at its current majors, and keep all of it in one PR - these move together or not at all. Microsoft.AspNetCore.OpenApi 9.0+ pulls Microsoft.OpenApi 2.x, whose schema model Swashbuckle 6.x cannot consume; Swashbuckle 10.x adopts 2.x as well, so OpenApi 10.x + Swashbuckle 10.x + CLI 10.x is the compatible set. Getting there is a real migration (rewrite of OilFieldPlanRequestDefaultsSchemaFilter.cs, edits to RequireNonNullablePropertiesSchemaFilter.cs, regenerated swagger.json and Vue client), deferred because WebApp is not deployed. See the comment in src/WebApp/WebApp.csproj.",
-      matchManagers: ["nuget"],
-      matchPackageNames: [
-        "Microsoft.AspNetCore.OpenApi",
-        "Swashbuckle.AspNetCore",
-        "swashbuckle.aspnetcore.cli",
-      ],
-      groupName: "WebApp OpenAPI stack",
-      allowedVersions: "<9.0.0",
-    },
-    {
-      // Split out because the two halves of the stack have different ceilings:
-      // Microsoft.AspNetCore.OpenApi is held below 9.0.0 (that is where the
-      // Microsoft.OpenApi 2.x break lands), while the Swashbuckle packages are held
-      // below 7.0.0 for the reason above. `allowedVersions` is last-match-wins, so
-      // this narrows the two Swashbuckle entries without disturbing the grouping or
-      // the OpenApi ceiling set by the rule above.
-      description:
-        "HOLD both Swashbuckle packages on 6.x specifically. Installed: Swashbuckle.AspNetCore 6.9.0, swashbuckle.aspnetcore.cli 6.9.0 - the two were out of step until #63 brought the CLI up to match, which is what this rule existing at all is meant to keep true. The csproj rationale covers 6.x and 10.x only - 7.x/8.x are simply unexamined against Microsoft.AspNetCore.OpenApi 8.0.x, so they are not a safe default. Raise this only as part of the OpenApi 10.x migration, which moves the whole stack at once - tracked in #47.",
-      matchManagers: ["nuget"],
-      matchPackageNames: ["Swashbuckle.AspNetCore", "swashbuckle.aspnetcore.cli"],
-      groupName: "WebApp OpenAPI stack",
-      allowedVersions: "<7.0.0",
-    },
-    {
-      // The version ceiling that used to sit here came off with #44: the test
-      // project moved to xunit v3 + Verify.XunitV3, so Verify.DiffPlex is no longer
-      // pinned to 3.1.x and the family tracks current again.
-      //
-      // The grouping stays, because the coupling that made the old hold necessary
-      // is structural, not version-specific. Verify.DiffPlex and Verify.XunitV3
-      // both bind to Verify core, so bumping one alone can pull core past what the
-      // other supports. That mismatch is the dangerous kind - it compiles with zero
-      // warnings and dies at runtime. On the old stack it took out 2748 of 4261
-      // tests with MethodAccessException on Guards.AgainstBadSourceFile.
-      description:
-        "Keep the whole Verify family in one PR. Verify.DiffPlex and Verify.XunitV3 both bind to the Verify core package, so bumping one alone can pull core past what the other supports - which builds cleanly and then fails at runtime with MethodAccessException on Guards.AgainstBadSourceFile. These move together, and 33.x is held by the rule below. See the comment in test/FactorioTools.Test/FactorioTools.Test.csproj.",
-      matchManagers: ["nuget"],
-      matchPackageNames: ["Verify.XunitV3", "Verify.DiffPlex", "Verify"],
-      groupName: "Verify test snapshot stack",
+        "Devcontainer base image majors (the next Ubuntu LTS) come as their own PR. The Devcontainer CI job rebuilds the image and runs the Rust tests and the site build inside it.",
+      matchManagers: ["dockerfile"],
+      matchUpdateTypes: ["major"],
       prBodyNotes: [
-        "This family's failure mode BUILDS CLEANLY and dies at runtime, so a compiling branch is not evidence. Run the full `dotnet test` before believing any bump here.",
+        "This moves the dev container to a new Ubuntu release. Check that the Devcontainer CI job (`smoke`) ran and passed, and that the Node tarball and rustup steps in .devcontainer/Dockerfile still work on it.",
       ],
-    },
-    {
-      // Tracking issue: #111. Every Verify.XunitV3 33.x release depends on
-      // xunit.v3.extensibility.core 4.x, which the xunit rule below holds back.
-      // Renovate proposed 33.3.4 in #155. The build failed with SponsorCheck
-      // SC021 first, and with that answered, the test binary died at startup:
-      //
-      //   System.TypeLoadException: Method 'get_AssemblyUniqueID' in type
-      //   'Xunit.Runner.Common.ErrorMessage' from assembly
-      //   'xunit.v3.runner.common, Version=3.2.2.0' does not have an
-      //   implementation.
-      //
-      // Zero tests ran. Verify.DiffPlex 3.4.0 needs Verify core 33.2.0, so it is
-      // held at the same line (#137 was closed for that).
-      //
-      // Verify 33 also needs a license property, or the build fails with SC021.
-      // When #111 lands, add the OpenSource exemption to the test project with an
-      // end month at most 12 months out (2026-10-20 check: it builds with
-      // SC031 "Exemption claimed"):
-      //   <Verify_SponsorshipExemption>OpenSource</Verify_SponsorshipExemption>
-      //   <Verify_SponsorshipExemptionUntil>yyyy-MM</Verify_SponsorshipExemptionUntil>
-      description:
-        "HOLD Verify and Verify.XunitV3 below 33, and Verify.DiffPlex below 3.4.0. Verify.XunitV3 33.x requires xunit.v3 4.x, which is held for the dotnet test migration in #111. Lift this as part of #111, together with the Verify SponsorCheck exemption described in the comment here.",
-      matchManagers: ["nuget"],
-      matchPackageNames: ["Verify.XunitV3", "Verify"],
-      allowedVersions: "<33.0.0",
-    },
-    {
-      // Same hold as the rule above, at the DiffPlex release that moves to core 33.
-      description:
-        "HOLD Verify.DiffPlex below 3.4.0, which needs Verify core 33. See the Verify 33 rule above and #111.",
-      matchManagers: ["nuget"],
-      matchPackageNames: ["Verify.DiffPlex"],
-      allowedVersions: "<3.4.0",
-    },
-    {
-      // Tracking issue: #111. Migration-shaped, and unlike the Verify rule above
-      // this one fails LOUDLY at build time, which is the easier kind. Renovate
-      // proposed v4 in #108 and both .NET test jobs failed identically on CI and
-      // on a local Mac:
-      //
-      //   Microsoft.Testing.Platform.MSBuild.targets(320,5): error : Testing with
-      //   VSTest target is no longer supported by Microsoft.Testing.Platform on
-      //   .NET 10 SDK and later. If you use dotnet test, you should opt-in to the
-      //   new dotnet test experience.
-      //
-      // The chain is xunit.v3 4.0.0 -> xunit.v3.mtp-v2 [4.0.0, 4.0.0] ->
-      // Microsoft.Testing.Platform 2.x, which drops the VSTest bridge on the .NET
-      // 10 SDK. So this is not a bump, it is a test-host migration: the project
-      // has to opt into the new `dotnet test`, and ci.yml's two .NET jobs both
-      // pass `--logger "console;verbosity=normal"`, which is VSTest syntax that
-      // MTP does not accept. #111 has the full checklist.
-      //
-      // Ceiling is <4.0.0 rather than `enabled: false` so patches inside 3.x keep
-      // flowing while the migration waits. Raise it as part of #111, not before.
-      description:
-        "HOLD the xunit-dotnet monorepo on 3.x. xunit.v3 4.0.0 pulls xunit.v3.mtp-v2 and Microsoft.Testing.Platform 2.x, which no longer supports the VSTest target on the .NET 10 SDK, so `dotnet test` fails at build time. Lifting this means migrating the test project to the new dotnet test experience and replacing the VSTest-only arguments in ci.yml - tracked in #111. Patches within 3.x still flow; the hold is on the major.",
-      matchManagers: ["nuget"],
-      matchPackageNames: ["xunit.v3", "xunit.runner.visualstudio"],
-      groupName: "xunit-dotnet monorepo",
-      allowedVersions: "<4.0.0",
-    },
-    {
-      // No tracking issue by design - this is a "not worth the review" call rather
-      // than a deferred upgrade, and it reverses on its own if WebApp is hosted
-      // again. The Dockerfile rule below is the same call for the same reason;
-      // keep the two consistent.
-      description:
-        "SKIP major bumps of Microsoft.ApplicationInsights.AspNetCore. WebApp is no longer deployed, so telemetry majors are not worth the review. Patches still flow. Re-enable if the API is ever hosted again.",
-      matchManagers: ["nuget"],
-      matchPackageNames: ["Microsoft.ApplicationInsights.AspNetCore"],
-      matchUpdateTypes: ["major"],
-      enabled: false,
-    },
-    {
-      // Resolves #45. Same reasoning as the ApplicationInsights rule above, applied
-      // to the only Dockerfile in the repo (src/WebApp/Dockerfile - confirmed from
-      // the Renovate job log: "Matched 1 file(s) for manager dockerfile"). Not
-      // narrowed with matchFileNames, because there is exactly one such file and a
-      // path guess that stops matching after a move would fail silently.
-      //
-      // Majors off, patches ON, which is the deliberate half of this. A .NET major
-      // on an undeployed service is not worth a review, but base images accumulate
-      // OS-level CVEs, and `10.0` / `10.0-alpine` are FLOATING minor tags - the
-      // digest behind them moves on its own regardless of what Renovate proposes.
-      // Keeping patches live is what lets a rebuild pick those up.
-      //
-      // WORTH KNOWING: global.json now pins the SDK to 10.0.302 while this
-      // Dockerfile tracks whatever `10.0` currently resolves to. Those two can
-      // drift apart silently, and Renovate will not report it because a floating
-      // tag is never "out of date". If the container build ever behaves differently
-      // from CI, check that first.
-      description:
-        "SKIP major bumps of the src/WebApp/Dockerfile base images (mcr.microsoft.com/dotnet/sdk, runtime-deps). WebApp is no longer deployed, so a .NET major here is not worth the review - same call as Microsoft.ApplicationInsights.AspNetCore above. Patch/minor updates still flow, because base images carry OS-level security fixes even when the service is unhosted. Re-enable if the API is ever hosted again.",
-      matchManagers: ["dockerfile"],
-      matchUpdateTypes: ["major"],
-      enabled: false,
-    },
-    {
-      // .devcontainer/Dockerfile pins the exact SDK from global.json by digest, and
-      // the Devcontainer CI job fails when the two disagree. Renovate saw both
-      // updates for 10.0.402 but put only global.json in the dotnet monorepo PR
-      // (#148), so the smoke job went red until the FROM line was re-pinned by
-      // hand. Sharing the group name puts both in the same PR. The rule above
-      // predates this Dockerfile, so it now covers this image's majors too.
-      description:
-        "Move the devcontainer SDK image with global.json, in the dotnet monorepo PR. The Devcontainer CI job fails when they disagree.",
-      matchManagers: ["dockerfile"],
-      matchFileNames: [".devcontainer/Dockerfile"],
-      matchPackageNames: ["mcr.microsoft.com/dotnet/sdk"],
-      groupName: "dotnet monorepo",
     },
   ],
 }

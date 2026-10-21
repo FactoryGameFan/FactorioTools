@@ -36,7 +36,6 @@ jobs:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
-          submodules: recursive
           fetch-depth: 0
       - name: Set up Node
         uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
@@ -63,8 +62,10 @@ jobs:
         run: npm run build
         working-directory: ${{ env.BUILD_PATH }}
       # Guard against shipping a site that cannot plan: the planner's .wasm and its
-      # worker must be in dist/assets with a content hash, and nothing may still
-      # point at the old .NET bundle under /framework/.
+      # worker must be in dist/assets with a content hash. The second half checks
+      # nothing still ships or points at the old .NET bundle under /framework/. That
+      # bundle and its src/vue/public/framework/ ignore rule are gone, so a stale
+      # local copy left in public/ would now show up as a file to commit.
       - name: Check the planner landed in the bundle
         run: |
           dist="$BUILD_PATH/dist"

@@ -11,8 +11,8 @@ export default defineConfigWithVueTs(
   },
   {
     name: 'app/files-to-ignore',
-    // Build output, the .NET WASM bundle, and the generated planner defaults.
-    ignores: ['**/dist/**', '**/public/framework/**', 'src/lib/plannerDefaults.verified.json'],
+    // Build output and the generated planner defaults.
+    ignores: ['**/dist/**', 'src/lib/plannerDefaults.verified.json'],
   },
   pluginVue.configs['flat/essential'],
   vueTsConfigs.recommended,

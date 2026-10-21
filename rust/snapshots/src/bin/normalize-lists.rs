@@ -1,8 +1,8 @@
-//! Rewrites `big-list.txt` and `small-list.txt` the way the C# CLI's `oil-field normalize`
-//! does: `cargo run --release -p snapshots --bin normalize-lists`. See
+//! Rewrites `big-list.txt` and `small-list.txt` the way the removed C# CLI's
+//! `oil-field normalize` did: `cargo run --release -p snapshots --bin normalize-lists`. See
 //! [`snapshots::normalize`] for what it changes and how it differs from the C#.
 //!
-//! `--keep-invalid` keeps a line that does not normalize, where the C# would ask.
+//! `--keep-invalid` keeps a line that does not normalize, where the C# asked.
 //! `--dir <path>` works on the lists in another directory instead of the test directory.
 
 use std::path::PathBuf;

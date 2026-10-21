@@ -1,0 +1,20 @@
+# Rust port of the oil-field planner (#138). It grows stage by stage beside the C#,
+# which stays the live planner until the port matches every snapshot.
+[workspace]
+resolver = "3"
+members = ["dotnet-compat"]
+
+[workspace.package]
+edition = "2024"
+license = "MIT"
+repository = "https://github.com/FactoryGameFan/FactorioTools"
+
+[workspace.lints.rust]
+unsafe_code = "forbid"
+
+[workspace.lints.clippy]
+all = { level = "warn", priority = -1 }
+
+[profile.release]
+lto = true
+codegen-units = 1

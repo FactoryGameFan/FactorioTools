@@ -45,6 +45,11 @@
       So: a green build is not evidence for this stack. If these versions are ever
       changed, run the suite, and keep Verify.XunitV3 and Verify.DiffPlex aligned on
       the same Verify core rather than bumping one alone.
+
+      Held below Verify 33 (DiffPlex below 3.4.0): Verify.XunitV3 33.x needs
+      xunit.v3 4.x, which waits on #111. See the Verify 33 rule in
+      .github/renovate.json5, which also has the SponsorCheck exemption that
+      Verify 33 will need.
     -->
     <PackageReference Include="Verify.DiffPlex" Version="3.3.1" />
     <PackageReference Include="Verify.XunitV3" Version="32.0.1" />

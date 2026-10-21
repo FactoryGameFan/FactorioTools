@@ -207,10 +207,11 @@
     //     typescript ............... #49  (upstream-gated: vue-tsc vs TS 7)
     //     WebApp OpenAPI stack ..... #47  (OpenApi 10.x + Swashbuckle 10.x)
     //     xunit-dotnet monorepo .... #111 (migrate to the new `dotnet test`)
+    //     Verify 33 ................ #111 (Verify.XunitV3 33 needs xunit.v3 4)
     //
-    //   The Verify family used to be listed here against #44. That migration
-    //   landed - the test project is on xunit v3 + Verify.XunitV3 - so the version
-    //   ceiling is gone. Only the grouping remains, and it is not a hold.
+    //   The Verify family was listed here against #44 until the move to xunit v3
+    //   + Verify.XunitV3 landed. It is held again since 2026-10-20, for a
+    //   different reason: every 33.x release requires xunit.v3 4.x (#155).
     //
     //   Conditional - nothing to plan until an external circumstance changes, so
     //   there is deliberately NO issue and the revisit condition is stated in the
@@ -323,13 +324,47 @@
       // warnings and dies at runtime. On the old stack it took out 2748 of 4261
       // tests with MethodAccessException on Guards.AgainstBadSourceFile.
       description:
-        "Keep the whole Verify family in one PR. Verify.DiffPlex and Verify.XunitV3 both bind to the Verify core package, so bumping one alone can pull core past what the other supports - which builds cleanly and then fails at runtime with MethodAccessException on Guards.AgainstBadSourceFile. Not a version hold; these are free to move, just not separately. See the comment in test/FactorioTools.Test/FactorioTools.Test.csproj.",
+        "Keep the whole Verify family in one PR. Verify.DiffPlex and Verify.XunitV3 both bind to the Verify core package, so bumping one alone can pull core past what the other supports - which builds cleanly and then fails at runtime with MethodAccessException on Guards.AgainstBadSourceFile. These move together, and 33.x is held by the rule below. See the comment in test/FactorioTools.Test/FactorioTools.Test.csproj.",
       matchManagers: ["nuget"],
       matchPackageNames: ["Verify.XunitV3", "Verify.DiffPlex", "Verify"],
       groupName: "Verify test snapshot stack",
       prBodyNotes: [
         "This family's failure mode BUILDS CLEANLY and dies at runtime, so a compiling branch is not evidence. Run the full `dotnet test` before believing any bump here.",
       ],
+    },
+    {
+      // Tracking issue: #111. Every Verify.XunitV3 33.x release depends on
+      // xunit.v3.extensibility.core 4.x, which the xunit rule below holds back.
+      // Renovate proposed 33.3.4 in #155. The build failed with SponsorCheck
+      // SC021 first, and with that answered, the test binary died at startup:
+      //
+      //   System.TypeLoadException: Method 'get_AssemblyUniqueID' in type
+      //   'Xunit.Runner.Common.ErrorMessage' from assembly
+      //   'xunit.v3.runner.common, Version=3.2.2.0' does not have an
+      //   implementation.
+      //
+      // Zero tests ran. Verify.DiffPlex 3.4.0 needs Verify core 33.2.0, so it is
+      // held at the same line (#137 was closed for that).
+      //
+      // Verify 33 also needs a license property, or the build fails with SC021.
+      // When #111 lands, add the OpenSource exemption to the test project with an
+      // end month at most 12 months out (2026-10-20 check: it builds with
+      // SC031 "Exemption claimed"):
+      //   <Verify_SponsorshipExemption>OpenSource</Verify_SponsorshipExemption>
+      //   <Verify_SponsorshipExemptionUntil>yyyy-MM</Verify_SponsorshipExemptionUntil>
+      description:
+        "HOLD Verify and Verify.XunitV3 below 33, and Verify.DiffPlex below 3.4.0. Verify.XunitV3 33.x requires xunit.v3 4.x, which is held for the dotnet test migration in #111. Lift this as part of #111, together with the Verify SponsorCheck exemption described in the comment here.",
+      matchManagers: ["nuget"],
+      matchPackageNames: ["Verify.XunitV3", "Verify"],
+      allowedVersions: "<33.0.0",
+    },
+    {
+      // Same hold as the rule above, at the DiffPlex release that moves to core 33.
+      description:
+        "HOLD Verify.DiffPlex below 3.4.0, which needs Verify core 33. See the Verify 33 rule above and #111.",
+      matchManagers: ["nuget"],
+      matchPackageNames: ["Verify.DiffPlex"],
+      allowedVersions: "<3.4.0",
     },
     {
       // Tracking issue: #111. Migration-shaped, and unlike the Verify rule above

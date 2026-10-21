@@ -42,6 +42,15 @@ jobs:
         run: npm install
         working-directory: ${{ env.BUILD_PATH }}
 
+      # The site loads the Rust planner (rust/planner-wasm). build-wasm builds it for
+      # wasm32 and copies planner.js and planner_wasm.wasm into src/lib/planner-wasm,
+      # which the Vite build imports, so it has to run first. No toolchain action:
+      # rust/rust-toolchain.toml pins the compiler and the wasm32 target, and the
+      # runner's rustup installs both on first use, as in the Rust job.
+      - name: Build the Rust planner
+        run: npm run build-wasm
+        working-directory: ${{ env.BUILD_PATH }}
+
       - name: Build
         run: npm run build
         working-directory: ${{ env.BUILD_PATH }}

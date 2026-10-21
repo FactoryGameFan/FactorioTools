@@ -37,26 +37,25 @@ npm install
 npm run dev            # vite dev server
 npm run build          # regenerates TS API client from swagger, type-checks, builds
 npm run swagger-gen    # regenerate src/lib API client from ../WebApp/swagger.json
-npm run build-wasm     # publish BrowserWasm and copy the bundle (incl. dotnet.js) into public/framework
+npm run build-wasm     # build the Rust planner (rust/planner-wasm) and copy it into src/lib/planner-wasm
 ```
 
-- The Vue app plans in-browser via .NET WASM. After changing C# planner code, run
-  `npm run build-wasm` in `src/vue` to refresh `public/framework` (the bundle,
-  incl. `dotnet.js`, lives in `public/framework`). The copy must land as
-  `public/framework/`, not flattened into `public/` - a flattened bundle puts
-  `dotnet.js` at the root, the `framework/dotnet.js` import 404s, and the site
-  loads but cannot plan. `build-wasm` does `mkdir -p public` first to guarantee
-  that. (Only `src/vue/public/framework/` is gitignored, not all of
-  `src/vue/public/`; the directory itself exists in a fresh checkout because
-  `_headers` is tracked in it, so the `mkdir -p` is belt-and-braces rather
-  than load-bearing.) `deploy-cloudflare.yml` runs `build-wasm` and asserts the
-  resulting shape, on pull requests as well as on deploys, so this is now
-  checked rather than trusted. Requires the .NET 10 SDK plus the wasm-tools
-  workload; without a local .NET 10 SDK, publish via `./docker-build.sh` (the SDK image
-  also needs `python3` on PATH for the emscripten native relink step), passing
-  `--property:LocationAsStruct=false` the way `build-wasm` does, and copy
-  `src/BrowserWasm/bin/Release/net10.0/browser-wasm/AppBundle/_framework` into
-  `src/vue/public/framework`. `npm run dev` / `npm run build` serve those assets.
+- The Vue app plans in-browser with the **Rust planner** (`rust/planner-wasm`), compiled to
+  WebAssembly. `npm run build-wasm` in `src/vue` builds it (`cargo build --release -p
+  planner-wasm --target wasm32-unknown-unknown`, run inside `rust/` so the pinned toolchain
+  applies) and copies `planner.js` and `planner_wasm.wasm` into `src/vue/src/lib/planner-wasm/`.
+  That folder is gitignored except for `planner.d.ts`, which types the wrapper, so run
+  `build-wasm` before `npm run dev` or `npm run build`: the Vite build imports those files and
+  fails without them. Vite gives the `.wasm` a content-hashed name under `/assets/`. Needs a
+  Rust toolchain (rustup); no .NET.
+- **Planning runs in a Web Worker** (`src/lib/plannerWorker.ts`), started by
+  `src/lib/wasmPlanner.ts`, so the page stays responsive while it plans. If the worker cannot
+  start (it fails to construct, reports an error, or does not answer within 15 s), the planner
+  falls back for good to the main thread and logs one warning. Add `?planner=main-thread` to
+  the page URL to force the fallback. The .NET build could never run in a worker (its runtime
+  deadlocked in `create()`); the Rust module has no runtime, so it can.
+  `deploy-cloudflare.yml` runs `build-wasm` and checks the planner landed in `dist/assets`, on
+  pull requests as well as on deploys.
 
 ### Building without a local .NET 10 SDK (Docker / OrbStack)
 
@@ -125,9 +124,9 @@ Blueprint string parsing and emitting live here, separate from the core lib: `Pa
 - `src/vue` - the primary front-end (Vue 3 + Vite + Pinia, persisted settings). This is what's deployed, as a Cloudflare Worker with static assets (see "Deployment" below); it plans in-browser via the WASM bundle and no longer calls a hosted API. Planner constants (pole presets, geometry defaults, strategy defaults, quality levels) are not retyped in TypeScript - they come from `src/vue/src/lib/plannerDefaults.verified.json`, which `PlannerDefaultsTest` generates from `OilFieldOptions` (most fields) and the `Quality` enum (`qualityLevels`). Change a default in the C# and `dotnet test` rewrites that file; commit it with your change.
 
   **Keep the FLUTE credit in the footer of `src/vue/src/App.vue`.** FLUTE (the `ConnectedCentersFlute` strategy, via the FluteSharp submodule) is under Chris Chu's Attribution Assurance License, `submodules/FluteSharp/flute-c/license.txt`. It requires a prominent display of "Dr. Chris C. N. Chu", "Iowa State University" and `http://home.engineering.iastate.edu/~cnchu/` every time the program launches. The footer shows on every page, which is what meets that. A Rust port of FLUTE would be under the same terms (#138).
-- `src/BrowserWasm` - runs the planner fully client-side via .NET WASM (trimmed). Lets the SPA plan without the API.
+- `src/BrowserWasm` - the planner as .NET WASM (trimmed). **The site no longer loads it**: it loads `rust/planner-wasm` instead (see the Rust port section). It stays until stage 13 of #138 removes the .NET projects, and the notes below describe how it was built.
 
-  **It ships as AOT with `Location` as a class, and the two flags only work together.** `BrowserWasm.csproj` sets `RunAOTCompilation=true`, and `build-wasm` passes `--property:LocationAsStruct=false`. That flag must stay on the command line: it is a global property that has to reach the referenced projects, and setting it in the `.csproj` does not. Measured 2026-10-06 in issue #139, against native .NET on the same machine:
+  **It shipped as AOT with `Location` as a class, and the two flags only work together.** `BrowserWasm.csproj` sets `RunAOTCompilation=true`, and `build-wasm` passes `--property:LocationAsStruct=false`. That flag must stay on the command line: it is a global property that has to reach the referenced projects, and setting it in the `.csproj` does not. Measured 2026-10-06 in issue #139, against native .NET on the same machine:
 
   | Build | Planning speed | Time to first plan | Download (brotli) |
   | --- | --- | --- | --- |
@@ -147,7 +146,7 @@ The planner is being ported to Rust/WASM, one stage per PR, following the plan o
 - **Those copies are tested against fixtures recorded from real .NET** (`rust/dotnet-compat/fixtures`, format in `rust/dotnet-compat/FIXTURES.md`). The `test-default` CI job reruns the recorder on the pinned SDK and fails if the fixtures drift, so an SDK bump that changes .NET's behavior shows up as a red check.
 - **`rust/delaunator-net` and `rust/flute` are ports of the two submodules**, DelaunatorSharp and FluteSharp, kept byte-for-byte compatible with them. Do not swap in the `delaunator` crate: it is a newer algorithm whose tie-breaking differs, which changes the planner's pipes. `rust/flute` is under FLUTE's Attribution Assurance License (`rust/flute/LICENSE-FLUTE`), the same terms as the C#, so the site's footer credit covers it too.
 - **`rust/snapshots` is the end-to-end gate.** It plans every case the C# Verify tests plan, from the same `small-list.txt` and `big-list.txt`, and compares the output with the committed `*.verified.txt` files byte for byte, plus `Score.HasExpectedScore`. It also fails if a snapshot file exists that no Rust case checks. Run it in release: `cargo test --release -p snapshots -- --include-ignored` (about a minute). `rust/blueprint` parses blueprint strings for it.
-- **`rust/contract` and `rust/planner-wasm` are what the site will load.** `contract` is the JSON the site sends and gets back (`PlanOrchestrator`'s `Plan` and `Normalize`, the error envelope), checked against responses recorded from the C# (`rust/contract/fixtures`). `planner-wasm` builds it to WebAssembly with no extra toolchain, and `planner-wasm/js/planner.js` exposes `plan(json)` and `normalize(json)` with the same signatures as `src/vue/src/lib/wasmPlanner.ts`. CI checks the WebAssembly build's output against the native contract byte for byte. The site still loads the .NET build; switching it over is a separate change.
+- **`rust/contract` and `rust/planner-wasm` are what the site loads.** `contract` is the JSON the site sends and gets back (`PlanOrchestrator`'s `Plan` and `Normalize`, the error envelope), checked against responses recorded from the C# (`rust/contract/fixtures`). `planner-wasm` builds it to WebAssembly with no extra toolchain, and `planner-wasm/js/planner.js` exposes `plan(json)` and `normalize(json)` with the same signatures as `src/vue/src/lib/wasmPlanner.ts`. CI checks the WebAssembly build's output against the native contract byte for byte. **The site loads this module** (stage 12b of #138), through `src/vue/src/lib/wasmPlanner.ts` and a Web Worker.
 - **Commands**, from `rust/`: `cargo fmt --all`, `cargo clippy --all-targets -- -D warnings`, `cargo test --all-targets`, and `cargo build --workspace --target wasm32-unknown-unknown`. The toolchain is pinned in `rust/rust-toolchain.toml`; rustup installs it on first use.
 - **A change to the C# planner during the port** has to land in the Rust version too, or wait for it. `rust/planner/fixtures` are recorded from the C# planner (format and the command to regenerate them in `rust/planner/FIXTURES.md`), and the `test-default` CI job reruns every recorder under `rust/`. So a C# change that alters planner output turns CI red until the fixtures are regenerated and the Rust port matches them.
 
@@ -158,7 +157,7 @@ The Vue app runs at `https://oilfieldplanner.factorygamefan.com` as a Cloudflare
 - **Config:** `src/vue/wrangler.jsonc`. It is an assets-only Worker: there is no Worker script, and every request is served straight from `dist/`. It attaches the hostname as a Custom Domain. `workers_dev` and `preview_urls` are off, so the site has one public hostname.
 - **CI deploys on every push to `main`.** `deploy-cloudflare.yml` runs `wrangler deploy` from `src/vue`, using the `wrangler` pinned in `package-lock.json`. Pull requests build and check the bundle but never deploy. So merging a PR that touches the site is a live deploy.
 - **Client routes use `"not_found_handling": "404-page"`.** A path with no file gets `dist/404.html` with status 404. That file is the SPA shell (`npm run build` copies `index.html` to it), so a hard load of a client route like `/oil-field` still starts the app. The 404 status is what Pages returned too. Do not swap this for `"single-page-application"` without meaning to: that serves `index.html` with status 200, which changes what crawlers see.
-- **Headers come from `src/vue/public/_headers`**, which Vite copies to `dist/` and Cloudflare reads without serving. It gives `/assets/*` a one-year `immutable` cache, since Vite puts a content hash in those file names. `/framework/` stays on the default (`max-age=0, must-revalidate`, with an ETag): the .NET WASM bundle keeps fixed names like `dotnet.native.wasm` across builds, so a long cache would serve a stale planner after a deploy. HTML stays on the default too.
+- **Headers come from `src/vue/public/_headers`**, which Vite copies to `dist/` and Cloudflare reads without serving. It gives `/assets/*` a one-year `immutable` cache, since Vite puts a content hash in those file names. That includes the planner's `planner_wasm-<hash>.wasm` and the worker script, so a deploy always gets new URLs. (The old .NET bundle lived under `/framework/` with fixed names and so stayed on the default cache; it is gone.) HTML stays on the default (`max-age=0, must-revalidate`, with an ETag).
 - **Two Pages default headers are restored in `_headers`.** Pages added `x-content-type-options: nosniff`, `referrer-policy: strict-origin-when-cross-origin` and `access-control-allow-origin: *` to every response, and a Worker adds none of them. The first two are back, in a `/*` block; `access-control-allow-origin: *` is left out on purpose: no other site is known to fetch these files. Add it back if one ever needs to.
 - **The old Pages host still redirects.** The Pages project `factoriotools` stays alive only to 301 `factoriotools-5jg.pages.dev` to the new hostname, keeping the path. Its whole deploy is `tools/pages-redirect-stub/_redirects`. CI never touches it. Never deploy it while `oilfieldplanner.factorygamefan.com` is still attached to the Pages project, or that hostname redirects to itself. To redeploy it, from `src/vue`:
 
@@ -166,7 +165,7 @@ The Vue app runs at `https://oilfieldplanner.factorygamefan.com` as a Cloudflare
   npx wrangler pages deploy ../../tools/pages-redirect-stub --project-name factoriotools --branch main
   ```
 
-Test locally against a real build (run `npm run build-wasm` first, or `dist/framework/` is missing):
+Test locally against a real build (run `npm run build-wasm` first, or the Vite build fails for want of `src/lib/planner-wasm/planner.js`):
 
 ```bash
 cd src/vue

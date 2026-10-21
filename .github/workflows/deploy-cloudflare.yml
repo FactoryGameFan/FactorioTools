@@ -7,28 +7,19 @@ on:
   push:
     branches:
       - "main"
-  # Pull requests run this whole job except the deploy step itself, so the WASM
-  # publish and the public/framework copy are proven before merge rather than by
-  # the deploy that happens after it. ci.yml's front-end build does none of that
-  # work - it builds with public/framework absent, so it is green against a
-  # different artifact from the one that ships.
+  # Pull requests run this whole job except the deploy step itself, so the
+  # planner build and the bundle check are proven before merge rather than by the
+  # deploy that happens after it.
   #
-  # The paths list is the dependency chain that feeds the bundle:
-  # BrowserWasm -> Serialization + Contract -> FactorioTools, plus the Vue app
-  # that consumes it and the build inputs that change how any of them compile.
-  # Keep it in sync when a new project joins that chain; a missing entry costs
-  # coverage silently, which is the failure mode this job exists to remove.
+  # The paths list is what feeds the bundle: the Rust planner (rust/, built by
+  # build-wasm into src/vue/src/lib/planner-wasm) and the Vue app. Keep it in
+  # sync when something new joins that chain; a missing entry costs coverage
+  # silently, which is the failure mode this job exists to remove.
   pull_request:
     paths:
       - ".github/workflows/deploy-cloudflare.yml"
-      - "src/BrowserWasm/**"
-      - "src/FactorioTools/**"
-      - "src/FactorioTools.Serialization/**"
-      - "src/FactorioTools.Contract/**"
+      - "rust/**"
       - "src/vue/**"
-      - "submodules/**"
-      - "global.json"
-      - "Directory.Build.props"
   workflow_dispatch:
 
 permissions:
@@ -47,52 +38,48 @@ jobs:
         with:
           submodules: recursive
           fetch-depth: 0
-      - name: Set up .NET
-        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6
-        with:
-          global-json-file: global.json
-      # build-wasm below shells out to dotnet publish, which needs the workload.
-      - name: Restore wasm-tools workload
-        run: dotnet workload restore
       - name: Set up Node
         uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with:
           node-version: 24
           cache: "npm"
           cache-dependency-path: ${{ env.BUILD_PATH }}/package-lock.json
-      # Node is set up before the .NET publish because build-wasm runs through
+      # Node is set up before the planner build because build-wasm runs through
       # npm and needs shx from node_modules.
       - name: Install dependencies
         run: npm install
         working-directory: ${{ env.BUILD_PATH }}
-      # Publishes BrowserWasm and copies AppBundle/_framework to public/framework.
-      # This deliberately calls the npm script rather than reimplementing those
-      # steps inline: this workflow used to carry its own copy of the publish and
-      # cp logic, so the command developers run locally (per CLAUDE.md) and the
-      # one that builds the deployed site were two hand-maintained definitions
-      # that had already drifted in operation order. Now there is one, and this
-      # job is what proves it still works.
-      - name: Build the WASM bundle
+      # Builds the Rust planner (rust/planner-wasm) for wasm32 and copies planner.js
+      # and planner_wasm.wasm into src/lib/planner-wasm for Vite to bundle. No
+      # toolchain action: rust/rust-toolchain.toml pins the compiler and the wasm32
+      # target, and the runner's rustup installs both on first use. This calls the
+      # npm script rather than reimplementing it inline, so the command developers
+      # run locally (per CLAUDE.md) and the one that builds the deployed site stay
+      # one definition, and this job is what proves it still works.
+      - name: Build the Rust planner
         run: npm run build-wasm
         working-directory: ${{ env.BUILD_PATH }}
       - name: Build
         run: npm run build
         working-directory: ${{ env.BUILD_PATH }}
-      # Guard against the bundle landing in the wrong shape - a flattened copy
-      # leaves dotnet.js at the dist root, the import 404s, and the site loads but
-      # cannot plan. Cheap to assert, and the assertion is the point of running
-      # this job on pull requests at all.
-      - name: Check the WASM bundle landed in the right shape
+      # Guard against shipping a site that cannot plan: the planner's .wasm and its
+      # worker must be in dist/assets with a content hash, and nothing may still
+      # point at the old .NET bundle under /framework/.
+      - name: Check the planner landed in the bundle
         run: |
-          for f in framework/dotnet.js framework/dotnet.boot.js framework/dotnet.native.wasm; do
-            if [ ! -f "$BUILD_PATH/dist/$f" ]; then
-              echo "::error::$BUILD_PATH/dist/$f is missing - the _framework copy did not land as dist/framework/."
-              echo "dist contents:"
-              ls -la "$BUILD_PATH/dist"
+          dist="$BUILD_PATH/dist"
+          for pattern in 'assets/planner_wasm-*.wasm' 'assets/plannerWorker-*.js'; do
+            if ! compgen -G "$dist/$pattern" > /dev/null; then
+              echo "::error::$dist/$pattern is missing - did build-wasm run before the Vite build?"
+              ls -la "$dist/assets"
               exit 1
             fi
           done
-          echo "dist/framework/ contains the expected bundle entry points."
+          if [ -e "$dist/framework" ] || grep -rq "framework/dotnet" "$dist"; then
+            echo "::error::$dist still has or references the .NET bundle under /framework/."
+            exit 1
+          fi
+          echo "dist/assets has the planner's .wasm and worker, and nothing references /framework/."
       - name: Deploy to Cloudflare Workers
         # Pull requests build and verify, but never deploy. This also keeps the
         # repository's only credential-bearing step off the PR path.

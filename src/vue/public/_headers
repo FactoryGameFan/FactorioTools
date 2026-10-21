@@ -5,9 +5,9 @@
 # contents in its name under /assets/ (index-SHUCZ6FL.js), so a changed file
 # always has a new URL and a cached copy can never go stale.
 #
-# /framework/ is left on the default on purpose. The .NET WASM bundle keeps
-# fixed names (dotnet.native.wasm, dotnet.js) from build to build, so a long
-# cache there would keep serving an old planner after a deploy.
+# That includes the planner: Vite fingerprints planner_wasm.wasm too
+# (src/lib/planner-wasm), so it is served from /assets/ with the long cache and
+# a deploy always gets a new URL.
 #
 # HTML also stays on the Workers default (max-age=0, must-revalidate), so a new
 # deploy shows up on the next page load.

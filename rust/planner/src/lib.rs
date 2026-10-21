@@ -13,6 +13,7 @@ pub mod helpers;
 pub mod location;
 pub mod models;
 pub mod options;
+pub mod providers;
 pub mod quality;
 pub mod steps;
 

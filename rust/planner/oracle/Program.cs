@@ -71,6 +71,7 @@ var bigList = ParseBlueprint.ReadBlueprintFile(Path.Combine(oilFieldTestDir, "bi
 AlgorithmCases.Write(outputDir, smallList, bigList);
 Console.WriteLine("entity kinds: " + string.Join(", ", kindCounts.Select(x => $"{x.Key}={x.Value}")));
 InitializeContextRecorder.Record(outputDir, repoRoot, smallList);
+HelpersRecorder.Record(outputDir, smallList);
 if (checkSnapshots)
 {
     Console.WriteLine($"snapshots: {snapshotMatches} match, {snapshotMismatches} differ");

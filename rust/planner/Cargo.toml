@@ -11,6 +11,7 @@ repository.workspace = true
 workspace = true
 
 [dependencies]
+delaunator-net = { path = "../delaunator-net" }
 dotnet-compat = { path = "../dotnet-compat" }
 
 [dev-dependencies]

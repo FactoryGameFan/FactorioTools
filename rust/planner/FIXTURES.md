@@ -167,3 +167,119 @@ integers, and module dictionaries are `[name, count]` pairs in dictionary order.
 | `center_to_original_direction` | `[x, y, direction]` per key, in dictionary order |
 | `adjacent_count_length`, `adjacent_counts` | `LocationToAdjacentCount`: its length, then `[index, count]` for each non-zero cell |
 | `electric_pole_*_with_quality` | the four quality-scaled pole fields |
+
+## `helpers.jsonl` (stage 4)
+
+Written by `oracle/HelpersRecorder.cs`. It checks the rest of `Helpers` (`OilField/Helpers.cs`)
+and `Validate` (`OilField/Steps/Validate.cs`) by calling their public methods directly. No C#
+under `src/` is changed to record them.
+
+**Lines come in two kinds.** A `context` line is a snapshot that later `case` lines name by `id`.
+For every case, the recorder **rebuilds a fresh C# context from the snapshot** and runs the
+method on that, and the Rust test rebuilds it the same way. A real plan's grid and dictionaries
+can hold freed slots that a rebuild does not. The helpers that change the grid would then order
+things differently, so recording straight from the plan would test the wrong starting state.
+
+The snapshots come from:
+
+| Contexts | Blueprints | Options (all with `ValidateSolution`) |
+|---|---|---|
+| `small-NNNN_medium_b_o_u` | every 4th | medium pole, beacons, overlap |
+| `small-NNNN_substation_b` | every 8th, from 1 | substation, beacons, no overlap |
+| `small-NNNN_small_u` | every 8th, from 2 | small pole, no beacons |
+| `small-NNNN_big_b` | every 8th, from 5 | big pole, beacons, no overlap |
+| `small-NNNN_medium_heat_b`, `_medium_heat` | every 8th, from 3 and 6 | heat pipes, with and without beacons |
+| `small-NNNN_initial` | every 4th | `InitializeContext` output, before any pipe |
+
+Each of the first four also gets two derived snapshots: `_no-poles`, the finished grid with the
+poles taken off (where the pole pass starts), and `_no-beacons`, with beacons taken off too
+(where the beacon pass starts).
+
+### `context` lines
+
+`options` holds the fields the helpers read: `beacon_width`, `beacon_height`,
+`beacon_supply_width`, `beacon_supply_height`, `electric_pole_width`, `electric_pole_height`,
+`overlap_beacons`, `validate_solution`, `add_heat_pipes` and `add_beacons`. Everything else is
+the default. `pole_supply` is `ElectricPoleSupply{Width,Height}WithQuality`. `entities` is
+encoded as in `grids.jsonl`, and `next_id` is the grid's next `GetId()`. `centers`,
+`center_to_terminals` and `location_to_terminals` are as in `initialize_context.jsonl`.
+`heat_pipes` is `Context.HeatPipes` in enumeration order, or null.
+
+**The rebuild:**
+
+1. Add the entities to a new grid in the recorded order, with the recorded ids.
+2. Add each pole's neighbors in the recorded order.
+3. Set the next id.
+4. Fill the two terminal dictionaries in order. In C# they share `TerminalLocation` objects, as the planner's do.
+5. Build `HeatPipes` as a hash set in order.
+
+### `case` lines
+
+`{"kind": "case", "op": ..., "ctx": id (if any), "mut": {...} (if any), ...inputs, "out": {...}}`.
+
+**`mut` changes the rebuilt context before the operation runs**, in this order:
+
+1. `overlap_beacons` overrides the option.
+2. `remove_cells` are `RemoveEntity` calls.
+3. `add_poles` are `AddProviderToGrid` calls, each placing a new `ElectricPoleCenter` and its sides.
+4. `remove_heat_pipes` are removed from `HeatPipes`.
+
+Results that throw a `FactorioToolsException` record `"error": message`, and `"ok": true` marks a check that passed.
+
+| `op` | What runs | `out` |
+|---|---|---|
+| `powered` | `GetPoweredEntities` | `recipients` as `[x, y, w, h, ...]`, `has_beacons` |
+| `pole_coverage` | `GetElectricPoleCoverage` over the grid's pole centers, in order | `p2c` and `c2p`, as `[x, y, [covered...]]` per key, or `error` |
+| `beacon_coverage` | `GetProviderCenterToCoveredCenters` with beacon geometry over the beacon centers, then `GetCoveredCenterToProviderCenters` | `p2c`, `c2p` |
+| `candidates` | `GetElectricPoleCandidateToCovered` (`provider` `pole`, recipients from `GetPoweredEntities`) or `GetBeaconCandidateToCovered` (`beacon`, recipients are `Centers` as pumpjacks). The `info` factory is `pole` (`ElectricPoleCandidateInfo`) or `plain` (`CandidateInfo`), with `remove_unused` as given | see below |
+| `mutate_grid` | `RemoveEntity(center, size)`, `RemovePumpjack`, `AddProviderToGrid` with a pole (`add_pole`), or `AddBeaconsToGrid(centers)` | `count` (entities), `grid` hash, `error` if `AddEntity` threw part way |
+| `fit` | `DoesProviderFit` and `IsProviderInBounds` at every cell, for a provider of `size` | `fit` and `bounds`, one character per cell, row by row. `fit` is `-` where the provider would leave the grid, since the C# would index outside it |
+| `validate` | the `Validate` method named by `check` (see below) | `ok`, `error`, or `counts` |
+| `terminals` | `GetCenterToTerminals` and `GetLocationToTerminals` on the starting context. Then, on a fresh rebuild for each of the first six centers, `EliminateOtherTerminals` with that pumpjack's last option | `c2t` and `l2t` hashes, then `eliminate` as `[x, y, c2t hash, l2t hash]` |
+| `path` | `GetPath` over a breadth-first `came_from` (`[x, y, from_x, from_y, ...]`, in order) | `path` |
+| `line`, `line_on_empty` | `MakeStraightLine`, or `MakeStraightLineOnEmpty` on the context's grid | `points`, `none` (blocked), or `error`: `ArgumentException: ...` |
+| `lines` | `PointsToLines(points, sort)` | `lines` as `[ax, ay, bx, by, ...]`, or the Delaunator exception's `error_type` (and `error`) |
+| `turns`, `collinear` | `CountTurns`, `AreLocationsCollinear` | `result` |
+
+**`candidates` output:**
+
+- the `recipients` used, `count`, a `hash` of the whole result, `covered`, and `providers` as `[x, y, id, ...]`
+- `grid`: the grid hash afterwards, since `remove_unused` takes unused providers off the grid
+- `list`: the candidates in full, for the first few contexts only
+- `entity_distance`: `GetEntityDistance` for each candidate
+- `covered_to_candidates`: `GetCoveredToCandidates`
+
+When the case is marked `simulate`, the recorder also drives the placement helpers the way the
+passes do, with a simplified pick of which candidate goes next:
+
+- **`allow`** runs the pole pass's loop from `AddElectricPoles` with `AddProviderAndAllowMultipleProviders`:
+  - candidates are batched by covered count in a descending `SortedBatches`
+  - the first candidate of the top batch is placed each time
+  - the top batch is passed as `scopedCandidateToInfo`, so one dictionary is reached through both names, as in the real pass
+- **`allow_separate`** is the same loop with a separate copy of every candidate as the scoped dictionary, as the priority subsets are.
+- **Each `allow` step records** `[x, y, covered bits or the error, candidates hash, covered-to-candidates hash, batches hash, scoped count]`.
+- **`covers_more`** is `CandidateCoversMoreEntities` on the first candidate twice: once with nothing covered (it passes), then with all it covers already covered (it throws).
+- **`prevent`** runs the beacon pass without overlap with `AddProviderAndPreventMultipleProviders`: each time it places the first candidate that still covers something new. Each step records `[x, y, covered bits, candidate keys hash, covered-to-candidates hash]`. `prevent_last` is one more call, on a candidate that covers nothing new.
+- **`overlap`** runs the three `RemoveOverlappingCandidates` overloads at the first four candidate spots. The scoped overload runs with and without `coveredToCandidates`, and each overload works on its own copy of the candidates.
+
+**`validate` checks:**
+
+| `check` | Input |
+|---|---|
+| `pipes_connected` | every `Pipe` cell (including terminals and undergrounds) except index `drop` |
+| `underground_are_pipes` | `UndergroundPipe` cells with their directions, and every pipe cell except underground number `drop` |
+| `pipes_do_not_match` | the same pipe set twice (`same`), one missing a pipe (`minus_one`), or two `LocationBitSet`s (`bit_same`; the C# `SetEquals` always answers false there) |
+| `beacons_do_not_overlap` | one solution holding the grid's beacon centers |
+| `no_existing_beacons` | an empty dictionary, or the grid's beacon centers |
+| `unheated` | `CountUnheatedTargets`, which records `counts`: `[pumpjacks, pipes]` |
+| `no_unheated_beacons`, `heat_connected`, `all_power` | the context alone |
+
+**Hashes** use FNV-1a 64 over the 4 little-endian bytes of each int, as in `algorithms.jsonl`.
+A double mixes its low 32 bits, then its high 32 bits. Each is written as 16 hex digits. The
+exact field order of each hash is the same in `HelpersRecorder.cs` and `tests/helpers.rs`:
+
+- **Grids:** every entity in order: x, y, a kind code (0 to 11 in `KindCode`), id, then the kind's own field (a direction, a center id, or a pole's neighbor count and ids). The grid's next id comes last.
+- **Candidates:** the count, then per candidate x, y, the covered bit count, the true count, each bit, and the entity distance.
+- **Covered-to-candidates:** the count, then per index the index, the count and the keys.
+- **Batches:** the queue count, the lookup count, then per lookup key the key, the count and the keys.
+- **Terminals:** the count, then per key the key, the count and each terminal's center, terminal and direction.

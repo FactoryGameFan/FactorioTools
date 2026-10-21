@@ -59,6 +59,24 @@ impl<TInfo> SortedBatches<TInfo> {
         Some(&mut self.batches[index])
     }
 
+    /// Which batch `Queue.Peek()` returns, as an index for [`Self::batch_mut`]. The C# hands
+    /// the batch object itself to code that then reaches it through `Lookup` too
+    /// (`AddElectricPoles` passes it as `scopedCandidateToInfo`); the index keeps that one
+    /// dictionary reachable both ways.
+    pub fn peek_index(&self) -> Option<usize> {
+        self.queue.peek().copied()
+    }
+
+    /// The batch at an index from [`Self::peek_index`].
+    pub fn batch(&self, index: usize) -> &LocationDictionary<TInfo> {
+        &self.batches[index]
+    }
+
+    /// The batch at an index from [`Self::peek_index`], for changing it in place.
+    pub fn batch_mut(&mut self, index: usize) -> &mut LocationDictionary<TInfo> {
+        &mut self.batches[index]
+    }
+
     /// `Queue.Dequeue()`. The batch stays reachable through `Lookup`, as in the C#.
     pub fn dequeue(&mut self) -> Option<&LocationDictionary<TInfo>> {
         let index = self.queue.dequeue()?;

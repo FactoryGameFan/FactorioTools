@@ -23,8 +23,7 @@ use entity_names::vanilla;
 
 /// The one place this file names the fixture's location.
 fn factorio_oracle_path() -> PathBuf {
-    PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .join("../../testdata/oil-field/factorio-oracle.json")
+    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../testdata/oil-field/factorio-oracle.json")
 }
 
 const RE_CAPTURE_HINT: &str = "Two likely causes: either Factorio changed (re-run \

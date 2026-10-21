@@ -27,6 +27,13 @@
         >, built on {{ buildDate }}. Report bugs at the
         <a href="https://github.com/wormeyman/FactorioTools">GitHub repository</a>.
       </p>
+      <!-- Required by FLUTE's Attribution Assurance License (submodules/FluteSharp/flute-c/license.txt). Keep all three parts. -->
+      <p class="text-muted pb-3">
+        Pipe planning uses FLUTE by Dr. Chris C. N. Chu, Iowa State University,
+        <a href="http://home.engineering.iastate.edu/~cnchu/"
+          >http://home.engineering.iastate.edu/~cnchu/</a
+        >.
+      </p>
     </div>
   </footer>
 </template>

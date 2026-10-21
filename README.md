@@ -44,6 +44,8 @@ I re-implemented FBE's pipe planner and beacon planner (with some tweaks) and wr
 
 My pipe planning algorithm is called "connected centers". It first tries to find pumpjacks that should be directly connected with lines of pipes ("trunks") and then connects these groups incrementally. My best performing "connected centers" variant uses Dr. Chris C. N. Chu's FLUTE algorithm, which is used for rectilinear Steiner minimal tree generation (RSMT) problem. RSMT is an NP-hard problem so getting a truly optimal solution isn't very feasible especially when considering multiple parameters like pipes, beacons, and poles.
 
+FLUTE is used under Dr. Chu's Attribution Assurance License ([`submodules/FluteSharp/flute-c/license.txt`](https://github.com/joelverhagen/FluteSharp/blob/main/flute-c/license.txt)). The license asks that every launch of a program built from it shows his name, Iowa State University and his web page, so the site's footer carries that credit. Anyone planning commercial use must tell the author first.
+
 My beacon planning algorithm is called "snug" and it tries to place beacons as close to each other as possible after preferring starting locations that cover the most pumpjacks.
 
 The tool tries up to 16 different planning routines and returns the best one to the user. Even for larger oil fields (20+ pumps) it generally completes in less than 100ms. The tool shows the quality of the other plans so you can see how each algorithm did.

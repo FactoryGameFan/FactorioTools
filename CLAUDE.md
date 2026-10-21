@@ -140,6 +140,14 @@ Blueprint string parsing and emitting live here, separate from the core lib: `Pa
 - `src/FactorioTools.Cli` (`System.CommandLine`) - `oil-field` subcommands `sample`, `normalize`, `sandbox`. Output assembly is `Knapcode.FactorioTools.Sandbox`.
 - `src/Benchmark` - BenchmarkDotNet harness.
 
+### Rust port (in progress): `rust/`
+The planner is being ported to Rust/WASM, one stage per PR, following the plan on issue #138. The C# stays the live planner until the Rust version matches every Verify snapshot. Until then:
+
+- **The port must reproduce the C# output exactly**, including how ties are broken. That depends on .NET details: `HashSet`/`Dictionary` enumeration order (insertion order, with freed slots reused last-in first-out), the 4-ary `PriorityQueue`, the unstable introsort behind `List.Sort`, and `Math.Round` rounding half to even. `rust/dotnet-compat` holds Rust copies of these. Use them, not std's `HashMap`, `BinaryHeap` or `sort_by`, wherever the C# result depends on order.
+- **Those copies are tested against fixtures recorded from real .NET** (`rust/dotnet-compat/fixtures`, format in `rust/dotnet-compat/FIXTURES.md`). The `test-default` CI job reruns the recorder on the pinned SDK and fails if the fixtures drift, so an SDK bump that changes .NET's behavior shows up as a red check.
+- **Commands**, from `rust/`: `cargo fmt --all`, `cargo clippy --all-targets -- -D warnings`, `cargo test --all-targets`, and `cargo build --workspace --target wasm32-unknown-unknown`. The toolchain is pinned in `rust/rust-toolchain.toml`; rustup installs it on first use.
+- **A change to the C# planner during the port** has to land in the Rust version too, or wait for it. The snapshots catch drift, since both are checked against the same files.
+
 ## Deployment
 
 The Vue app runs at `https://oilfieldplanner.factorygamefan.com` as a Cloudflare **Worker with static assets**, named `oilfieldplanner-factorygamefan-com`. It moved there from the Cloudflare Pages project `factoriotools` in issue #126.

@@ -1,0 +1,16 @@
+[package]
+name = "dotnet-compat"
+version = "0.0.0"
+description = "Copies of the .NET collection, sort and rounding behavior the planner's output depends on"
+publish = false
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[lints]
+workspace = true
+
+[dev-dependencies]
+# float_roundtrip: the fixtures write doubles with .NET's "R" format, and they must read
+# back to the exact same bits. serde_json's default float parser can be one ULP out.
+serde_json = { version = "1", features = ["float_roundtrip"] }

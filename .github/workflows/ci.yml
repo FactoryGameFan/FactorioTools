@@ -295,5 +295,48 @@ jobs:
           fi
           echo "No Verify snapshots drifted."
 
+      # The Rust port (#138) copies .NET's tie-breaking behavior, and its tests
+      # check that copy against fixtures recorded from .NET. They are committed so
+      # the Rust job needs no .NET. This reruns the recorder on the pinned SDK and
+      # fails if the committed fixtures no longer match what .NET does.
+      - name: Check the dotnet-compat fixtures still match .NET
+        run: |
+          dotnet run --project rust/dotnet-compat/oracle --configuration Release -- rust/dotnet-compat/fixtures
+          if [ -n "$(git status --porcelain -- rust/dotnet-compat/fixtures)" ]; then
+            echo "::error::rust/dotnet-compat/fixtures no longer match what .NET records. If the SDK changed behavior, the Rust copy must change with it. Rerun the recorder (see rust/dotnet-compat/FIXTURES.md), commit, and fix the Rust tests."
+            git status --porcelain -- rust/dotnet-compat/fixtures
+            exit 1
+          fi
+          echo "dotnet-compat fixtures match .NET."
+
       - name: Publish
         run: dotnet publish src/WebApp --configuration Release --output src/WebApp/bin/publish --runtime linux-x64 --no-self-contained /p:PublishReadyToRun=true
+
+  rust:
+    name: Rust port
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: rust
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      # No toolchain action: rust/rust-toolchain.toml is honoured by the runner's
+      # preinstalled rustup, so the pin stays the single source of truth. Same
+      # pattern as factorio-oracle.
+      - name: Show toolchain
+        run: rustc --version && cargo --version
+
+      - name: Format
+        run: cargo fmt --all -- --check
+
+      - name: Clippy
+        run: cargo clippy --all-targets -- -D warnings
+
+      - name: Test
+        run: cargo test --all-targets
+
+      # The port ships to the browser as WASM, so every crate has to build there.
+      - name: Build for wasm32
+        run: cargo build --workspace --target wasm32-unknown-unknown

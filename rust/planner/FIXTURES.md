@@ -393,3 +393,59 @@ pole's footprint, which is why both appear.
 
 On 2026-10-21: 558 cases, 28 of them failures (24 no-path results, 4 thrown "A goal should have
 been reached."), 2 `FbeOriginal` fallbacks to `Fbe`.
+## `connected_centers.jsonl` (stage 7)
+
+The connected-centers pipe strategies (`AddPipes.2.ConnectedCenters.cs`, `.3.ConnectedCenters.DT.cs`,
+`.4.ConnectedCenters.FLUTE.cs`), recorded by `oracle/ConnectedCentersRecorder.cs` through their
+public methods. Each line is one blueprint and options. The recorder builds the starting
+`Context` with `InitializeContext.Execute`, then for each of `ConnectedCentersDelaunay`,
+`ConnectedCentersDelaunayMst` and `ConnectedCentersFlute` does what `AddPipes.GetSolutionGroups`
+does: gives the context fresh copies of `CenterToTerminals` and `LocationToTerminals` (new
+dictionaries and lists, the same terminal objects, in the original order), calls
+`GetConnectedPumpjacks`, then `FindTrunksAndConnect`.
+
+The cases (313):
+
+| Cases | Blueprints | Options |
+|---|---|---|
+| `small-NNNN_medium` | all 61 in `small-list.txt` | medium pole, `ValidateSolution` on |
+| `small-NNNN_<preset>` | all 61 | small pole, big pole or substation in turn, `ValidateSolution` off |
+| `small-NNNN_medium_avoid` | every third | up to 8 avoided cells 2-3 tiles from pumpjacks, fixed seed |
+| `small-NNNN_medium_ring` | every second, when it fits | a ring of avoided cells enclosing one pumpjack, so A* fails |
+| `big-NNNN_medium` | every 8th in `big-list.txt` | medium pole, `ValidateSolution` on |
+| `PlannerTest.AllowsLocationsToBeAvoided`, `ring-two-pumpjacks` | the test's two pumpjacks | its wall of avoided cells, or a ring |
+
+```json
+{
+  "name": "small-0000_medium", "preset": "ForMediumElectricPole", "validate_solution": true,
+  "entities": [ [entity_number, name, x_bits, y_bits, direction or null, mirror or null], ... ],
+  "avoid": [ [x_bits, y_bits], ... ],
+  "centers": [x0, y0, x1, y1, ...],
+  "center_to_terminals": [...], "location_to_terminals": [...],
+  "runs": [
+    {
+      "strategy": 2,
+      "graph": [ [center_x, center_y, [x0, y0, ...]], ... ],
+      "pipes": [x0, y0, ...],
+      "center_to_terminals_after": [...], "location_to_terminals_after": [...]
+    }, ...
+  ]
+}
+```
+
+- `entities` and `avoid` use the encoding of `initialize_context.jsonl`: float bits for
+  positions. `preset` names an `OilFieldOptions` preset, with `validate_solution` applied.
+- `centers` and the two terminal maps are the starting context, so the Rust test can tell an
+  `InitializeContext` difference from a connected-centers one. Terminal maps are
+  `[[key_x, key_y, [[center_x, center_y, terminal_x, terminal_y, direction], ...]], ...]`.
+- `graph` is `GetConnectedPumpjacks`' result, keys and sets in enumeration order. If it throws,
+  the run has `graph_error` instead and nothing else.
+- `pipes` is `FindTrunksAndConnect`'s pipe set in enumeration order. When it fails, the run has
+  `returned_error` (the exception came back in a `Result`) or `thrown_error` (it was thrown)
+  instead. The C# planner treats the two differently, so the Rust port keeps them apart. An
+  error is `{"type", "message"}`, plus `"a"` and `"b"` for a `NoPathBetweenTerminalsException`.
+- `*_after` are the terminal maps once the run is done: `FindTrunksAndConnect` selects terminals
+  with `EliminateOtherTerminals` as it goes.
+
+On 2026-10-20: 939 runs, of which 864 found pipes, 57 returned and 18 threw a
+`NoPathBetweenTerminalsException`.

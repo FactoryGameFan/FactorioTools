@@ -55,7 +55,7 @@ CI (`.github/workflows/ci.yml`) runs all five Rust commands above except `normal
 
 ### Devcontainer
 
-`.devcontainer/` builds a Linux container carrying every toolchain this repo needs: **Rust 1.98.1 through rustup (with rustfmt, clippy and the wasm32 target), Node 24.21.0 and python3**, on an Ubuntu devcontainers base image pinned by digest. Node is pinned exactly and checksummed. Before stage 13b the image was built on the .NET SDK and also carried dotnet, PowerShell and Lua 5.2; those are gone with the C#.
+`.devcontainer/` builds a Linux container carrying every toolchain this repo needs: **Rust 1.98.1 through rustup (with rustfmt, clippy, rust-src and the wasm32 target), Node 24.21.0, python3, git and gcc** (cargo's linker), on plain `ubuntu:24.04` pinned by digest. Node is pinned exactly and checksummed. The base already has user `ubuntu` at uid 1000, which is the container's `remoteUser`. Before stage 13b the image was built on the .NET SDK and also carried dotnet, PowerShell and Lua 5.2; those are gone with the C#.
 
 **Rust is pre-installed, and `rust/rust-toolchain.toml` still decides.** The image installs the toolchain named by `RUST_VERSION` in the Dockerfile, so creating the container downloads no compiler. Inside `rust/`, rustup reads the toolchain file as it does anywhere else. A stale `RUST_VERSION` therefore breaks nothing - rustup just installs the new pin on first use (about 10 s, measured) - which is exactly why nobody would notice. So the Devcontainer CI job compares `RUST_VERSION` with the toolchain file, checks that `rustc` and `cargo` in `rust/` report that version, and checks that the wasm32 target is installed. **When `rust/rust-toolchain.toml` moves, move `RUST_VERSION` with it.** The toolchain file is in that job's paths filter for this reason.
 
@@ -63,14 +63,15 @@ The container keeps its own `rust/target`, cargo registry and cargo git cache in
 
 Do not try to change the pre-installed toolchain's components from inside the container. `rustup target remove` failed there with `Invalid cross-device link (os error 18)`, because the files sit in a read-only image layer. Change the Dockerfile and rebuild instead. Installing another toolchain works.
 
-Measured 2026-10-21 on tealc (Linux x86-64, 8 cores, Docker Desktop), with `@devcontainers/cli@0.89.0` running the Devcontainer job's own steps against a fresh clone with tags. This was the stage 13a image, still on the .NET SDK base; the Rust and Node steps are the same in the new one. Two full runs; where they differ, both times are shown:
+Measured 2026-10-21 on tealc (Linux x86-64, 8 cores, Docker Desktop), on the stage 13b image, with `@devcontainers/cli@0.89.0` running the Devcontainer job's own steps against a fresh clone with tags:
 
 | step | result |
 | --- | --- |
-| `devcontainer up` | 45 s with the image cached, 88 s when the Rust layer had to be rebuilt. `postCreateCommand` took 34 s and 52 s, of which `build-wasm` took 17 s and 33 s and `npm ci` 10 s |
-| toolchain check | Rust 1.98.1 in the image and in the toolchain file; `rustc` and `cargo` 1.98.1 in `rust/`; wasm32 target present |
-| `cargo test --all-targets` in `rust/` | 175 passed, 7 ignored; 152 s and 188 s, of which about 11 s is compiling |
-| `npm run build-wasm && npm run build && npm run test` in `src/vue` | build OK, all tests passed (51 then; 55 since stage 13a); 12.5 s and 14 s (`build-wasm` already up to date) |
+| image build | 118 s with the base image already pulled. 1.93 GB on disk, down from 4.97 GB on the old .NET SDK base |
+| `devcontainer up` | 36 s with the image cached, of which `build-wasm` took 17 s and `npm ci` 7 s |
+| toolchain check | Rust 1.98.1 in the image and in the toolchain file; `rustc` and `cargo` 1.98.1 in `rust/`; wasm32 target present; `cc` 13.3.0 |
+| `cargo test --all-targets` in `rust/` | 190 passed, 7 ignored, in 175 s |
+| `npm run build-wasm && npm run build && npm run test` in `src/vue` | build OK, 55 tests passed, 10.4 s (`build-wasm` already up to date) |
 
 The release gates (`cargo test --release -p snapshots -p contract -- --include-ignored`) also pass in the container, in 96 s. The Devcontainer job leaves them to `ci.yml`'s Rust job: they test the planner, not the container.
 

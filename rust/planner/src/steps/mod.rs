@@ -8,4 +8,5 @@ pub mod add_pipes_fbe;
 pub mod initialize_context;
 pub mod initialize_flute;
 pub mod plan_underground_pipes;
+pub mod rotate_optimize;
 pub mod validate;

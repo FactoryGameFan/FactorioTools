@@ -449,3 +449,40 @@ The cases (313):
 
 On 2026-10-20: 939 runs, of which 864 found pipes, 57 returned and 18 threw a
 `NoPathBetweenTerminalsException`.
+## `rotate_optimize.jsonl` (stage 8)
+
+Calls to `RotateOptimize.Execute(context, pipes)`, recorded by `oracle/RotateOptimizeRecorder.cs`
+through the public API. The inputs are the ones the planner really passes: for each blueprint
+the recorder builds the starting `Context`, then does what `AddPipes.GetSolutionGroups` and
+`OptimizeAndAddSolutions` do - copies both terminal maps, runs a pipe strategy
+(`AddPipesFbe.Execute`, or `AddPipesConnectedCenters.GetConnectedPumpjacks` then
+`FindTrunksAndConnect`), copies the maps again and calls `RotateOptimize.Execute`.
+
+The blueprints are all 61 in `small-list.txt` with `ForMediumElectricPole` and all five pipe
+strategies; every third one again on the poles-first path with the small pole, and every third
+(from index 1) with the big pole (poles added with `AddElectricPoles.Execute` before the pipes,
+and terminals under a pole dropped, as `Planner.Execute` does); every 20th in `big-list.txt`;
+and the first three one-pumpjack blueprints in `big-list.txt` (the single-terminal path, where
+`RotateOptimize` returns at once).
+
+**The input pipes are a compact rebuild.** The planner passes `context.GetLocationSet(pipes)`,
+and `HashSet`'s copy constructor can keep freed slots that later adds fill, which a list cannot
+describe. So the recorded case runs on the strategy's pipes added in order to a fresh set, which
+the Rust test rebuilds exactly. The recorder also runs each case on the planner's real copy and
+writes `real_copy_matches`; on 2026-10-21 all 796 cases matched it.
+
+Lines come in two kinds, in file order:
+
+| `kind` | Fields |
+|---|---|
+| `grid` | `id`, `width`, `height`, `cells`: `[x, y, isPipe, ...]` for every entity in `EntityLocations` order, `isPipe` 1 for a `Pipe` (or subclass). `RotateOptimize` only asks whether a cell is empty and whether it holds a pipe, so the test places a `Pipe` or a `TemporaryEntity`. Written once per distinct grid. |
+| `case` | `name`, `strategy`, `grid` (an id above), `pipes_type` (`hash`, or `single` for a `SingleLocationSet`), `pipes` (flat, in order), `center_to_terminals` and `location_to_terminals` (`[keyX, keyY, [cx, cy, tx, ty, direction, ...]]` in enumeration order), `out`, `real_copy_matches`. |
+
+`out` holds `error` (null, or `"<ExceptionType>: <message>"`), `pipes` after the call in
+enumeration order, and both terminal maps after the call as text: `kx,ky:cx,cy,tx,ty,dir;...|`
+per key, in enumeration order.
+
+`RotateOptimize` compares terminals by reference (`minTerminal != originalTerminal`), and the
+new terminal is often in the same place as the old one. The Rust port keeps that behavior (see
+`eliminate_other_terminals_keeping_last` in `src/steps/rotate_optimize.rs`); swapping in the
+value-comparing `helpers::eliminate_other_terminals` fails this fixture on its second case.

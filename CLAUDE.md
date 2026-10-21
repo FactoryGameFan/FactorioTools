@@ -123,13 +123,33 @@ cargo run --release -p bench -- --json /tmp/before.json   # on the old code
 cargo run --release -p bench -- --baseline /tmp/before.json   # on the new code
 ```
 
-The comparison gives the speed-up of the list's total and the per-field geometric mean, and says how many responses changed. Each field's input and response are stored as hashes, so a change meant to keep the output identical must report `all N identical`. Times depend on the machine and its load, so compare runs from the same machine only. Two back-to-back small-list runs on tealc agreed within about 1%. CI only smoke-tests the benchmark; it never checks timing. These are native times. The site runs the same code as WebAssembly in a browser, so its times differ.
+The comparison gives the speed-up of the list's total and the per-field geometric mean, and says how many responses changed. Each field's input and response are stored as 64-bit FNV-1a hashes, and only fields found in both runs with the same input are compared. Fields missing from the baseline, or with a different blueprint, are skipped and listed on their own lines. So a change meant to keep the output identical must report `all N identical`, with N equal to the list's full field count and no skipped fields. The command prints the result but exits 0 even when responses changed, so read its output; the byte-for-byte proof is the snapshot release gate. Times depend on the machine and its load, so compare runs from the same machine only. Two back-to-back small-list runs on tealc agreed within about 1%. CI only smoke-tests the benchmark; it never checks timing. These are native times. The site runs the same code as WebAssembly in a browser, so its times differ.
 
-Measured on tealc (8 cores, Linux), 2026-10-21, at the end of the port: small list 1.46 s total for 61 fields (median of 5 runs per field; field median 20 ms, slowest 229 ms for 58 pumpjacks); big list 58.0 s for 1,147 fields (one run each; field median 27 ms, slowest 5.4 s for 134 pumpjacks).
+Measured on tealc (8 cores, Linux), 2026-10-21. Small list: 5 runs per field, median kept. Big list: one run each.
+
+| code | small list (61 fields) | big list (1,147 fields) | slowest big field (#84, 134 pumpjacks) |
+| --- | ---: | ---: | ---: |
+| end of the port (#178) | 1.46 s | 58.0 s | 5.4 s |
+| after #179 (fast hasher for the .NET-style sets) | 1.08 s | 44.7 s | not measured |
+| after #182 (A* scratch in flat arrays) | 0.91 s | 35.8 s | 3.5 s |
+
+Every response stayed identical through both changes.
+
+### Profiling
+
+samply works on tealc (`pacman --sync samply`). It needs `sudo sysctl --write kernel.perf_event_paranoid=1`, which resets at every reboot. Build the benchmark with line tables into a separate target dir, so the normal build is untouched, then record without opening a browser:
+
+```bash
+CARGO_PROFILE_RELEASE_DEBUG=line-tables-only CARGO_TARGET_DIR=/tmp/prof-target cargo build --release -p bench
+samply record --save-only --unstable-presymbolicate --rate 2000 --output prof.json.gz -- /tmp/prof-target/release/bench --list big --limit 93 --runs 1
+```
+
+The first 93 big-list fields include the five slowest and take about 10 s. To rank functions and lines from the saved profile, use `llvm-addr2line`: GNU `addr2line` cannot read the LTO line tables and prints `??`. After #182, A* is about 68% of the time, and a third of all time is its heuristic's scan over every goal (`a_star.rs`, `heuristic`). That scan is already vectorized. Sorting the goals by x with an early exit was 5% slower, and an iterator `min` made no difference, so a real gain there needs a different algorithm. Next comes `NetPriorityQueue::dequeue`, at about 9.5% self.
 
 ### Ordering rules
 
 - **Planner output must not change by accident**, including how ties are broken. The committed snapshots were recorded from the C# planner, and the Rust port reproduces them byte for byte. That depends on .NET details: `HashSet`/`Dictionary` enumeration order (insertion order, with freed slots reused last-in first-out), the 4-ary `PriorityQueue`, the unstable introsort behind `List.Sort`, and `Math.Round` rounding half to even. `rust/dotnet-compat` holds Rust copies of these. Use them, not std's `HashMap`, `BinaryHeap` or `sort_by`, wherever the result depends on order.
+- **A lookup-only container can use anything fast.** When nothing ever enumerates a container, its storage cannot change the output. The index inside `NetHashSet`/`NetDictionary` uses `dotnet_compat::FastHasher` (FxHash, no seed), `LocationMap`/`LocationLookup` use `LocationHasher`, and A* keeps its cost and came-from data in flat per-cell arrays on a `SquareGrid` (`GridNeighbors::bounds`). Before swapping one in, check that nothing iterates it. Then run `bench --baseline`, which must show `all N identical` for every field with none skipped (it compares hashes and does not fail on a change; see "Benchmark"), and the snapshot release gate, which checks the output byte for byte.
 - **Do not swap in the `delaunator` crate** for `delaunator-net`. It is a newer algorithm whose tie-breaking differs, which changes the planner's pipes. `rust/flute` likewise matches FluteSharp tree for tree.
 - **The fixtures are frozen.** `rust/*/fixtures` hold inputs and outputs recorded from the C# code (the planner, DelaunatorSharp, FluteSharp and .NET itself) at commit `0532d923`, and each crate's tests check the Rust against them. Each crate's `FIXTURES.md` gives the format. The recorders that wrote them were C# programs, deleted in stage 13b, so the fixtures cannot be re-recorded. A deliberate change that one of them pins means editing that fixture by hand and saying why in the commit.
 

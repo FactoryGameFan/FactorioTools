@@ -56,6 +56,19 @@ fn main() -> ExitCode {
         }
     };
 
+    // Read the baseline first: `--json` may name the same file, and a bad baseline should
+    // fail before minutes of planning.
+    let baseline = match &args.baseline {
+        Some(path) => match read_baseline(path) {
+            Ok(saved) => Some((path, saved)),
+            Err(message) => {
+                eprintln!("{}: {message}", path.display());
+                return ExitCode::FAILURE;
+            }
+        },
+        None => None,
+    };
+
     let mut fields = Vec::new();
     for &list in &args.lists {
         let path = test_dir().join(format!("{list}-list.txt"));
@@ -102,14 +115,8 @@ fn main() -> ExitCode {
         println!("\nSaved {} fields to {}", fields.len(), path.display());
     }
 
-    if let Some(path) = &args.baseline {
-        match read_baseline(path) {
-            Ok(baseline) => compare(&fields, &baseline, path),
-            Err(message) => {
-                eprintln!("{}: {message}", path.display());
-                return ExitCode::FAILURE;
-            }
-        }
+    if let Some((path, saved)) = &baseline {
+        compare(&fields, saved, path);
     }
     ExitCode::SUCCESS
 }

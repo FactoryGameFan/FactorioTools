@@ -1,0 +1,16 @@
+[package]
+name = "flute"
+version = "0.0.0"
+description = "Rust port of FluteSharp (FLUTE 3.1 by Dr. Chris C. N. Chu), as the oil-field planner uses it"
+publish = false
+edition.workspace = true
+repository.workspace = true
+# FLUTE's code and lookup tables are under Chris Chu's Attribution Assurance License, not
+# the workspace's MIT. See README.md for the attribution it requires.
+license-file = "LICENSE-FLUTE"
+
+[lints]
+workspace = true
+
+[dev-dependencies]
+serde_json = "1"

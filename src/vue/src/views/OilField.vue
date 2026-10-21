@@ -283,7 +283,7 @@ export default {
       return `${location.protocol}//${location.host}${location.pathname}?${queryString}`
     },
     fbeUrl() {
-      return `https://fbeworkeyman.wormeyman.workers.dev/?source=${this.inputBlueprint}`
+      return `https://fbe.factorygamefan.com/?source=${this.inputBlueprint}`
     },
   },
   watch: {

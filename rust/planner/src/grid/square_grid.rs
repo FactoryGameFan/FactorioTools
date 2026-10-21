@@ -33,6 +33,12 @@ const EMPTY_LABEL: &str = ".";
 /// `Location.Invalid` for any that may not be entered.
 pub trait GridNeighbors {
     fn get_neighbors(&self, location: Location) -> [Location; 4];
+
+    /// `(width, height)` when [`get_neighbors`](Self::get_neighbors) never returns a cell
+    /// outside `0..width` by `0..height`. A* then keeps its scratch data in flat arrays.
+    fn bounds(&self) -> Option<(i32, i32)> {
+        None
+    }
 }
 
 /// `PipeGrid`, the concrete `SquareGrid`.
@@ -293,6 +299,11 @@ impl SquareGrid {
 
 /// `PipeGrid.GetNeighbors`: in bounds and empty.
 impl GridNeighbors for SquareGrid {
+    /// Every neighbor is checked with `is_in_bounds`.
+    fn bounds(&self) -> Option<(i32, i32)> {
+        Some((self.width, self.height))
+    }
+
     fn get_neighbors(&self, location: Location) -> [Location; 4] {
         [
             location.translate(1, 0),

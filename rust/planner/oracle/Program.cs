@@ -1,5 +1,6 @@
 // Records the C# planner's behavior as fixtures for the Rust port (#138).
 // Usage: PlannerOracle <output directory> [--check-snapshots]
+// Writes grids.jsonl (stage 1) and algorithms.jsonl (stage 2, see Algorithms.cs).
 // Format and how to regenerate: rust/planner/FIXTURES.md.
 
 using System.Text;
@@ -65,6 +66,9 @@ using (var stream = File.Create(gridsPath))
 }
 
 Console.WriteLine($"grids.jsonl: {cases.Count} cases, {new FileInfo(gridsPath).Length} bytes");
+
+var bigList = ParseBlueprint.ReadBlueprintFile(Path.Combine(oilFieldTestDir, "big-list.txt"));
+AlgorithmCases.Write(outputDir, smallList, bigList);
 Console.WriteLine("entity kinds: " + string.Join(", ", kindCounts.Select(x => $"{x.Key}={x.Value}")));
 if (checkSnapshots)
 {

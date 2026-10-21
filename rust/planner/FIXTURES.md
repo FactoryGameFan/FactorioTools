@@ -10,7 +10,7 @@ fails if the committed files drift.
 ./docker-build.sh run --project rust/planner/oracle -c Release -- rust/planner/fixtures
 ```
 
-All files are JSON Lines, one case per line. The output is deterministic.
+All files are JSON Lines, one case per line. The output is deterministic. One run writes every file.
 
 ## `grids.jsonl` (stage 1)
 
@@ -75,3 +75,39 @@ byte for byte.
 then also compares each case's `text` with the grid half of its committed Verify snapshot (the
 part after the first blank line) and exits 1 on any difference. On 2026-10-21 all 126
 snapshot-backed cases matched.
+
+## `algorithms.jsonl` (stage 2)
+
+Calls to the planner's graph and line algorithms in `src/FactorioTools/OilField/Algorithms`,
+made by the recorder through their public methods (no C# is changed to record them), with
+every result. Written by `oracle/Algorithms.cs`. The inputs are realistic: for each of the 61
+`small-list.txt` blueprints and every 20th `big-list.txt` blueprint, the recorder builds the
+planner's starting `Context` (`InitializeContext.Execute` with
+`OilFieldOptions.ForMediumElectricPole`) and calls the algorithms between its pumpjack
+terminals, picked with a fixed-seed `Random`. For the small list it also plans the blueprint
+and walks the finished pipes through an `ExistingPipeGrid`, as `RotateOptimize` and `Validate`
+do.
+
+Points are written as one flat array, `[x0, y0, x1, y1, ...]`, and every set or dictionary in
+the order the C# enumerates it. Lines come in these kinds, in file order:
+
+| `kind` | Fields |
+|---|---|
+| `grid` | `id`, `width`, `height`, `occupied`: the starting grid's entity cells, in `EntityLocations` order. The Rust test places a `TemporaryEntity` on each, since `PipeGrid.GetNeighbors` only asks whether a cell is empty. Later lines name it in `grid`. |
+| `pipes` | `id`, `width`, `height`, `pipes`: a finished plan's `Pipe` cells (including terminals and underground pipes), as a `LocationHashSet`. Later lines name it in `pipes` and walk it as an `ExistingPipeGrid`. |
+| `astar` | `grid` or `pipes`, `start`, `goals`, `goalsKind` (`hash` for a `LocationHashSet`, `single` for a `SingleLocationSet`), `preferNoTurns`, `xWeight`, `yWeight`, `prefix` (the caller's `outputList` before the call, or null for none), then `success`, `reached` and `path` (null when no goal was reached; it includes `prefix` when there is one). |
+| `dijkstra` | `grid` or `pipes`, `start`, `goals`, `stopOnFirstGoal`, `allowGoalEnumerate`, then `reachedCount` and either `reached` (in order) or `reachedContains` (one flag per goal, since a `LocationBitSet` cannot be enumerated), then `previousCount`, `previousHash` and, for the first call per blueprint, `previous`. |
+| `bfs` | `grid`, `start`, `goal`, `path` (start first, or null). |
+| `prims` | `graph` (each node with its `[x, y, cost, ...]` edges, both in order), `first`, `digraph`, `mst` (each node with its neighbors, both in order). The graphs are the Delaunay graph `ExecuteWithDelaunayMst` builds (the recorder checks its copy against the planner's own result) and a complete graph over up to 8 centers with costs 1 to 3, so ties are common. |
+| `bresenham` | `a`, `b`, `path`. |
+
+**`LocationToPrevious` is recorded indirectly.** Its values are `LocationBitSet`s, which
+throw when enumerated. Every previous cell is a grid neighbor, so the recorder probes the four
+in-bounds neighbors of each key (east, north, west, south as bits 0 to 3) and checks the mask
+accounts for the set's whole `Count`. `previous` is `[x, y, mask, ...]` in key order, and
+`previousHash` is 64-bit FNV-1a (offset 14695981039346656037) over the little-endian bytes of
+those ints, so most calls can be checked without writing every cell.
+
+On 2026-10-21 the file held 1,672 A* calls (244 of them on an `ExistingPipeGrid`), 479 Dijkstra
+calls (122 on an `ExistingPipeGrid`), 714 BFS calls, 474 Prim's calls and 400 Bresenham lines,
+in 3.1 MB.

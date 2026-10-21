@@ -35,15 +35,6 @@
       plans one strategy at a time so a progress bar can update)
     </div>
     <div class="form-check">
-      <input
-        type="checkbox"
-        class="form-check-input"
-        id="use-staging-api"
-        v-model="useStagingApi"
-      />
-      <label class="form-check-label" for="use-staging-api">Use staging API 🤠</label>
-    </div>
-    <div class="form-check">
       <input type="checkbox" class="form-check-input" id="auto-plan" v-model="autoPlan" />
       <label class="form-check-label" for="auto-plan">Start planning on page load</label> (useful
       for share URLs)
@@ -169,7 +160,6 @@ export default {
         storeToRefs(useOilFieldStore()),
         "addBeacons",
         "useUndergroundPipes",
-        "useStagingApi",
         "optimizePipes",
         "validateSolution",
         "showProgress",

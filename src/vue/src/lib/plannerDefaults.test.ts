@@ -156,7 +156,6 @@ describe("moduleNameAndCount", () => {
 /** Store keys with no counterpart in the planner options. */
 const VUE_ONLY_KEYS = [
   "usingQueryString",
-  "useStagingApi",
   "inputBlueprint",
   "useAdvancedOptions",
   "pumpjackModuleIsCustom",

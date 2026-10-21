@@ -62,10 +62,7 @@ jobs:
         run: npm run build
         working-directory: ${{ env.BUILD_PATH }}
       # Guard against shipping a site that cannot plan: the planner's .wasm and its
-      # worker must be in dist/assets with a content hash. The second half checks
-      # nothing still ships or points at the old .NET bundle under /framework/. That
-      # bundle and its src/vue/public/framework/ ignore rule are gone, so a stale
-      # local copy left in public/ would now show up as a file to commit.
+      # worker must be in dist/assets with a content hash.
       - name: Check the planner landed in the bundle
         run: |
           dist="$BUILD_PATH/dist"
@@ -76,11 +73,7 @@ jobs:
               exit 1
             fi
           done
-          if [ -e "$dist/framework" ] || grep -rq "framework/dotnet" "$dist"; then
-            echo "::error::$dist still has or references the .NET bundle under /framework/."
-            exit 1
-          fi
-          echo "dist/assets has the planner's .wasm and worker, and nothing references /framework/."
+          echo "dist/assets has the planner's .wasm and worker."
       - name: Deploy to Cloudflare Workers
         # Pull requests build and verify, but never deploy. This also keeps the
         # repository's only credential-bearing step off the PR path.

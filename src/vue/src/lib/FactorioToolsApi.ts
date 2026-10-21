@@ -123,7 +123,7 @@ export interface OilFieldPlanRequest {
    * (Factorio 2.0 / Space Age) where unheated entities freeze. When enabled, the output blueprint is emitted in the
    * Factorio 2.0 version format (2.0 directions and module item format). The planner only routes the heat pipe network
    * and leaves it for the user to connect a heat source (heating tower or reactor). Heat pipes and beacons
-   * (see Knapcode.FactorioTools.OilField.OilFieldOptions.AddBeacons) can be enabled together: heat is the hard constraint, so the planner routes the
+   * (see addBeacons) can be enabled together: heat is the hard constraint, so the planner routes the
    * heat network first and then places beacons around it, choosing a pipe layout it can fully heat. Beacons are
    * best-effort and may be reduced (even to none) on tight fields where heat needs the contested tiles.
    * @default false
@@ -140,7 +140,7 @@ export interface OilFieldPlanRequest {
    */
   pipeStrategies?: PipeStrategy[]
   /**
-   * The beacon planning strategies to attempt. This will have no affect if Knapcode.FactorioTools.OilField.OilFieldOptions.AddBeacons is false.
+   * The beacon planning strategies to attempt. This has no effect if addBeacons is false.
    * @default ["Fbe","Snug"]
    */
   beaconStrategies?: BeaconStrategy[]
@@ -295,7 +295,7 @@ export interface OilFieldPlanRequestResponse {
    * (Factorio 2.0 / Space Age) where unheated entities freeze. When enabled, the output blueprint is emitted in the
    * Factorio 2.0 version format (2.0 directions and module item format). The planner only routes the heat pipe network
    * and leaves it for the user to connect a heat source (heating tower or reactor). Heat pipes and beacons
-   * (see Knapcode.FactorioTools.OilField.OilFieldOptions.AddBeacons) can be enabled together: heat is the hard constraint, so the planner routes the
+   * (see addBeacons) can be enabled together: heat is the hard constraint, so the planner routes the
    * heat network first and then places beacons around it, choosing a pipe layout it can fully heat. Beacons are
    * best-effort and may be reduced (even to none) on tight fields where heat needs the contested tiles.
    */
@@ -304,7 +304,7 @@ export interface OilFieldPlanRequestResponse {
   heatPipeEntityName: string
   /** The pipe planning strategies to attempt. */
   pipeStrategies: PipeStrategy[]
-  /** The beacon planning strategies to attempt. This will have no affect if Knapcode.FactorioTools.OilField.OilFieldOptions.AddBeacons is false. */
+  /** The beacon planning strategies to attempt. This has no effect if addBeacons is false. */
   beaconStrategies: BeaconStrategy[]
   /** The internal entity name for the electric pole to use. */
   electricPoleEntityName: string

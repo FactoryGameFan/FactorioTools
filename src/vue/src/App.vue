@@ -1,16 +1,4 @@
 <template>
-  <nav class="navbar navbar-expand-lg navbar-dark bg-dark" v-if="false">
-    <div class="container">
-      <router-link class="navbar-brand" to="/">Factorio Tools</router-link>
-      <div class="navbar-collapse">
-        <div class="navbar-nav">
-          <router-link class="nav-link active" aria-current="page" to="/oil-field"
-            >Oil field planner</router-link
-          >
-        </div>
-      </div>
-    </div>
-  </nav>
   <main class="py-3">
     <div class="container">
       <router-view></router-view>

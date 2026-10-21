@@ -90,7 +90,6 @@ export function resetBeaconAdvancedOptions(state: BeaconAdvancedOptions) {
 
 export type PlannerAdvancedOptions = AdvancedOptionState<
   | "useUndergroundPipes"
-  | "useStagingApi"
   | "optimizePipes"
   | "validateSolution"
   | "showProgress"
@@ -108,7 +107,6 @@ export function resetPlannerAdvancedOptions(state: PlannerAdvancedOptions) {
   restore(
     state,
     "useUndergroundPipes",
-    "useStagingApi",
     "optimizePipes",
     "validateSolution",
     "showProgress",

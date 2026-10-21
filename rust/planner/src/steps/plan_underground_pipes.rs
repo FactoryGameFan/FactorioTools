@@ -20,7 +20,8 @@ use crate::steps::validate;
 const MIN_UNDERGROUND: usize = 3;
 
 /// The longest underground pipe, ends included (9 cells between the ends, per the wiki).
-const MAX_UNDERGROUND: usize = 11;
+/// Public only so `tests/factorio_oracle.rs` can check it against the game.
+pub const MAX_UNDERGROUND: usize = 11;
 
 /// `Execute(context, pipes)`: the underground pipes and the direction each end faces. The
 /// cells between each pair of ends are removed from `pipes`.

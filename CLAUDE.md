@@ -8,7 +8,7 @@ FactorioTools is a Factorio oil-field (outpost) blueprint planner. Given a bluep
 
 ## Prerequisites
 
-- **.NET SDK 10.0.401** (pinned in `global.json`, `rollForward: latestMajor`). This is a floor, not an exact pin - `latestMajor` means any newer 10.x SDK works, but an *older* one now fails, so raising this number raises the bar for every contributor. Keep it in sync with `global.json`; CI installs exactly this version via `setup-dotnet`'s `global-json-file`.
+- **.NET SDK 10.0.402** (pinned in `global.json`, `rollForward: latestMajor`). This is a floor, not an exact pin - `latestMajor` means any newer 10.x SDK works, but an *older* one now fails, so raising this number raises the bar for every contributor. Keep it in sync with `global.json`; CI installs exactly this version via `setup-dotnet`'s `global-json-file`.
 
   **Renovate bumps `global.json` and cannot see this line**, so the two drift apart silently every time it does. #103 raised the pin 10.0.400 -> 10.0.401 and left this paragraph reading 10.0.400. After any SDK bump, `grep -rn` the old version string and fix whatever the bot could not reach.
 
@@ -72,7 +72,7 @@ A full-solution `dotnet build` also builds `BrowserWasm`/`BlazorWebApp`, which n
 
 ### Devcontainer
 
-`.devcontainer/` builds a Linux container carrying every toolchain this repo needs, which is more than the SDK: **dotnet 10.0.401 plus wasm-tools, Node 24.21.0, PowerShell 7.6.5, Lua 5.2.4 and python3**. Before it, a full local loop meant five separate host installs, one of which (`tools/check-lua.sh`) started a second container of its own.
+`.devcontainer/` builds a Linux container carrying every toolchain this repo needs, which is more than the SDK: **dotnet 10.0.402 plus wasm-tools, Node 24.21.0, PowerShell 7.6.5, Lua 5.2.4 and python3**. Before it, a full local loop meant five separate host installs, one of which (`tools/check-lua.sh`) started a second container of its own.
 
 It is not a replacement for `docker-build.sh`. That script is the quick way to run one `dotnet` command in the pinned SDK; this is the whole environment, with an editor attached.
 

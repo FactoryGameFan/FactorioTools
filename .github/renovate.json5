@@ -394,5 +394,19 @@
       matchUpdateTypes: ["major"],
       enabled: false,
     },
+    {
+      // .devcontainer/Dockerfile pins the exact SDK from global.json by digest, and
+      // the Devcontainer CI job fails when the two disagree. Renovate saw both
+      // updates for 10.0.402 but put only global.json in the dotnet monorepo PR
+      // (#148), so the smoke job went red until the FROM line was re-pinned by
+      // hand. Sharing the group name puts both in the same PR. The rule above
+      // predates this Dockerfile, so it now covers this image's majors too.
+      description:
+        "Move the devcontainer SDK image with global.json, in the dotnet monorepo PR. The Devcontainer CI job fails when they disagree.",
+      matchManagers: ["dockerfile"],
+      matchFileNames: [".devcontainer/Dockerfile"],
+      matchPackageNames: ["mcr.microsoft.com/dotnet/sdk"],
+      groupName: "dotnet monorepo",
+    },
   ],
 }

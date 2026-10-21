@@ -41,6 +41,7 @@ version = "0.0.0"
 dependencies = [
  "delaunator-net",
  "dotnet-compat",
+ "flute",
  "serde_json",
 ]
 

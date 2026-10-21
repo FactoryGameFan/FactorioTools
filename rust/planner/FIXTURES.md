@@ -283,3 +283,62 @@ exact field order of each hash is the same in `HelpersRecorder.cs` and `tests/he
 - **Covered-to-candidates:** the count, then per index the index, the count and the keys.
 - **Batches:** the queue count, the lookup count, then per lookup key the key, the count and the keys.
 - **Terminals:** the count, then per key the key, the count and each terminal's center, terminal and direction.
+
+## `pipes.jsonl` (stage 5)
+
+`PlanUndergroundPipes.Execute` and `AddPipeEntities.Execute`, recorded by
+`oracle/PipesRecorder.cs`. The planner calls both inside `AddPipes` with the pipe set of the
+plan it picked, which no public method returns, so the recorder rebuilds that set from a
+finished plan: every `Pipe`, `Terminal` and `UndergroundPipe` cell of the final grid, in
+`EntityLocations` order, with each underground pair's skipped cells added right after its left
+or upper end. It then runs both steps on a fresh `InitializeContext` result that carries the
+plan's selected terminals, as `AddPipes` does, and **checks that the rebuilt run puts exactly the
+plan's pipes on the grid**. On 2026-10-21 every one of them did, so the inputs are real ones. A
+plan whose grid size differs from a fresh context (the poles-first retry) would be skipped and
+counted; none were.
+
+| Cases | Blueprints | Mode |
+|---|---|---|
+| `small-NNNN_medium-electric-pole_b_o_u`, `_small-electric-pole_u` | as in `grids.jsonl` | the plan's own underground setting |
+| `small-NNNN_big-electric-pole_b`, `_substation_b_o` | as in `grids.jsonl` | no undergrounds, as planned |
+| `..._forced-u` | the same as the line above | the same plain pipes, with `PlanUndergroundPipes` run anyway |
+| `small-NNNN_medium_multiple-terminals` | every second | every candidate terminal, onto a `PipeGrid` clone with `allowMultipleTerminals`, as `RotateOptimize` and connected centers pass them |
+| `small-NNNN_medium_multiple-terminals-error` | every twelfth, from 1 | every candidate terminal without `allowMultipleTerminals`, which throws |
+| `big-NNNN_medium` | every 40th big-list blueprint | the medium pole defaults, without validation |
+
+```json
+{
+  "name": "...", "validate": true, "width": 24, "height": 27, "next_id": 19,
+  "grid": [ [x, y, "Kind", id, ...extra], ... ],
+  "center_to_terminals": [ [cx, cy, [ [cx, cy, tx, ty, direction], ... ]], ... ],
+  "location_to_terminals": [ [x, y, [ [cx, cy, tx, ty, direction], ... ]], ... ],
+  "pipes": [x0, y0, x1, y1, ...],
+  "plan_underground": true,
+  "mode": "selected" | "multiple_on_clone" | "multiple_error",
+  "underground": [ [x, y, direction], ... ],
+  "pipes_after": [x0, y0, ...],
+  "added": [ [x, y, "Kind", id, ...extra], ... ],
+  "next_id_after": 25
+}
+```
+
+- `grid` is the starting grid in `EntityLocations` order, in the `grids.jsonl` entity encoding.
+  `next_id` is the grid's private `_nextId` (read by reflection), the id `GetId` hands out next.
+- The terminal dictionaries and `pipes` are listed in .NET enumeration order. The replay
+  builds them by adding in that order, so both sides start from the same internal state.
+- `underground` and `pipes_after` appear only when `plan_underground` is true: the dictionary
+  `PlanUndergroundPipes` returns, and the pipe set after it removed the cells between ends.
+- `added` lists the entities `AddPipeEntities` placed, in `EntityLocations` order after the
+  starting ones (the recorder checks that the starting entities keep their order, so the new
+  ones simply follow), and `next_id_after` is `_nextId` afterwards. A case that throws has
+  `"error": "<message>"` instead of both.
+- `no_overlap` (`selected` cases only) holds `Validate.NoOverlappingEntities` checks, run after
+  `PlanUndergroundPipes` and before `AddPipeEntities`. The check works on grid clones, so it
+  leaves the context as it was. Each item is `{"label", "pipes", "beacons"?, "error"}`, where
+  `beacons` (absent means no beacon solutions) is one solution's centers and `error` is null
+  or the message. The labels are `no_beacons` and `plan_beacons` (the plan's own beacons),
+  which pass, and three broken inputs, which fail when `ValidateSolution` is on:
+  `beacon_on_pipe` (one beacon centered on the first pipe whose footprint fits the grid),
+  `duplicate_beacon` (the plan's first beacon twice; left out when the plan has none) and
+  `pipe_on_pumpjack` (the pipes plus the first pumpjack center). With validation off the check
+  does nothing, so those pass too.

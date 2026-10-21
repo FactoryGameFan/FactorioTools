@@ -14,7 +14,7 @@
 # check rather than a container that silently disagrees with the repo.
 # Re-pin with:
 #   docker buildx imagetools inspect mcr.microsoft.com/dotnet/sdk:<version>
-FROM mcr.microsoft.com/dotnet/sdk:10.0.401@sha256:2fa828c68761b1b8c23d7662dc134421b9d3b59fe1425fdbc80804e390cdb24d
+FROM mcr.microsoft.com/dotnet/sdk:10.0.402@sha256:0d99ebf1ccad15037b5c98c9fe8979d6b8dbac23812feae2277a0b277b5c5ffa
 
 # The base image is Ubuntu 24.04 (noble) and already has a `ubuntu` user at uid
 # 1000, so there is no user to create - only sudo to add, for the postCreate

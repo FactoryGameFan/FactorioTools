@@ -48,7 +48,7 @@ FLUTE is used under Dr. Chu's Attribution Assurance License ([`rust/flute/LICENS
 
 My beacon planning algorithm is called "snug" and it tries to place beacons as close to each other as possible after preferring starting locations that cover the most pumpjacks.
 
-The tool tries up to 16 different planning routines and returns the best one to the user. On the live site, the four test fields with 20 or more pumpjacks (20 to 58 of them) plan in 131 to 402 ms. The tool shows the quality of the other plans so you can see how each algorithm did.
+The tool tries up to 16 different planning routines and returns the best one to the user. On the live site, the four test fields with 20 or more pumpjacks (20 to 58 of them) plan in 110 to 273 ms. The tool shows the quality of the other plans so you can see how each algorithm did.
 
 ![image](https://user-images.githubusercontent.com/94054/224569867-936af0b4-28e1-4c44-9ad5-af33e89f8236.png)
 
@@ -88,8 +88,8 @@ The planner was first written in C#, and the site ran it in the browser on .NET 
 
 | What | .NET (before) | Rust (now) |
 | --- | ---: | ---: |
-| Planner download (brotli) | 3.15 MiB | 244 KB |
+| Planner download, as the browser fetches it | 3.15 MiB | 293 KB |
 | First plan after the page loads | 1,146 ms | 312 ms |
-| Largest field in [`big-list.txt`](testdata/oil-field/big-list.txt) | 26.7 s | 7.6 s |
+| Largest field in [`big-list.txt`](testdata/oil-field/big-list.txt) | 26.7 s | 5.2 s |
 
-The .NET planner ran on the page itself, so the page froze until the plan was done. The Rust planner runs in a Web Worker (a background thread), so the page keeps responding while it works. The first two rows come from the live site, and the largest field was timed on a local build of the same code. More details are in the [write-up of the port](https://claude.ai/artifact/1514Dr6iCGjyVXgENCxEuX).
+The .NET planner ran on the page itself, so the page froze until the plan was done. The Rust planner runs in a Web Worker (a background thread), so the page keeps responding while it works. All the numbers come from the live site. The download is what Cloudflare serves, brotli-compressed, for both. The first-plan time was measured when the site switched to Rust; it depends a lot on the network. The download and largest-field numbers are from 21 October 2026, after two speed-ups that kept every plan the same ([#179](https://github.com/FactoryGameFan/FactorioTools/pull/179), [#182](https://github.com/FactoryGameFan/FactorioTools/pull/182)). More details are in the [write-up of the port](https://claude.ai/artifact/1514Dr6iCGjyVXgENCxEuX).

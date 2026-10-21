@@ -140,36 +140,44 @@
     <div class="col p-3">
       <h3>About this tool</h3>
       <p>
-        This tool attempts finds a near optimal oil field layout given a blueprint containing
-        pumpjacks.
+        This tool finds a near-optimal oil field layout for a blueprint that contains pumpjacks.
       </p>
       <p>
-        It attempts to find the best arrangement for pipes, beacons, and electric poles and returns
-        the plan in the form of a Factorio blueprint. The input blueprint should contain at least
-        one pumpjack. All other entities will be ignored and excluded from the output blueprint. You
-        can use the "View in FBE" links on the input or output blueprint to preview the blueprint in
-        your web browser using Teoxoy's wonderful
-        <a href="https://fbe.factorygamefan.com/">Factorio Blueprint Editor</a> tool.
+        It looks for the best arrangement of pipes, beacons and electric poles, and returns the plan
+        as a Factorio blueprint. The input blueprint should contain at least one pumpjack. Every
+        other entity is ignored and left out of the output blueprint. You can use the "View in FBE"
+        links on the input or output blueprint to preview it in your web browser with Teoxoy's
+        wonderful <a href="https://fbe.factorygamefan.com/">Factorio Blueprint Editor</a>.
       </p>
       <p>
-        The planner has multiple pipe planning strategies (i.e. algorithms) and multiple beacon
-        planning strategies. It tries all combinations enabled and returns the blueprint for the
-        best result. You can explore alternate or less effective plans by limiting the strategies
-        enabled. For more information about performance analysis, see
+        The planner runs entirely in your browser. It is written in Rust and compiled to
+        WebAssembly, and it works in a background thread so the page stays responsive. Nothing you
+        paste here is uploaded. A blueprint only leaves your computer if you click a "View in FBE"
+        link, which opens it in the editor.
+      </p>
+      <p>
+        The planner has several pipe planning strategies (algorithms) and several beacon planning
+        strategies. It tries every enabled combination and returns the blueprint for the best
+        result. You can explore other plans, including less effective ones, by turning strategies
+        off. For more about how well the strategies perform, see
         <a
           href="https://www.reddit.com/r/factorio/comments/11ply6h/i_want_to_share_an_oil_field_planner_tool_i_built/"
-          >my Reddit post</a
+          >Joel Verhagen's Reddit post</a
         >
-        about the tool.
+        about the original tool.
       </p>
       <p>
-        There is only one electric pole strategy implemented so it is only run on the best pipe and
-        beacon layout.
+        There is only one electric pole strategy, so it runs only on the best pipe and beacon
+        layout.
       </p>
       <p>
-        Currently, only oil pumpjacks from the base game (vanilla) are supported. Other kinds of
-        liquid extractors, such as those from mods, are not supported. There is a
-        <a href="https://github.com/joelverhagen/FactorioTools/issues/4">GitHub issue #4</a>
+        You can pick the quality of the pumpjacks, beacons, modules and electric poles. For Aquilo,
+        the planner can also add heat pipes so the oil field does not freeze.
+      </p>
+      <p>
+        Only the base game (vanilla) pumpjack is supported. Other fluid extractors, such as those
+        from mods, are not. There is a
+        <a href="https://github.com/FactoryGameFan/FactorioTools/issues/184">GitHub issue #184</a>
         tracking this possible enhancement.
       </p>
       <p>For more details about the various steps performed, see the table below.</p>

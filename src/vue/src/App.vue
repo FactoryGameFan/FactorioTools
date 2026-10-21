@@ -21,11 +21,15 @@
       <p class="text-muted py-3">
         Site originally by <a href="https://joelverhagen.com/">Joel Verhagen</a>, version
         {{ gitVersion }}, commit
-        <a :href="`https://github.com/wormeyman/FactorioTools/tree/${gitCommit}`">{{ gitCommit }}</a
+        <a :href="`https://github.com/FactoryGameFan/FactorioTools/tree/${gitCommit}`">{{
+          gitCommit
+        }}</a
         >, branch
-        <a :href="`https://github.com/wormeyman/FactorioTools/tree/${gitBranch}`">{{ gitBranch }}</a
+        <a :href="`https://github.com/FactoryGameFan/FactorioTools/tree/${gitBranch}`">{{
+          gitBranch
+        }}</a
         >, built on {{ buildDate }}. Report bugs at the
-        <a href="https://github.com/wormeyman/FactorioTools">GitHub repository</a>.
+        <a href="https://github.com/FactoryGameFan/FactorioTools">GitHub repository</a>.
       </p>
       <!-- Required by FLUTE's Attribution Assurance License (rust/flute/LICENSE-FLUTE). Keep all three parts. -->
       <p class="text-muted pb-3">

@@ -38,7 +38,7 @@ export const Steps = {
       text: "FBE pipe",
       class: "text-bg-fbe",
       shortDescription: "Teoxoy's FBE pipe planner with minimal modifications",
-      longDescription: `Teoxoy's pipe planner algorithm used in FBE (<a href="https://fbe.factorygamefan.com/">Factorio Blueprint Editor</a>) with minimal modifications for a C# port (<a
+      longDescription: `Teoxoy's pipe planner algorithm used in FBE (<a href="https://fbe.factorygamefan.com/">Factorio Blueprint Editor</a>) with minimal modifications, ported to C# and then to Rust (<a
       href="https://github.com/teoxoy/factorio-blueprint-editor/blob/0bec144b8989422f86bce8cea58ef49258c1a88d/packages/editor/src/core/generators/pipe.ts">original source</a>)`,
     }),
     Fbe: newPipeStep({
@@ -90,7 +90,7 @@ export const Steps = {
       text: "FBE beacon",
       class: "text-bg-fbe",
       shortDescription: "Teoxoy's FBE beacon planner with minimal modifications",
-      longDescription: `Teoxoy's beacon planner algorithm used in FBE (<a href="https://fbe.factorygamefan.com/">Factorio Blueprint Editor</a>) with minimal modifications for a C# port (<a
+      longDescription: `Teoxoy's beacon planner algorithm used in FBE (<a href="https://fbe.factorygamefan.com/">Factorio Blueprint Editor</a>) with minimal modifications, ported to C# and then to Rust (<a
         href="https://github.com/teoxoy/factorio-blueprint-editor/blob/0bec144b8989422f86bce8cea58ef49258c1a88d/packages/editor/src/core/generators/beacon.ts">original source</a>)`,
     }),
     Fbe: newBeaconStep({

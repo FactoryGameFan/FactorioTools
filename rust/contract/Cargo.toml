@@ -1,0 +1,24 @@
+[package]
+name = "contract"
+version = "0.0.0"
+description = "The planner's JSON contract (Plan and Normalize), from src/FactorioTools.Contract (#138)"
+publish = false
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+blueprint = { path = "../blueprint" }
+planner = { path = "../planner" }
+serde = "1"
+# raw_value: each request property is kept as its JSON text, so numbers can be read the way
+# System.Text.Json reads them (an int must be an integer token, or a string with one).
+serde_json = { version = "1", features = ["raw_value"] }
+
+[dev-dependencies]
+base64 = "0.22"
+flate2 = "1"
+serde_json = { version = "1", features = ["raw_value", "float_roundtrip"] }

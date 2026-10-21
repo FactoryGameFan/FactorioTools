@@ -1,7 +1,6 @@
 import { OilFieldStoreState, useOilFieldStore } from "../stores/OilFieldStore"
 import {
   BeaconStrategy,
-  HttpResponse,
   OilFieldNormalizeRequest,
   OilFieldNormalizeResponse,
   OilFieldPlan,
@@ -88,7 +87,6 @@ export type ApiError = {
   title: string
   errors?: Record<string, string[]>
   errorDetails?: string[]
-  response?: HttpResponse<unknown, unknown>
 }
 
 export interface ApiResult<Data> {
@@ -98,7 +96,7 @@ export interface ApiResult<Data> {
 
 export type PlanProgress = { current: number; total: number; label: string }
 
-// Display names mirror OilFieldPlan.ToString in the C# core.
+// Display names mirror OilFieldPlan::to_string_with_counts in rust/planner/src/models.rs.
 const pipeStrategyLabels: Record<PipeStrategy, string> = {
   [PipeStrategy.FbeOriginal]: "FBE",
   [PipeStrategy.Fbe]: "FBE*",

@@ -151,7 +151,7 @@ export default {
   },
   computed: {
     fbeUrl() {
-      return `https://fbeworkeyman.wormeyman.workers.dev/?source=${this.plan.data.blueprint}`
+      return `https://fbe.factorygamefan.com/?source=${this.plan.data.blueprint}`
     },
     allPlans(): SelectedOilFieldPlan[] {
       const allPlans = []

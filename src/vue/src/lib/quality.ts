@@ -9,7 +9,7 @@ export const QUALITY_ORDER: Quality[] = [
   Quality.Legendary,
 ]
 
-// The integer levels come from the C# Quality enum via plannerDefaults.verified.json.
+// The integer levels come from the planner's Quality enum via plannerDefaults.verified.json.
 // Factorio skips a hidden level 4, which is why Legendary is 5 and not 4.
 const levels: Record<Quality, number> = {
   [Quality.Normal]: QUALITY_LEVELS.Normal,

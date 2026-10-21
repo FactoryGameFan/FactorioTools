@@ -1,0 +1,5 @@
+# `npm run build-wasm` copies the Rust planner here (rust/planner-wasm): planner.js and
+# planner_wasm.wasm. Only this file and planner.d.ts are committed.
+*
+!.gitignore
+!planner.d.ts

@@ -10,9 +10,9 @@ import artifact from "./plannerDefaults.verified.json"
 //   exist. These must keep failing loudly on any drift.
 // - SHAPE (presence / positivity / non-emptiness): reserved for pure tuning numbers
 //   that the planner's author may retune at will - beacon/pole geometry, which
-//   strategies happen to be enabled by default. The C# Verify snapshot
-//   (plannerDefaults.verified.json's own generation test) already gates those
-//   numbers; pinning them here too means every retune forces an unrelated Vue test
+//   strategies happen to be enabled by default. The Rust generator test
+//   (rust/contract/tests/planner_defaults.rs) already gates those numbers;
+//   pinning them here too means every retune forces an unrelated Vue test
 //   edit, which defeats the point of sharing the artifact.
 //
 // Do not tighten a shape check into a pinned value, or loosen a pinned value into a
@@ -37,7 +37,7 @@ import {
 import { getDefaults } from "../stores/OilFieldStore"
 
 describe("the emitted artifact", () => {
-  // SHAPE: these are tuning numbers - the C# Verify snapshot already gates their exact
+  // SHAPE: these are tuning numbers - the Rust generator test already gates their exact
   // values, so this only checks the fields are present and physically sensible.
   it("carries the planner geometry", () => {
     const geometryFields = [
@@ -89,7 +89,7 @@ describe("the emitted artifact", () => {
   // artifact.allBeaconStrategies (see strategyFlags below), so comparing them back
   // against the same artifact fields would be true by construction and could never
   // catch a missing enum member. A hardcoded list in a test is not the bug the
-  // hardcoded list in production code was - here it's the point: if a C# enum grows a
+  // hardcoded list in production code was - here it's the point: if a planner enum grows a
   // member, this expectation fails loudly and forces a human to update it. Do not
   // "fix" this by deriving the expected value from the artifact.
   it("carries the full strategy universe from the C# enums", () => {
@@ -111,8 +111,8 @@ describe("strategyFlags", () => {
   })
 
   // SHAPE: which strategies are enabled by default is a tuning choice (see
-  // OilFieldOptions.DefaultPipeStrategies / DefaultBeaconStrategies in C#), so this
-  // does not pin the exact set. It only asserts the defaults aren't vacuous.
+  // DEFAULT_PIPE_STRATEGIES / DEFAULT_BEACON_STRATEGIES in rust/planner/src/options.rs),
+  // so this does not pin the exact set. It only asserts the defaults aren't vacuous.
   //
   // Note: an assertion of the form "every strategy in the universe has a boolean
   // entry" is deliberately NOT included here - PIPE_STRATEGY_DEFAULTS /
@@ -153,7 +153,7 @@ describe("moduleNameAndCount", () => {
 // here, so it cannot quietly become a TypeScript literal. Same enumerate-the-store
 // approach as advancedOptions.test.ts.
 
-/** Store keys with no counterpart in the C# planner options. */
+/** Store keys with no counterpart in the planner options. */
 const VUE_ONLY_KEYS = [
   "usingQueryString",
   "useStagingApi",
@@ -217,7 +217,7 @@ describe("store defaults", () => {
 
     // A key classified as VUE_ONLY or CONVERTED must not also be a literal artifact
     // option name - otherwise the store could hardcode a value under that name (see
-    // NAME_MATCHED_KEYS above) while claiming it has no C# counterpart, and this test
+    // NAME_MATCHED_KEYS above) while claiming it has no planner counterpart, and this test
     // would still pass. This is what let beaconSupplyWidth silently diverge from the
     // C# default before it was caught: moving it into VUE_ONLY_KEYS and hardcoding a
     // stale value in the store left every other assertion here green.

@@ -1,0 +1,23 @@
+[package]
+name = "planner-wasm"
+version = "0.0.0"
+description = "The oil-field planner as a WebAssembly module for the site (#138)"
+publish = false
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[lib]
+crate-type = ["cdylib"]
+
+# Not the workspace lints: the exports need `#[unsafe(no_mangle)]`, which the `unsafe_code`
+# lint counts as unsafe, and the workspace forbids it (a `forbid` cannot be allowed per item).
+# Here it is denied and allowed on the five export functions only. No other unsafe code.
+[lints.rust]
+unsafe_code = "deny"
+
+[lints.clippy]
+all = { level = "warn", priority = -1 }
+
+[dependencies]
+contract = { path = "../contract" }

@@ -1,0 +1,3 @@
+# The lookup tables are read byte by byte, so a line-ending conversion on checkout
+# would change what FLUTE computes. Keep them exactly as committed.
+*.dat -text

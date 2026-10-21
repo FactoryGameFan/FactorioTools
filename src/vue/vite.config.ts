@@ -4,19 +4,9 @@ import path from 'path'
 import { execSync } from 'child_process'
 import { readFileSync } from 'fs'
 
-if (process.env.VERCEL) {
-  console.log("fetching full Git commit history")
-  execSync('git remote add --fetch --tags origin https://github.com/joelverhagen/FactorioTools.git')
-  execSync('git fetch --depth 1000000')
-  execSync('git fetch --all --tags')
-}
-
 const buildDate = new Date().toISOString().slice(0, 10);
 
-let branch = execSync('git rev-parse --abbrev-ref HEAD').toString().trim()
-if (process.env.VERCEL_GIT_COMMIT_REF) {
-  branch = process.env.VERCEL_GIT_COMMIT_REF.trim()
-}
+const branch = execSync('git rev-parse --abbrev-ref HEAD').toString().trim()
 
 const commit = execSync('git rev-parse --short HEAD').toString().trim()
 const shortVersion = execSync('git describe --abbrev=0').toString().trim()
@@ -27,7 +17,7 @@ if (version == `${shortVersion}-0-g${commit}` && branch == 'main') {
   version += "-" + branch
 }
 
-const sampleBlueprints = Array.from(new Set(readFileSync("../../test/FactorioTools.Test/OilField/small-list.txt", { encoding: 'utf8' })
+const sampleBlueprints = Array.from(new Set(readFileSync("../../testdata/oil-field/small-list.txt", { encoding: 'utf8' })
   .split(/\r?\n/)
   .map(l => l.trim())
   .filter(l => l.length > 0 && !l.startsWith("#"))))
@@ -72,6 +62,9 @@ export default defineConfig({
     },
   },
   plugins: [vue()],
+  // The planner runs in a module Web Worker (src/lib/plannerWorker.ts) that imports the
+  // Rust planner's ES module wrapper, so build the worker as an ES module too.
+  worker: { format: 'es' },
   define: define,
   base: basePath
 })

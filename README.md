@@ -48,7 +48,7 @@ FLUTE is used under Dr. Chu's Attribution Assurance License ([`rust/flute/LICENS
 
 My beacon planning algorithm is called "snug" and it tries to place beacons as close to each other as possible after preferring starting locations that cover the most pumpjacks.
 
-The tool tries up to 16 different planning routines and returns the best one to the user. Even for larger oil fields (20+ pumps) it generally completes in less than 100ms. The tool shows the quality of the other plans so you can see how each algorithm did.
+The tool tries up to 16 different planning routines and returns the best one to the user. On the live site, the four test fields with 20 or more pumpjacks (20 to 58 of them) plan in 131 to 402 ms. The tool shows the quality of the other plans so you can see how each algorithm did.
 
 ![image](https://user-images.githubusercontent.com/94054/224569867-936af0b4-28e1-4c44-9ad5-af33e89f8236.png)
 

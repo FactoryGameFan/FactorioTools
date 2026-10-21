@@ -83,6 +83,19 @@ jobs:
             echo "Transpile reproduced the committed output, and it parses and runs under 5.2."
           '
 
+      # The site now loads the Rust planner (rust/planner-wasm), and the Vite build
+      # imports it from src/vue/src/lib/planner-wasm. The devcontainer image has no
+      # Rust toolchain yet (adding one belongs with stage 13 of #138, when .NET
+      # leaves the image), so build it on the runner, whose rustup honours
+      # rust/rust-toolchain.toml. The checkout is mounted into the container, so the
+      # copied files are visible there. This is what `npm run build-wasm` does,
+      # minus shx, which the runner does not have outside the container.
+      - name: Build the Rust planner on the runner
+        working-directory: rust
+        run: |
+          cargo build --release -p planner-wasm --target wasm32-unknown-unknown
+          cp target/wasm32-unknown-unknown/release/planner_wasm.wasm planner-wasm/js/planner.js ../src/vue/src/lib/planner-wasm/
+
       - name: The front-end builds and tests
         run: |
           npx --yes @devcontainers/cli@0.89.0 exec --workspace-folder "$GITHUB_WORKSPACE" bash -ec '

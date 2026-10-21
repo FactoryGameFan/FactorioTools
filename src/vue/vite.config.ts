@@ -72,6 +72,9 @@ export default defineConfig({
     },
   },
   plugins: [vue()],
+  // The planner runs in a module Web Worker (src/lib/plannerWorker.ts) that imports the
+  // Rust planner's ES module wrapper, so build the worker as an ES module too.
+  worker: { format: 'es' },
   define: define,
   base: basePath
 })

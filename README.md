@@ -14,7 +14,7 @@ Why did I build my own? Well, I didn't know of these tools before I started and 
 
 ### Check it out
 
-The tool is available here: https://oilfieldplanner.factorygamefan.com/oil-field. The planner runs entirely in your browser via .NET WebAssembly, so no blueprint data leaves your machine. There is an "Add sample" button (which drops one of my test blueprints in) and "View in FBE" buttons to view the input and output blueprints. Give it a try and let me know what you think!
+The tool is available here: https://oilfieldplanner.factorygamefan.com/oil-field. The planner runs entirely in your browser via WebAssembly (a Rust port of the C# planner, in a background worker), so no blueprint data leaves your machine. There is an "Add sample" button (which drops one of my test blueprints in) and "View in FBE" buttons to view the input and output blueprints. Give it a try and let me know what you think!
 
 I've also attached a video of the thing in action.
 

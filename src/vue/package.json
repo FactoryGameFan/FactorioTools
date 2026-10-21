@@ -11,7 +11,7 @@
     "lint": "eslint . --fix",
     "format": "prettier --write src/",
     "swagger-gen": "swagger-typescript-api generate --path ../WebApp/swagger.json --output src/lib --name FactorioToolsApi",
-    "build-wasm": "dotnet publish ../BrowserWasm/BrowserWasm.csproj --configuration Release --property:LocationAsStruct=false && shx rm -rf public/framework && shx mkdir -p public && shx cp -r ../BrowserWasm/bin/Release/net10.0/browser-wasm/AppBundle/_framework public/framework",
+    "build-wasm": "cd ../../rust && cargo build --release -p planner-wasm --target wasm32-unknown-unknown && shx cp target/wasm32-unknown-unknown/release/planner_wasm.wasm planner-wasm/js/planner.js ../src/vue/src/lib/planner-wasm/",
     "test": "vitest run",
     "test:watch": "vitest"
   },

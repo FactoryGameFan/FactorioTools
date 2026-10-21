@@ -4,8 +4,12 @@
 //!
 //! It lives in its own crate because it needs both the planner and the blueprint parser,
 //! and because the full set is slow enough to want a release build of its own.
+//!
+//! [`normalize`] and the `normalize-lists` binary keep the two blueprint lists those tests
+//! read normalized, in place of the C# CLI's `oil-field normalize`.
 
 pub mod issue_cases;
+pub mod normalize;
 
 use std::path::{Path, PathBuf};
 use std::sync::Mutex;

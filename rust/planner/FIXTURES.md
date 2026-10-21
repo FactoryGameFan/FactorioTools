@@ -486,3 +486,57 @@ per key, in enumeration order.
 new terminal is often in the same place as the old one. The Rust port keeps that behavior (see
 `eliminate_other_terminals_keeping_last` in `src/steps/rotate_optimize.rs`); swapping in the
 value-comparing `helpers::eliminate_other_terminals` fails this fixture on its second case.
+## `beacons.jsonl` (stage 9)
+
+Real `PlanBeacons.Execute(context, pipes, heatPipes)` calls, recorded by `oracle/BeaconsRecorder.cs`.
+`AddPipes.GetSolution` calls it with the pipe set `PlanUndergroundPipes` has already thinned, which
+is exactly the `Pipe`, `Terminal` and `UndergroundPipe` cells a finished plan's grid ends up with.
+So for each case the recorder plans a blueprint, keeps the grid the beacon pass saw (pumpjacks,
+avoid cells, and, where noted, poles) as a snapshot, takes the pipe cells in `EntityLocations`
+order as the pipe set, and calls `PlanBeacons.Execute` on a context rebuilt from the snapshot -
+the same rebuild the Rust test does. On Aquilo the heat pipe set comes from `AddHeatPipes.Route` on
+its own rebuild of the snapshot, as `GetSolution` routes heat before beacons; a layout `Route`
+cannot fully heat gets no beacon pass in the planner, so it is not recorded.
+
+**The recorder checks its inputs are the planner's own.** For each case without heat pipes or a
+custom strategy list, some selected plan's beacon strategy must give that plan's beacon and effect
+counts, and every beacon on the finished grid must be one of its beacons (a later step can drop a
+beacon no pole can power, so the grid holds a subset). One case first failed this and passed with
+the plan's poles kept: it went through the planner's poles-first retry, which plans beacons with
+poles already placed; it is named `_poles-first`. One case fails it either way and is named
+`_input-unverified`: a poles-first plan with beacons runs pole placement again afterwards, so no
+snapshot of the finished plan has the poles its beacon pass saw. It is still a valid input for
+comparing .NET and Rust, so it is kept.
+
+| Cases | Blueprints | Options (all with `ValidateSolution`, all three beacon strategies) |
+|---|---|---|
+| `small-NNNN_medium_b_o_u`, `big-NNNN_medium_b_o_u` | all 61; every 50th big-list | medium pole, overlap, underground |
+| `small-NNNN_big_b` | every 2nd from 1 | big pole, no overlap |
+| `small-NNNN_substation_b_o` | every 3rd from 2 | substation, overlap |
+| `small-NNNN_small_b_u` | every 3rd from 0 | small pole, no overlap, underground |
+| `small-NNNN_nonstandard_b_o_u` / `_b_u` | every 2nd from 0 / every 3rd from 1 | the `NonStandardBeacon` theory's 2x4 beacon with a 4x6 supply area, overlap on / off |
+| `small-NNNN_medium_heat_b_o` / `_b` | every 3rd from 0 / every 4th from 2 | heat pipes, overlap on / off |
+| `small-NNNN_medium_b_o_u_poles`, `small-NNNN_big_b_poles` | every 4th from 3 / every 6th from 5 | the finished plan's poles kept on the grid, as on the poles-first path |
+| `PlannerTest.AllowsLocationsToBeAvoided` | that test's two pumpjacks and avoid row | medium pole, overlap, underground |
+| `small-NNNN_medium_b_o_u_strategies-order` / `-default` / `-none` | 4, 17, 33 | `BeaconStrategies` of `[Snug, Fbe, Snug, FbeOriginal, Fbe]` (each runs once, in first-seen order), the default list, and an empty list (the error) |
+
+```json
+{
+  "name": "small-0005_big_b",
+  "options": { "beacon_width": 3, "...": "...", "beacon_strategies": [0, 1, 2] },
+  "pole_supply": [w, h], "width": 40, "height": 31, "next_id": 412,
+  "entities": [ [x, y, "Kind", id, ...extra], ... ],
+  "centers": [x0, y0, ...], "center_to_terminals_count": 9,
+  "pipes": [x0, y0, ...], "heat_pipes": null,
+  "solutions": [ { "strategy": 0, "beacons": [x0, y0, ...], "effects": 20, "counts": [...] }, ... ],
+  "after_entity_locations": [x0, y0, ...], "after_next_id": 530
+}
+```
+
+`entities` uses the `grids.jsonl` encoding (only `PumpjackCenter`, `PumpjackSide`,
+`ElectricPoleCenter`, `ElectricPoleSide`, `TemporaryEntity` and `AvoidEntity` occur). `options`
+holds only what `PlanBeacons` and `AddHeatPipes.Route` read. `center_to_terminals_count` only sizes
+a list in Snug. A failed call has `"error": "<message>"` instead of `solutions`. Every case records
+the grid's `EntityLocations` order and next id afterwards: the pass adds the pipes as temporary
+entities and removes them again, which uses up ids and, through the entity set's free list, changes
+the order the remaining entities are listed in.

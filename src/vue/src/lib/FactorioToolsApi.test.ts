@@ -1,7 +1,3 @@
-// TypeScript 6 no longer loads every @types package by default, and this is the only file
-// under src/ that uses Node APIs.
-/// <reference types="node" />
-import { readFileSync } from "node:fs"
 import { describe, expect, it } from "vitest"
 import {
   BeaconStrategy,
@@ -13,6 +9,9 @@ import {
   PipeStrategy,
   Quality,
 } from "./FactorioToolsApi"
+// The contract fixtures, as text. A Vite raw import rather than node:fs keeps Node's types
+// out of the app's type-check; vite/client (src/vite-env.d.ts) types `*?raw` as a string.
+import contractJsonl from "../../../../rust/contract/fixtures/contract.jsonl?raw"
 
 // Checks the hand-maintained types in FactorioToolsApi.ts against the responses the Rust
 // contract test replays (rust/contract/FIXTURES.md has the line format). The samples below
@@ -20,11 +19,6 @@ import {
 // Required<...>` fails on a missing or extra property. The tests then check every recorded
 // response has exactly the samples' keys and value types, so a field renamed on either side
 // fails here.
-const CONTRACT_FIXTURES = new URL(
-  "../../../../rust/contract/fixtures/contract.jsonl",
-  import.meta.url,
-)
-
 const planSample = {
   pipeStrategy: PipeStrategy.Fbe,
   optimizePipes: true,
@@ -101,7 +95,7 @@ type Line = { name: string; op: string; outcome: string; response: string }
 type Envelope = { title: unknown; status: unknown; errors: unknown }
 
 function readFixtures(): { name: string; op: "plan" | "normalize"; response: unknown }[] {
-  return readFileSync(CONTRACT_FIXTURES, "utf8")
+  return contractJsonl
     .split("\n")
     .filter((line) => line.length > 0)
     .map((line) => JSON.parse(line) as Line)

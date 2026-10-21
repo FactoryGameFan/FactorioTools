@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Records the C# planner's behavior as fixtures for the Rust port (#138). Not part of
+    FactorioTools.sln, so a solution build or test run never builds it. Run it with
+    ./docker-build.sh; see rust/planner/FIXTURES.md.
+  -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <InvariantGlobalization>true</InvariantGlobalization>
+    <RootNamespace>Knapcode.FactorioTools.PlannerOracle</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\src\FactorioTools.Serialization\FactorioTools.Serialization.csproj" />
+  </ItemGroup>
+
+</Project>

@@ -309,6 +309,19 @@ jobs:
           fi
           echo "dotnet-compat fixtures match .NET."
 
+      # Same idea for the planner itself: rust/planner/fixtures are recorded from
+      # the C# planner, and a C# planner change that is not mirrored in the Rust
+      # port shows up here as drift.
+      - name: Check the planner fixtures still match the C# planner
+        run: |
+          dotnet run --project rust/planner/oracle --configuration Release -- rust/planner/fixtures
+          if [ -n "$(git status --porcelain -- rust/planner/fixtures)" ]; then
+            echo "::error::rust/planner/fixtures no longer match what the C# planner records. A C# planner change has to land in the Rust port too (see CLAUDE.md, 'Rust port'). Rerun the recorder (see rust/planner/FIXTURES.md), commit, and fix the Rust tests."
+            git status --porcelain -- rust/planner/fixtures
+            exit 1
+          fi
+          echo "planner fixtures match the C# planner."
+
       - name: Publish
         run: dotnet publish src/WebApp --configuration Release --output src/WebApp/bin/publish --runtime linux-x64 --no-self-contained /p:PublishReadyToRun=true
 

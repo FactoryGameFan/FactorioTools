@@ -216,7 +216,6 @@
     //   Conditional - nothing to plan until an external circumstance changes, so
     //   there is deliberately NO issue and the revisit condition is stated in the
     //   rule itself. Filing issues for these would just create things to close:
-    //     SixLabors.ImageSharp ..... needs a Six Labors license key
     //     @types/node .............. tracks CI's Node, not the registry
     //     ApplicationInsights ...... only matters if WebApp is hosted again
     //
@@ -245,24 +244,6 @@
       prBodyNotes: [
         "`node-version: 24` is hardcoded in both .github/workflows/ci.yml and .github/workflows/deploy-cloudflare.yml - there is no .node-version or .nvmrc file for Renovate to bump instead. If this ceiling is ever raised, those two workflows must move in the same PR, or the types will describe a runtime CI is not using.",
       ],
-    },
-    {
-      // No tracking issue by design - there is nothing to plan. The hold lifts if
-      // and only if someone registers a Six Labors license key; until then there is
-      // no migration to schedule, just a condition to state. Applies to the
-      // .Drawing rule below too, which must move with this one.
-      description:
-        "HOLD SixLabors.ImageSharp on 3.x. ImageSharp 4.x adds build-time license enforcement and fails the build without a Six Labors license key. See the comment in src/FactorioTools/FactorioTools.csproj. Debug-visualizer-only, never ships. Unlock only if someone registers a key (free for OSS qualifies).",
-      matchManagers: ["nuget"],
-      matchPackageNames: ["SixLabors.ImageSharp"],
-      allowedVersions: "<4.0.0",
-    },
-    {
-      description:
-        "HOLD SixLabors.ImageSharp.Drawing on 2.x - same license enforcement as ImageSharp 4.x. Must move together with ImageSharp.",
-      matchManagers: ["nuget"],
-      matchPackageNames: ["SixLabors.ImageSharp.Drawing"],
-      allowedVersions: "<3.0.0",
     },
     {
       // Tracking issue: #47 - the OpenApi 10.x + Swashbuckle 10.x migration that

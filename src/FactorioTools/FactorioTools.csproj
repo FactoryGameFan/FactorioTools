@@ -59,23 +59,11 @@
     <EmbeddedResource Include="..\..\submodules\FluteSharp\data\POST6.dat" LinkBase="OilField" />
   </ItemGroup>
 
-  <ItemGroup Condition="'$(EnableVisualizer)' == 'true'">
-    <!--
-      Pinned to ImageSharp 3.1.12 / ImageSharp.Drawing 2.1.7 on purpose; do NOT bump to
-      ImageSharp 4.x / Drawing 3.x. Starting with those versions, SixLabors added build-time
-      license enforcement: the build fails with "No Six Labors license found ... obtain a
-      license from https://sixlabors.com/pricing/" unless a license key/file is supplied
-      ($(SixLaborsLicenseKey) / $(SixLaborsLicenseFile) / a sixlabors.lic file). The 3.x/2.x
-      line is the last that builds with no license key.
-
-      These packages back the OilField/Visualizer.cs debug visualizer only (this ItemGroup is
-      gated on EnableVisualizer, which defaults to Debug-only, and the whole file is behind
-      #if ENABLE_VISUALIZER) - they never ship in the planner or WASM bundle, so taking on
-      license-key management isn't worth it. Revisit only if someone registers a Six Labors
-      license key (free for OSS qualifies).
-    -->
-    <PackageReference Include="SixLabors.ImageSharp" Version="3.1.12" />
-    <PackageReference Include="SixLabors.ImageSharp.Drawing" Version="2.1.7" />
-  </ItemGroup>
+  <!--
+    No PackageReference here on purpose. The debug visualizer (OilField/Visualizer.cs) used
+    SixLabors.ImageSharp until it was rewritten to write SVG by hand. ImageSharp 4.x needs a
+    Six Labors license key to build, and 3.x stopped getting security fixes, so do not add an
+    image library back for it.
+  -->
 
 </Project>

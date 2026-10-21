@@ -149,7 +149,7 @@
         one pumpjack. All other entities will be ignored and excluded from the output blueprint. You
         can use the "View in FBE" links on the input or output blueprint to preview the blueprint in
         your web browser using Teoxoy's wonderful
-        <a href="https://fbe.teoxoy.com/">Factorio Blueprint Editor</a> tool.
+        <a href="https://fbe.factorygamefan.com/">Factorio Blueprint Editor</a> tool.
       </p>
       <p>
         The planner has multiple pipe planning strategies (i.e. algorithms) and multiple beacon

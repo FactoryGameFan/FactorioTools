@@ -38,14 +38,14 @@ export const Steps = {
       text: "FBE pipe",
       class: "text-bg-fbe",
       shortDescription: "Teoxoy's FBE pipe planner with minimal modifications",
-      longDescription: `Teoxoy's pipe planner algorithm used in FBE (<a href="https://fbe.teoxoy.com/">Factorio Blueprint Editor</a>) with minimal modifications for a C# port (<a
+      longDescription: `Teoxoy's pipe planner algorithm used in FBE (<a href="https://fbe.factorygamefan.com/">Factorio Blueprint Editor</a>) with minimal modifications for a C# port (<a
       href="https://github.com/teoxoy/factorio-blueprint-editor/blob/0bec144b8989422f86bce8cea58ef49258c1a88d/packages/editor/src/core/generators/pipe.ts">original source</a>)`,
     }),
     Fbe: newPipeStep({
       text: "FBE pipe*",
       class: "text-bg-fbe",
       shortDescription: "Teoxoy's FBE pipe planner with some modifications",
-      longDescription: `Teoxoy's pipe planner algorithm used in FBE (<a href="https://fbe.teoxoy.com/">Factorio Blueprint Editor</a>) with modifications (e.g. A*, more turns allowed, runtime improvements)`,
+      longDescription: `Teoxoy's pipe planner algorithm used in FBE (<a href="https://fbe.factorygamefan.com/">Factorio Blueprint Editor</a>) with modifications (e.g. A*, more turns allowed, runtime improvements)`,
     }),
     ConnectedCentersDelaunay: newPipeStep({
       text: "CC-DT",
@@ -90,14 +90,14 @@ export const Steps = {
       text: "FBE beacon",
       class: "text-bg-fbe",
       shortDescription: "Teoxoy's FBE beacon planner with minimal modifications",
-      longDescription: `Teoxoy's beacon planner algorithm used in FBE (<a href="https://fbe.teoxoy.com/">Factorio Blueprint Editor</a>) with minimal modifications for a C# port (<a
+      longDescription: `Teoxoy's beacon planner algorithm used in FBE (<a href="https://fbe.factorygamefan.com/">Factorio Blueprint Editor</a>) with minimal modifications for a C# port (<a
         href="https://github.com/teoxoy/factorio-blueprint-editor/blob/0bec144b8989422f86bce8cea58ef49258c1a88d/packages/editor/src/core/generators/beacon.ts">original source</a>)`,
     }),
     Fbe: newBeaconStep({
       text: "FBE beacon*",
       class: "text-bg-fbe",
       shortDescription: "Teoxoy's FBE beacon planner with modifications",
-      longDescription: `Teoxoy's beacon planner algorithm used in FBE (<a href="https://fbe.teoxoy.com/">Factorio Blueprint Editor</a>) with modifications (e.g. different candidate sorting)`,
+      longDescription: `Teoxoy's beacon planner algorithm used in FBE (<a href="https://fbe.factorygamefan.com/">Factorio Blueprint Editor</a>) with modifications (e.g. different candidate sorting)`,
     }),
     Snug: newBeaconStep({
       text: "snug",

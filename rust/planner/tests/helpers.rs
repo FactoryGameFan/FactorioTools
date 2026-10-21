@@ -129,6 +129,26 @@ fn terminals(value: &Value) -> LocationDictionary<Vec<TerminalLocation>> {
     dictionary
 }
 
+/// In C#, `LocationToTerminals` holds the same terminal objects as `CenterToTerminals`,
+/// and `EliminateOtherTerminals` compares them by reference. The snapshot records both
+/// maps as values, so rebuild the second from the first's objects.
+fn share_terminals(
+    center_to_terminals: &LocationDictionary<Vec<TerminalLocation>>,
+    mut location_to_terminals: LocationDictionary<Vec<TerminalLocation>>,
+) -> LocationDictionary<Vec<TerminalLocation>> {
+    let keys: Vec<Location> = location_to_terminals.iter().map(|(key, _)| key).collect();
+    for key in keys {
+        for terminal in location_to_terminals.value_mut(key).iter_mut() {
+            *terminal = *center_to_terminals
+                .value(terminal.center)
+                .iter()
+                .find(|t| *t == terminal)
+                .expect("every terminal in LocationToTerminals is one of its center's");
+        }
+    }
+    location_to_terminals
+}
+
 fn rebuild(s: &Value) -> Context {
     let o = &s["options"];
     let options = OilFieldOptions {
@@ -169,6 +189,7 @@ fn rebuild(s: &Value) -> Context {
     };
 
     let supply = arr(&s["pole_supply"]);
+    let center_to_terminals = terminals(&s["center_to_terminals"]);
     Context {
         options,
         input_blueprint: Blueprint::default(),
@@ -176,9 +197,12 @@ fn rebuild(s: &Value) -> Context {
         delta_y: 0.0,
         grid,
         centers: points(&s["centers"]),
-        center_to_terminals: terminals(&s["center_to_terminals"]),
         center_to_original_direction: LocationDictionary::new(),
-        location_to_terminals: terminals(&s["location_to_terminals"]),
+        location_to_terminals: share_terminals(
+            &center_to_terminals,
+            terminals(&s["location_to_terminals"]),
+        ),
+        center_to_terminals,
         location_to_adjacent_count: vec![0; (width * height) as usize],
         electric_pole_supply_width_with_quality: int(&supply[0]),
         electric_pole_supply_height_with_quality: int(&supply[1]),

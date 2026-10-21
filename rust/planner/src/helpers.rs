@@ -154,7 +154,8 @@ pub fn eliminate_other_terminals(context: &mut Context, selected_terminal: Termi
     }
 
     for other_terminal in &terminal_options {
-        if *other_terminal == selected_terminal {
+        // `otherTerminal == selectedTerminal` compares references in C#.
+        if other_terminal.same_object(&selected_terminal) {
             continue;
         }
 
@@ -165,8 +166,8 @@ pub fn eliminate_other_terminals(context: &mut Context, selected_terminal: Termi
             context
                 .location_to_terminals
                 .remove(other_terminal.terminal);
-        } else if let Some(index) = terminals.iter().position(|t| t == other_terminal) {
-            // `List.Remove`: the first equal item.
+        } else if let Some(index) = terminals.iter().position(|t| t.same_object(other_terminal)) {
+            // `List.Remove`: the first item that is the same object (reference equality).
             terminals.remove(index);
         }
     }

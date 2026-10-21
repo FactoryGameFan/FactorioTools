@@ -1,8 +1,5 @@
 //! `Validate`, from `src/FactorioTools/OilField/Steps/Validate.cs`: checks the planner runs on
 //! its own results. Most do nothing unless `options.validate_solution` is set.
-//!
-//! `NoOverlappingEntities` is not here yet: it calls `AddPipeEntities.Execute`, which stage 5
-//! of #138 ports. It belongs in this module once that lands.
 
 use std::collections::VecDeque;
 
@@ -15,10 +12,11 @@ use crate::data::Direction;
 use crate::error::{FactorioToolsError, FtResult};
 use crate::grid::{EntityKind, ExistingPipeGrid};
 use crate::helpers::{
-    get_covered_center_to_provider_centers, get_electric_pole_coverage, get_powered_entities,
-    get_provider_center_to_covered_centers,
+    add_beacons_to_grid, get_covered_center_to_provider_centers, get_electric_pole_coverage,
+    get_powered_entities, get_provider_center_to_covered_centers,
 };
 use crate::models::{BeaconSolution, ElectricPoleCandidateInfo, ProviderRecipient};
+use crate::steps::add_pipe_entities;
 
 /// `AddHeatPipes.PumpjackRingOffsets`: the twelve cells next to a pumpjack's 3x3 footprint, in
 /// the C#'s order. `AddHeatPipes` is ported in stage 10, which should use this one.
@@ -160,6 +158,50 @@ pub fn no_existing_beacons(
         return Err(FactorioToolsError::new(
             "There should not be any existing beacons.",
         ));
+    }
+
+    Ok(())
+}
+
+/// `NoOverlappingEntities`: the pipes, and each beacon solution in turn, can all be placed on
+/// a copy of the grid. A clash surfaces as `AddEntity`'s "There is already an entity at ..."
+/// error, which is how the C# reports it too.
+pub fn no_overlapping_entities(
+    context: &Context,
+    optimized_pipes: &LocationSet,
+    underground_pipes: Option<&LocationDictionary<Direction>>,
+    beacon_solutions: Option<&[BeaconSolution]>,
+) -> FtResult<()> {
+    if context.options.validate_solution {
+        match beacon_solutions {
+            None => {
+                let mut clone = context.grid.clone_grid();
+                add_pipe_entities::execute_on_grid(
+                    context,
+                    &mut clone,
+                    optimized_pipes,
+                    underground_pipes,
+                    false,
+                )?;
+            }
+            Some(solutions) => {
+                for solution in solutions {
+                    let mut clone = context.grid.clone_grid();
+                    add_pipe_entities::execute_on_grid(
+                        context,
+                        &mut clone,
+                        optimized_pipes,
+                        underground_pipes,
+                        false,
+                    )?;
+                    add_beacons_to_grid(
+                        &mut clone,
+                        &context.options,
+                        solution.beacons.iter().copied(),
+                    )?;
+                }
+            }
+        }
     }
 
     Ok(())

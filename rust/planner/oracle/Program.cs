@@ -72,6 +72,7 @@ AlgorithmCases.Write(outputDir, smallList, bigList);
 Console.WriteLine("entity kinds: " + string.Join(", ", kindCounts.Select(x => $"{x.Key}={x.Value}")));
 InitializeContextRecorder.Record(outputDir, repoRoot, smallList);
 HelpersRecorder.Record(outputDir, smallList);
+PipesRecorder.Record(outputDir, repoRoot, smallList);
 if (checkSnapshots)
 {
     Console.WriteLine($"snapshots: {snapshotMatches} match, {snapshotMismatches} differ");

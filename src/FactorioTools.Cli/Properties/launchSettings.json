@@ -1,8 +1,0 @@
-{
-  "profiles": {
-    "Sandbox": {
-      "commandName": "Project",
-      "commandLineArgs": "oil-field sandbox"
-    }
-  }
-}

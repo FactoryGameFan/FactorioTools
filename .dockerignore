@@ -1,9 +1,0 @@
-**/.*
-**/bin
-**/obj
-**/node_modules
-
-# Keep the dotnet tool manifest (excluded by **/.* above) so the WebApp
-# Dockerfile's PostBuild `dotnet tool restore` can install the swagger CLI.
-!**/.config
-!**/.config/**

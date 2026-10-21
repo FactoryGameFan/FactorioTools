@@ -8,7 +8,7 @@ Custom tools to augment the play of Factorio by Joel Verhagen. Currently, there 
 Given a blueprint containing pumpjacks, this tool return output a new blueprint conecting the pumpjacks with pipes and
 electric poles. It also tried to find the best direction for the pumpjack to minimize extra pipes.
 
-If you've used [FBE's](https://fbe.teoxoy.com/) or [Autotorio's](https://www.autotorio.com/oil) oil outpost generator or read [DeeFox's post](https://www.reddit.com/r/factorio/comments/6all0k/after_those_blueprintwizardryposts_i_decided_to/), it's a lot like that.
+If you've used [FBE's](https://fbe.factorygamefan.com/) or [Autotorio's](https://www.autotorio.com/oil) oil outpost generator or read [DeeFox's post](https://www.reddit.com/r/factorio/comments/6all0k/after_those_blueprintwizardryposts_i_decided_to/), it's a lot like that.
 
 Why did I build my own? Well, I didn't know of these tools before I started and by the time I was committed, I still hadn't learned about the sunk cost fallacy. But actually I was interested if I could make the State-of-the-Art planner that generates the very best plans! Well, I haven't 😂 (at least not all the time). But I have built a tool that is very configurable and tries several different planning strategies and returns the best results.
 

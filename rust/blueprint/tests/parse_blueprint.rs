@@ -124,8 +124,7 @@ fn reads_blueprint_files_like_read_all_lines() {
 /// Every corpus blueprint parses.
 #[test]
 fn parses_the_whole_corpus() {
-    let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
-        .join("../../test/FactorioTools.Test/OilField");
+    let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../testdata/oil-field");
     for list in ["small-list.txt", "big-list.txt"] {
         let lines = blueprint::read_blueprint_file(root.join(list)).unwrap();
         assert!(!lines.is_empty());

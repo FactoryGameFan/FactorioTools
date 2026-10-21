@@ -1,6 +1,6 @@
-//! A line-for-line port of `submodules/delaunator-sharp/DelaunatorSharp/Delaunator.cs`,
-//! limited to what the oil-field planner uses: the constructor, `Triangles`, `Halfedges`
-//! and `Hull`.
+//! A line-for-line port of DelaunatorSharp's `DelaunatorSharp/Delaunator.cs` (a submodule
+//! here until stage 13b), limited to what the oil-field planner uses: the constructor,
+//! `Triangles`, `Halfedges` and `Hull`.
 //!
 //! Keep the arithmetic exactly as the C# writes it. The planner feeds in grid points, so
 //! many lie on one circle and many distances tie. Which triangles come out then depends

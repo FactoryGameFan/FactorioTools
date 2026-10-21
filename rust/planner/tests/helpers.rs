@@ -1,6 +1,7 @@
 //! Replays `fixtures/helpers.jsonl` (recorded from the C# by `oracle/HelpersRecorder.cs`,
-//! format in `FIXTURES.md`): every `Helpers` and `Validate` case, on a context rebuilt from
-//! its recorded snapshot the same way the recorder rebuilt it, must give the recorded result.
+//! removed in stage 13b; format in `FIXTURES.md`): every `Helpers` and `Validate` case, on
+//! a context rebuilt from its recorded snapshot the same way the recorder rebuilt it, must
+//! give the recorded result.
 
 use std::collections::HashMap;
 use std::panic::{AssertUnwindSafe, catch_unwind};

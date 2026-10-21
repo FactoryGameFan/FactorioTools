@@ -9,8 +9,9 @@
   "compatibility_date": "2026-09-25",
 
   "assets": {
-    // Output of `npm run build`. Run `npm run build-wasm` first, or the
-    // planner's WASM bundle (dist/framework/) is missing.
+    // Output of `npm run build`. Run `npm run build-wasm` first: the Vite build
+    // imports the Rust planner from src/lib/planner-wasm and puts its .wasm in
+    // dist/assets/.
     "directory": "./dist",
 
     // A path with no file serves dist/404.html with status 404. That file is

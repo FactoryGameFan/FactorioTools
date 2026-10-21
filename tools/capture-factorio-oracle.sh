@@ -56,7 +56,7 @@
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-FIXTURE="$REPO_ROOT/test/FactorioTools.Test/OilField/factorio-oracle.json"
+FIXTURE="$REPO_ROOT/testdata/oil-field/factorio-oracle.json"
 OUT="$FIXTURE"
 FACTORIO_APP=""
 USER_DATA_DIR=""

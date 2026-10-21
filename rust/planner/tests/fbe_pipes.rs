@@ -1,6 +1,7 @@
 //! Replays `fixtures/fbe_pipes.jsonl` (recorded from the C# by `oracle/FbePipesRecorder.cs`,
-//! format in `FIXTURES.md`): `AddPipesFbe.Execute` on each recorded context must give the
-//! recorded pipes, final strategy or error, and leave the terminal maps as the C# did.
+//! removed in stage 13b; format in `FIXTURES.md`): `AddPipesFbe.Execute` on each recorded
+//! context must give the recorded pipes, final strategy or error, and leave the terminal
+//! maps as the C# did.
 
 use std::path::PathBuf;
 

@@ -1,5 +1,5 @@
-# Rust port of the oil-field planner (#138). It grows stage by stage beside the C#,
-# which stays the live planner until the port matches every snapshot.
+# The oil-field planner, ported from C# to Rust (#138). It is the only planner now: the
+# site runs its WASM build, and stage 13b removed the C#.
 [workspace]
 resolver = "3"
 members = ["dotnet-compat", "planner", "delaunator-net", "flute", "blueprint", "snapshots", "contract", "planner-wasm"]

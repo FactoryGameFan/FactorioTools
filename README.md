@@ -14,7 +14,7 @@ Why did I build my own? Well, I didn't know of these tools before I started and 
 
 ### Check it out
 
-The tool is available here: https://oilfieldplanner.factorygamefan.com/oil-field. The planner runs entirely in your browser via WebAssembly (a Rust port of the C# planner, in a background worker), so no blueprint data leaves your machine. There is an "Add sample" button (which drops one of my test blueprints in) and "View in FBE" buttons to view the input and output blueprints. Give it a try and let me know what you think!
+The tool is available here: https://oilfieldplanner.factorygamefan.com/oil-field. The planner is written in Rust and runs entirely in your browser as WebAssembly, in a background worker, so no blueprint data leaves your machine. There is an "Add sample" button (which drops one of my test blueprints in) and "View in FBE" buttons to view the input and output blueprints. Give it a try and let me know what you think!
 
 I've also attached a video of the thing in action.
 
@@ -38,17 +38,17 @@ https://user-images.githubusercontent.com/94054/224560733-35ca401f-ae51-46a9-951
 
 ### Methodology
 
-I captured a set of test blueprints from my own saves and used them for a scoring data set (61 of them today, in [`small-list.txt`](test/FactorioTools.Test/OilField/small-list.txt)). If the beacon or pipe planning algorithms I tried produced better results on this data set, I considered it a better algorithm and moved forward with the idea. This iterative process allowed me to come up with several algorithm variants that are all used.
+I captured a set of test blueprints from my own saves and used them for a scoring data set (61 of them today, in [`small-list.txt`](testdata/oil-field/small-list.txt)). If the beacon or pipe planning algorithms I tried produced better results on this data set, I considered it a better algorithm and moved forward with the idea. This iterative process allowed me to come up with several algorithm variants that are all used.
 
 I re-implemented FBE's pipe planner and beacon planner (with some tweaks) and wrote my own algorithms for pipe placement, pipe straitening, beacon placement, and electric pole placement. I did not try FBE's electric pole algorithm since it's not that important to have the fewest electric poles.
 
 My pipe planning algorithm is called "connected centers". It first tries to find pumpjacks that should be directly connected with lines of pipes ("trunks") and then connects these groups incrementally. My best performing "connected centers" variant uses Dr. Chris C. N. Chu's FLUTE algorithm, which is used for rectilinear Steiner minimal tree generation (RSMT) problem. RSMT is an NP-hard problem so getting a truly optimal solution isn't very feasible especially when considering multiple parameters like pipes, beacons, and poles.
 
-FLUTE is used under Dr. Chu's Attribution Assurance License ([`submodules/FluteSharp/flute-c/license.txt`](https://github.com/joelverhagen/FluteSharp/blob/main/flute-c/license.txt)). The license asks that every launch of a program built from it shows his name, Iowa State University and his web page, so the site's footer carries that credit. Anyone planning commercial use must tell the author first.
+FLUTE is used under Dr. Chu's Attribution Assurance License ([`rust/flute/LICENSE-FLUTE`](rust/flute/LICENSE-FLUTE)). The license asks that every launch of a program built from it shows his name, Iowa State University and his web page, so the site's footer carries that credit. Anyone planning commercial use must tell the author first. The planner's copy of FLUTE, in [`rust/flute/`](rust/flute/), is a Rust port of [FluteSharp](https://github.com/joelverhagen/FluteSharp), my C# version (MIT, [`LICENSE-FluteSharp`](rust/flute/LICENSE-FluteSharp)).
 
 My beacon planning algorithm is called "snug" and it tries to place beacons as close to each other as possible after preferring starting locations that cover the most pumpjacks.
 
-The tool tries up to 16 different planning routines and returns the best one to the user. Even for larger oil fields (20+ pumps) it generally completes in less than 100ms. The tool shows the quality of the other plans so you can see how each algorithm did.
+The tool tries up to 16 different planning routines and returns the best one to the user. On the live site, the four test fields with 20 or more pumpjacks (20 to 58 of them) plan in 131 to 402 ms. The tool shows the quality of the other plans so you can see how each algorithm did.
 
 ![image](https://user-images.githubusercontent.com/94054/224569867-936af0b4-28e1-4c44-9ad5-af33e89f8236.png)
 
@@ -80,36 +80,16 @@ I want to thank [teoxoy](https://github.com/teoxoy), author of the awesome Facto
 
 ### Planner quality
 
-See [`Score.HasExpectedScore.verified.txt`](test/FactorioTools.Test/OilField/Score.HasExpectedScore.verified.txt) for results. There is a table at the bottom.
+See [`Score.HasExpectedScore.verified.txt`](testdata/oil-field/Score.HasExpectedScore.verified.txt) for results. There is a table at the bottom.
 
 ### Runtime performance
 
-``` ini
-BenchmarkDotNet v0.13.11, Windows 11 (10.0.22621.2861/22H2/2022Update/SunValley2)
-AMD Ryzen 9 3950X, 1 CPU, 32 logical and 16 physical cores
-.NET SDK 8.0.100
-  [Host]     : .NET 8.0.0 (8.0.23.53103), X64 RyuJIT AVX2
-  DefaultJob : .NET 8.0.0 (8.0.23.53103), X64 RyuJIT AVX2
-```
+The planner was first written in C#, and the site ran it in the browser on .NET compiled to WebAssembly. It is now written in Rust. These numbers compare the two in headless Chromium on a Linux desktop, with the site's default options:
 
-| Method                                    |     Mean |    Error |   StdDev |
-| ----------------------------------------- | -------: | -------: | -------: |
-| MediumElectricPole_NoBeacon_NoUnderground | 17.43 ms | 0.090 ms | 0.085 ms |
-| SmallElectricPole_Beacon_Underground      | 31.82 ms | 0.122 ms | 0.114 ms |
-| MediumElectricPole_Beacon_Underground     | 31.78 ms | 0.292 ms | 0.273 ms |
-| BigElectricPole_Beacon_Underground        | 69.82 ms | 1.009 ms | 0.944 ms |
-| Substation_Beacon_Underground             | 33.92 ms | 0.199 ms | 0.186 ms |
+| What | .NET (before) | Rust (now) |
+| --- | ---: | ---: |
+| Planner download (brotli) | 3.15 MiB | 244 KB |
+| First plan after the page loads | 1,146 ms | 312 ms |
+| Largest field in [`big-list.txt`](testdata/oil-field/big-list.txt) | 26.7 s | 7.6 s |
 
-### Lua performance log
-
-This is the time to run the planner sample with Lua 5.2.4 on my desktop machine. System specs are the same as the .NET performance benchmark above.
-
-Reproduced using commit `3822074caaff18d11fa56961707d41a7ebca68b3` of [CSharp.lua](https://github.com/yanghuan/CSharp.lua).
-
-- `b984d3c050b8f16135197e457bc461b662ac04e3`: 7.08 seconds (original working implementation)
-- `6c1537e175b3b45879fe02d4b37ccce7ff349188`: 5.20 seconds (int based Location hash set, struct hash set is slow)
-- `8964b81944476f3f76a55186fdadabbf4a357230`: 2.20 seconds (int based Location dictionary, struct dictionary key is slow)
-- `fd55e01fd688e6bee033f96cbca7e24d3570de09`: 0.82 seconds (class instead struct for Location, struct does lots of copies)
-- `362caba6117438e27693289e76baeaea3ac9bb5f`: 0.74 seconds (don't use yield return, reduce Lua coroutines)
-- `596eb1bd1c808a48693d3239b412d05c8bff3cb9`: 0.71 seconds (don't use LINQ, reduce Lua coroutines)
-- `5bd8888af55dc201984de52ccae3ecbb5c646b89`: 0.69 seconds (eliminate named tuples, try/catch)
+The .NET planner ran on the page itself, so the page froze until the plan was done. The Rust planner runs in a Web Worker (a background thread), so the page keeps responding while it works. The first two rows come from the live site, and the largest field was timed on a local build of the same code. More details are in the [write-up of the port](https://claude.ai/artifact/1514Dr6iCGjyVXgENCxEuX).

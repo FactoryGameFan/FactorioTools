@@ -1,12 +1,12 @@
-//! Runs the Rust planner on exactly the inputs of the C# Verify snapshot tests in
-//! `test/FactorioTools.Test/OilField` and compares its output with the committed
-//! `*.verified.txt` files, byte for byte, with no .NET involved (#138).
+//! Runs the Rust planner on exactly the inputs of the old C# Verify snapshot tests and
+//! compares its output with the committed `*.verified.txt` files in `testdata/oil-field`,
+//! byte for byte (#138). The C# tests were removed in stage 13b; the snapshots stayed.
 //!
 //! It lives in its own crate because it needs both the planner and the blueprint parser,
 //! and because the full set is slow enough to want a release build of its own.
 //!
 //! [`normalize`] and the `normalize-lists` binary keep the two blueprint lists those tests
-//! read normalized, in place of the C# CLI's `oil-field normalize`.
+//! read normalized. They replaced the C# CLI's `oil-field normalize`.
 //!
 //! With `UPDATE_SNAPSHOTS=1` the tests write the snapshots instead of comparing them: they
 //! create missing files, rewrite changed ones and delete files no case produces any more.
@@ -36,9 +36,10 @@ pub fn repo_root() -> PathBuf {
         .expect("the repository root exists")
 }
 
-/// `test/FactorioTools.Test/OilField`.
+/// `testdata/oil-field`: the test blueprint lists, the Factorio oracle fixture and the
+/// committed snapshots.
 pub fn oil_field_test_dir() -> PathBuf {
-    repo_root().join("test/FactorioTools.Test/OilField")
+    repo_root().join("testdata/oil-field")
 }
 
 /// Set to `1` to write the snapshots rather than compare against them.
@@ -126,7 +127,7 @@ pub enum Input {
 /// One snapshot test case: the inputs, and the snapshot file it must match.
 #[derive(Clone, Debug)]
 pub struct SnapshotCase {
-    /// The snapshot file, relative to `test/FactorioTools.Test/OilField`.
+    /// The snapshot file, relative to `testdata/oil-field`.
     pub snapshot: String,
     pub input: Input,
     pub options: OilFieldOptions,
@@ -247,7 +248,7 @@ pub fn all_cases(big_list_step: usize) -> Vec<SnapshotCase> {
     cases
 }
 
-/// The snapshot methods of `PlannerTest.cs` and `PlannerIssueTest.cs`.
+/// The snapshot methods of the C# `PlannerTest.cs` and `PlannerIssueTest.cs`, ported.
 pub fn planner_test_cases() -> Vec<SnapshotCase> {
     let mut cases = Vec::new();
 

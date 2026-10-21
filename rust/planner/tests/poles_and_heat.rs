@@ -1,8 +1,8 @@
 //! Replays `fixtures/poles_and_heat.jsonl` (recorded from the C# by
-//! `oracle/PolesAndHeatRecorder.cs`, format in `FIXTURES.md`): every `AddElectricPoles` and
-//! `AddHeatPipes` case, on a context rebuilt from its recorded snapshot the same way the
-//! recorder rebuilt it, must give the recorded result and leave the grid in the recorded
-//! state (entities, ids, pole wiring and the next id).
+//! `oracle/PolesAndHeatRecorder.cs`, removed in stage 13b; format in `FIXTURES.md`): every
+//! `AddElectricPoles` and `AddHeatPipes` case, on a context rebuilt from its recorded
+//! snapshot the same way the recorder rebuilt it, must give the recorded result and leave
+//! the grid in the recorded state (entities, ids, pole wiring and the next id).
 
 use std::collections::HashMap;
 use std::panic::{AssertUnwindSafe, catch_unwind};

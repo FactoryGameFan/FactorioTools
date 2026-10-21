@@ -1,5 +1,5 @@
-//! Replays `fixtures/delaunator.jsonl`, recorded from DelaunatorSharp by `oracle/`, and
-//! checks every triangulation matches exactly.
+//! Replays `fixtures/delaunator.jsonl`, recorded from DelaunatorSharp by `oracle/` (removed
+//! in stage 13b, so the file is frozen), and checks every triangulation matches exactly.
 
 use delaunator_net::{Delaunator, DelaunatorError};
 use serde_json::Value;

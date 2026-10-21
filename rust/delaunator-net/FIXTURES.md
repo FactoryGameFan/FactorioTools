@@ -1,16 +1,12 @@
 # delaunator-net fixtures
 
-`fixtures/delaunator.jsonl` holds triangulations recorded from DelaunatorSharp by `oracle/`,
-so `tests/fixtures.rs` can check the Rust port without .NET (#138).
+`fixtures/delaunator.jsonl` holds triangulations recorded from DelaunatorSharp by a recorder
+in `oracle/`, so `tests/fixtures.rs` can check the Rust port without .NET (#138). The random
+cases used `new Random(1)`.
 
-**Regenerate**, from the repo root with submodules checked out:
-
-```bash
-./docker-build.sh run --project rust/delaunator-net/oracle -c Release -- rust/delaunator-net/fixtures
-```
-
-The output is deterministic (the random cases use `new Random(1)`), so a rerun on the same
-SDK gives the same bytes.
+**These fixtures are frozen inputs.** They were recorded from the C# planner's copy of
+DelaunatorSharp at commit `0532d923`. Stage 13b (#138) deleted the C# and the recorder with
+it, so nothing can regenerate them now. To see the recorder, check out that commit.
 
 ## Format
 

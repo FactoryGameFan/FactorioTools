@@ -1,12 +1,10 @@
-//! Inputs of the snapshot tests in `test/FactorioTools.Test/OilField/PlannerIssueTest.cs`,
-//! extracted from that file by `rust/snapshots/tools/extract_issue_cases.py` so the numbers
-//! cannot drift by hand. Regenerate rather than edit if the C# test changes, from the repo root:
+//! Inputs of the planner issue snapshot tests (the `PlannerIssueTest.*` snapshots in
+//! `testdata/oil-field`).
 //!
-//! ```text
-//! python3 -I rust/snapshots/tools/extract_issue_cases.py \
-//!     test/FactorioTools.Test/OilField/PlannerIssueTest.cs rust/snapshots/src/issue_cases.rs
-//! cd rust && cargo fmt --all
-//! ```
+//! This file was first generated from the C# `PlannerIssueTest.cs` by a script,
+//! `extract_issue_cases.py`. Stage 13b removed both, so this file is now the source of truth
+//! and is edited by hand. To add a case, add an entry here, then write its snapshot with
+//! [`crate::UPDATE_COMMAND`].
 
 /// One test: its name, the options preset, whether beacons are added, the pumpjack
 /// positions and the avoided locations.

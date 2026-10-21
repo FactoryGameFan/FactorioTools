@@ -1,14 +1,8 @@
 # flute fixtures
 
-`fixtures/flute.jsonl` holds what FluteSharp computes, so the Rust port can be checked without .NET (#138). CI reruns the recorder on the pinned SDK and fails if the committed file drifts.
+`fixtures/flute.jsonl` holds what FluteSharp computes, recorded by a recorder in `oracle/`, so the Rust port can be checked without .NET (#138).
 
-**Regenerate** (from the repo root, with submodules checked out):
-
-```bash
-./docker-build.sh run --project rust/flute/oracle -c Release -- rust/flute/fixtures
-```
-
-The output is deterministic: two runs give the same bytes.
+**These fixtures are frozen inputs.** They were recorded from the C# planner's copy of FluteSharp at commit `0532d923`. Stage 13b (#138) deleted the C# and the recorder with it, so nothing can regenerate them now. To see the recorder, check out that commit.
 
 ## Format
 
@@ -24,7 +18,7 @@ JSON Lines, one case per line:
 
 | Cases | Input |
 |---|---|
-| `small-NNNN` | All 61 blueprints in `test/FactorioTools.Test/OilField/small-list.txt` |
+| `small-NNNN` | All 61 blueprints in `testdata/oil-field/small-list.txt` |
 | `big-NNNN` | Every second blueprint in `big-list.txt` (574 of 1,147) |
 | `tiny-*`, `small-random-*` | 1 to 10 random points, coordinates 0 to 4 (many duplicates) and 0 to 20 |
 | `medium-random-*`, `crowded-*` | 11 to 60 random points, coordinates -10 to 40, and 0 to 6 (crowded) |

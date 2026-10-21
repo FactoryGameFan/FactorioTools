@@ -9,4 +9,5 @@ It copies the C# line for line rather than using the `delaunator` crate. The pla
 lie on a grid, so many of them sit on the same circle, and the triangle order then depends on
 details such as the seed choice, the custom quicksort and the non-robust predicates. Those
 details decide which pipes the planner draws (#138). `tests/fixtures.rs` checks the port
-against triangulations recorded from the C# (see `FIXTURES.md`).
+against frozen triangulations recorded from the C# before stage 13b removed it (see
+`FIXTURES.md`).

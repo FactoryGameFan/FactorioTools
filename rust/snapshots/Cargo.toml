@@ -10,11 +10,6 @@ repository.workspace = true
 [lints]
 workspace = true
 
-# Not in src/bin, which the repository's .gitignore ignores as a .NET output folder.
-[[bin]]
-name = "normalize-lists"
-path = "tools/normalize-lists.rs"
-
 [dependencies]
 # normalize-lists reads a line's own compressed data strictly, beside blueprint's reader.
 base64 = "0.22"

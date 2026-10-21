@@ -10,10 +10,11 @@ import {
   PUMPJACK_MODULE_DEFAULT,
 } from "../lib/plannerDefaults"
 
-// Values that mirror the C# planner come from plannerDefaults.verified.json, which the
-// .NET test suite generates from OilFieldOptions. Do not retype them here: the Vue app
-// sends these explicitly in the plan request, so a stale copy would override the correct
-// C# default and produce a wrong blueprint with a green test suite. See issue #54.
+// Values that mirror the planner come from plannerDefaults.verified.json, which the Rust
+// test rust/contract/tests/planner_defaults.rs generates from OilFieldOptions (run it with
+// UPDATE_PLANNER_DEFAULTS=1). Do not retype them here: the Vue app sends these explicitly
+// in the plan request, so a stale copy would override the correct planner default and
+// produce a wrong blueprint with a green test suite. See issue #54.
 const defaults = {
   // Vue-only state, with no counterpart in the planner options.
   usingQueryString: false,
@@ -25,7 +26,7 @@ const defaults = {
   electricPoleIsCustom: false,
   showProgress: false,
 
-  // Derived from the C#.
+  // Derived from the planner.
   pumpjackModule: PUMPJACK_MODULE_DEFAULT.name,
   beaconModule: BEACON_MODULE_DEFAULT.name,
   beaconModuleSlots: BEACON_MODULE_DEFAULT.count,

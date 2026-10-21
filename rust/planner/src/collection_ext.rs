@@ -1,6 +1,6 @@
 //! `CollectionExtensions`, from `src/FactorioTools/CollectionExtensions.cs`.
 //!
-//! The C# replaces LINQ with these so the core transpiles to Lua. Most map straight onto
+//! The C# replaced LINQ with these so the core could transpile to Lua. Most map straight onto
 //! Rust iterators. The ones kept here are those whose behavior is easy to get subtly wrong:
 //!
 //! - `MaxBy`/`MinBy`/`Max`/`Min` compare with `Comparer<T>.Default` and only replace on a

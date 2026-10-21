@@ -1,5 +1,5 @@
-//! Rust port of the FactorioTools oil-field planner (#138), built stage by stage beside
-//! the C# in `src/FactorioTools`. Each module names the C# file it copies. Wherever the C#
+//! Rust port of the FactorioTools oil-field planner (#138), from the C# that lived in
+//! `src/FactorioTools` until stage 13b. Each module names the C# file it copies. Wherever the C#
 //! result depends on .NET's ordering or tie-breaking, the port uses `dotnet_compat`.
 
 pub mod algorithms;

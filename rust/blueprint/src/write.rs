@@ -438,7 +438,7 @@ mod tests {
     /// `tests/factorio_oracle.rs` checks the rest of it.
     fn factorio_oracle_path() -> std::path::PathBuf {
         std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
-            .join("../../test/FactorioTools.Test/OilField/factorio-oracle.json")
+            .join("../../testdata/oil-field/factorio-oracle.json")
     }
 
     /// `FactorioOracleTest.EntityNameToSizeMatchesTheDerivedCollisionBoxFootprint`: each

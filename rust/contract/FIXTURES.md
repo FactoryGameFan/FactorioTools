@@ -1,16 +1,11 @@
 # contract fixtures
 
-Recorded from the C# contract by `oracle/`, so the Rust tests can check `rust/contract` (and
-through it `rust/blueprint`'s writer) without .NET (#138). CI reruns the recorder on the
-pinned SDK and fails if the committed file drifts.
+Recorded from the C# contract by a recorder in `oracle/`, so the Rust tests can check
+`rust/contract` (and through it `rust/blueprint`'s writer) without .NET (#138).
 
-**Regenerate** (from the repo root, with submodules checked out):
-
-```bash
-./docker-build.sh run --project rust/contract/oracle -c Release -- rust/contract/fixtures
-```
-
-The output is deterministic.
+**These fixtures are frozen inputs.** They were recorded from the C# planner at commit
+`0532d923`. Stage 13b (#138) deleted the C# and the recorder with it, so nothing can
+regenerate them now. To see the recorder, check out that commit.
 
 ## `contract.jsonl`
 

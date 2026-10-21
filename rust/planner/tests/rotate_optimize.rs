@@ -1,6 +1,7 @@
 //! Replays `fixtures/rotate_optimize.jsonl` (recorded from the C# by
-//! `oracle/RotateOptimizeRecorder.cs`, format in `FIXTURES.md`): every `RotateOptimize.Execute`
-//! call must leave the pipes and both terminal maps exactly as the C# did, in .NET's order.
+//! `oracle/RotateOptimizeRecorder.cs`, removed in stage 13b; format in `FIXTURES.md`):
+//! every `RotateOptimize.Execute` call must leave the pipes and both terminal maps exactly
+//! as the C# did, in .NET's order.
 
 use std::collections::HashMap;
 use std::fmt::Write as _;

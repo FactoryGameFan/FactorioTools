@@ -1,16 +1,14 @@
 # planner fixtures
 
-Recorded from the C# planner by `oracle/`, so the Rust tests can check the port without .NET.
-Each stage of the port (#138) adds files here. CI reruns the recorder on the pinned SDK and
-fails if the committed files drift.
+Recorded from the C# planner by the recorders in `oracle/`, so the Rust tests can check the
+port without .NET. Each stage of the port (#138) added files here.
 
-**Regenerate** (from the repo root, with submodules checked out):
+**These fixtures are frozen inputs.** They were recorded from the C# planner at commit
+`0532d923`. Stage 13b (#138) deleted the C# and the recorders with it, so nothing can
+regenerate them now. To see a recorder, check out that commit. The `oracle/...` file names
+below are paths at that commit.
 
-```bash
-./docker-build.sh run --project rust/planner/oracle -c Release -- rust/planner/fixtures
-```
-
-All files are JSON Lines, one case per line. The output is deterministic. One run writes every file.
+All files are JSON Lines, one case per line.
 
 ## `grids.jsonl` (stage 1)
 
@@ -71,9 +69,9 @@ The Rust test rebuilds each grid by adding the entities in this order, then chec
 `EntityLocations` enumerates in the same order and that its `to_string` equals `text`
 byte for byte.
 
-**Checking the recorder itself:** add `--check-snapshots` to the command above. The recorder
-then also compares each case's `text` with the grid half of its committed Verify snapshot (the
-part after the first blank line) and exits 1 on any difference. On 2026-10-21 all 126
+**Checking the recorder itself:** the recorder had a `--check-snapshots` flag that also
+compared each case's `text` with the grid half of its committed Verify snapshot (the part
+after the first blank line) and exited 1 on any difference. On 2026-10-21 all 126
 snapshot-backed cases matched.
 
 ## `algorithms.jsonl` (stage 2)

@@ -1,7 +1,6 @@
 import { OilFieldStoreState, useOilFieldStore } from "../stores/OilFieldStore"
 import {
   BeaconStrategy,
-  HttpResponse,
   OilFieldNormalizeRequest,
   OilFieldNormalizeResponse,
   OilFieldPlan,
@@ -88,7 +87,6 @@ export type ApiError = {
   title: string
   errors?: Record<string, string[]>
   errorDetails?: string[]
-  response?: HttpResponse<unknown, unknown>
 }
 
 export interface ApiResult<Data> {

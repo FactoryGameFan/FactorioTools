@@ -19,9 +19,6 @@
         <pre class="mb-0">{{ value }}</pre>
       </div>
     </template>
-    <div class="card-body" v-if="!error.errors && error.response?.error">
-      <pre class="mb-0">{{ JSON.stringify(error.response.error, null, "  ") }}</pre>
-    </div>
   </div>
 </template>
 

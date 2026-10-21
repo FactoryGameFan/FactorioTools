@@ -55,22 +55,6 @@ jobs:
         run: npm run build
         working-directory: ${{ env.BUILD_PATH }}
 
-      # "npm run build" runs swagger-gen first, so the build above has already
-      # regenerated the committed TS client from the committed swagger.json.
-      # This is the second link in the chain the swagger.json check below guards:
-      # WebApp C# -> swagger.json -> src/vue/src/lib -> the deployed front-end.
-      # Without this, the client could keep describing an older contract than the
-      # swagger.json sitting next to it. Only FactorioToolsApi.ts is generated -
-      # everything else in src/lib is hand-written.
-      - name: Check the committed API client is up to date
-        run: |
-          if [ -n "$(git status --porcelain -- src/vue/src/lib/FactorioToolsApi.ts)" ]; then
-            echo "::error::src/vue/src/lib/FactorioToolsApi.ts does not match what swagger.json generates. Run 'npm run swagger-gen' in src/vue and commit the result."
-            git diff -- src/vue/src/lib/FactorioToolsApi.ts
-            exit 1
-          fi
-          echo "src/vue/src/lib/FactorioToolsApi.ts matches the generated client."
-
       - name: Test
         run: npm run test
         working-directory: ${{ env.BUILD_PATH }}

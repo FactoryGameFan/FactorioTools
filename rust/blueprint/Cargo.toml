@@ -12,6 +12,7 @@ workspace = true
 
 [dependencies]
 base64 = "0.22"
+dotnet-compat = { path = "../dotnet-compat" }
 flate2 = "1"
 planner = { path = "../planner" }
 serde = { version = "1", features = ["derive"] }

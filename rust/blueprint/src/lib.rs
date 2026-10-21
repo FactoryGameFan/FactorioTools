@@ -1,8 +1,8 @@
 //! Factorio blueprint strings, from `src/FactorioTools.Serialization` (#138).
 //!
-//! So far this ports `ParseBlueprint` (`OilField/Steps/ParseBlueprint.cs`): a blueprint string
-//! is a version character `'0'`, then base64 of zlib-compressed JSON. Writing blueprint strings
-//! (`GridToBlueprintString`) comes with stage 12.
+//! A blueprint string is a version character `'0'`, then base64 of zlib-compressed JSON.
+//! Reading ports `ParseBlueprint` (`OilField/Steps/ParseBlueprint.cs`); writing ports
+//! `GridToBlueprintString` ([`write`]), with .NET's JSON text formats in [`json_out`].
 //!
 //! The planner crate stays free of serde, so the JSON is read into this crate's own
 //! [`RawBlueprintRoot`] model first and then converted to the planner's `data` types. The raw
@@ -10,6 +10,11 @@
 //! holds only the four values a pumpjack can face, which is all the planner reads: like the
 //! C#, only pumpjack directions are converted to internal ones, and another entity's direction
 //! carries over only when it is one of those four values.
+
+pub mod json_out;
+pub mod write;
+
+pub use write::{grid_to_blueprint_string, serialize_blueprint};
 
 use std::io::Read;
 
@@ -226,12 +231,25 @@ pub fn read_blueprint_lines(text: &str) -> Vec<String> {
 /// The "could not be fully decoded" error. The C# reports it for every failure while
 /// decoding, since its `looksLikeJson` flag starts true and only a decoded JSON text that
 /// does not start with `{` can turn it off.
-fn not_fully_decoded() -> FactorioToolsError {
+///
+/// `inner` is the wrapped exception's message, which the contract's error envelope lists
+/// after this one. The base64 and zlib messages are .NET's own text. A JSON error carries
+/// serde_json's description instead, since `System.Text.Json`'s wording (and its own nested
+/// inner exception) cannot be reproduced in general.
+fn not_fully_decoded(inner: impl Into<String>) -> FactorioToolsError {
     FactorioToolsError::with_bad_input(
         "Input blueprint string could not be fully decoded. Are you sure you copied the whole blueprint?",
         true,
     )
+    .with_inner_message(inner)
 }
+
+/// `Convert.FromBase64String`'s `FormatException` message.
+const BASE64_FORMAT_MESSAGE: &str = "The input is not a valid Base-64 string as it contains a non-base 64 character, more than two padding characters, or an illegal character among the padding characters.";
+
+/// The `InvalidDataException` message .NET's `ZLibStream` gives for data zlib rejects.
+const ZLIB_DATA_MESSAGE: &str =
+    "The archive entry was compressed using an unsupported compression method.";
 
 /// Decodes a blueprint string to its JSON text, as the C# does: base64 after the version
 /// character (missing `=` padding added, whitespace ignored as `Convert.FromBase64String`
@@ -252,12 +270,14 @@ pub fn decode_blueprint_json(blueprint_string: &str) -> FtResult<String> {
             .with_decode_allow_trailing_bits(true)
             .with_decode_padding_mode(DecodePaddingMode::RequireCanonical),
     );
-    let bytes = engine.decode(&base64).map_err(|_| not_fully_decoded())?;
+    let bytes = engine
+        .decode(&base64)
+        .map_err(|_| not_fully_decoded(BASE64_FORMAT_MESSAGE))?;
 
     let mut decompressed = Vec::new();
     flate2::read::ZlibDecoder::new(&bytes[..])
         .read_to_end(&mut decompressed)
-        .map_err(|_| not_fully_decoded())?;
+        .map_err(|_| not_fully_decoded(ZLIB_DATA_MESSAGE))?;
 
     let text = String::from_utf8_lossy(&decompressed);
     Ok(text.strip_prefix('\u{feff}').unwrap_or(&text).to_string())
@@ -281,7 +301,7 @@ pub fn parse_raw(blueprint_string: &str) -> FtResult<RawBlueprintRoot> {
 
     let json = decode_blueprint_json(blueprint_string)?;
     let root: Option<RawBlueprintRoot> =
-        serde_json::from_str(&json).map_err(|_| not_fully_decoded())?;
+        serde_json::from_str(&json).map_err(|e| not_fully_decoded(e.to_string()))?;
 
     root.ok_or_else(|| {
         FactorioToolsError::with_bad_input("The blueprint JSON deserialized as null.", true)

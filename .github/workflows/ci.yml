@@ -303,7 +303,7 @@ jobs:
       # that has not been mirrored in the Rust port (see CLAUDE.md, "Rust port").
       - name: Check the Rust port's fixtures still match .NET
         run: |
-          for crate in dotnet-compat delaunator-net flute planner; do
+          for crate in dotnet-compat delaunator-net flute planner contract; do
             dotnet run --project "rust/$crate/oracle" --configuration Release -- "rust/$crate/fixtures"
           done
           if [ -n "$(git status --porcelain -- 'rust/*/fixtures/*')" ]; then
@@ -347,7 +347,18 @@ jobs:
 
       # The port's end-to-end gate: the Rust planner must reproduce every committed
       # Verify snapshot (2,747 planner files) and the Score scoreboard byte for byte,
-      # with no .NET involved. In release it takes about a minute; the full set is
-      # #[ignore]d in debug because it is slow there.
+      # with no .NET involved. The contract replay (rust/contract) runs here too: the
+      # JSON the site sends and gets back, against responses recorded from the C#.
+      # In release this takes about a minute; both are #[ignore]d in debug because
+      # they are slow there.
       - name: Check every planner snapshot (release)
-        run: cargo test --release -p snapshots -- --include-ignored
+        run: cargo test --release -p snapshots -p contract -- --include-ignored
+
+      # The site will load the planner as WebAssembly, so check that build gives the
+      # same bytes as the native contract on every recorded request. node-replay.mjs
+      # exits 1 on the first difference.
+      - name: Check the WebAssembly build matches the native contract
+        run: |
+          cargo build --release -p planner-wasm --target wasm32-unknown-unknown
+          cargo run --release -p contract --example replay -- contract/fixtures/contract.jsonl "$RUNNER_TEMP/native.jsonl"
+          node planner-wasm/tests/node-replay.mjs contract/fixtures/contract.jsonl "$RUNNER_TEMP/native.jsonl" target/wasm32-unknown-unknown/release/planner_wasm.wasm

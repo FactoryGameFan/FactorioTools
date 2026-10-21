@@ -1,5 +1,4 @@
 # Editor and OS files
-.vs/
 .idea/
 *.code-workspace
 .history/
@@ -20,10 +19,7 @@ pump_2.2.0.zip
 # packages. Working state for an in-flight plan, not a record - git history is.
 .superpowers/
 
-# Local secrets: Wrangler's .dev.vars, env files, and the certificate and
-# publish-profile files the old Visual Studio template ignored
+# Local secrets: Wrangler's .dev.vars and env files
 .dev.vars*
 .env
 .env.*
-*.pfx
-*.publishsettings

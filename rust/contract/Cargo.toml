@@ -1,7 +1,7 @@
 [package]
 name = "contract"
 version = "0.0.0"
-description = "The planner's JSON contract (Plan and Normalize), from src/FactorioTools.Contract (#138)"
+description = "The JSON the site sends the planner and gets back (Plan and Normalize)"
 publish = false
 edition.workspace = true
 license.workspace = true

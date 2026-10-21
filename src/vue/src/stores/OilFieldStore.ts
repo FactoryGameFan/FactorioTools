@@ -18,7 +18,6 @@ import {
 const defaults = {
   // Vue-only state, with no counterpart in the planner options.
   usingQueryString: false,
-  useStagingApi: false,
   inputBlueprint: "",
   useAdvancedOptions: false,
   pumpjackModuleIsCustom: false,
@@ -65,9 +64,7 @@ const defaults = {
 export type OilFieldStoreState = typeof defaults
 
 type StoreToQuery = {
-  [
-    Property in keyof OilFieldStoreState as Exclude<Property, "usingQueryString" | "useStagingApi">
-  ]: string
+  [Property in keyof OilFieldStoreState as Exclude<Property, "usingQueryString">]: string
 }
 
 const storeToQuery: StoreToQuery = {
@@ -192,7 +189,7 @@ export function hasMatchingQueryString(
 function populateStoreFromQuery(query: LocationQuery) {
   const store = useOilFieldStore()
   for (const [storeKey, storeValue] of getEntries(store.$state)) {
-    if (storeKey == "usingQueryString" || storeKey == "useStagingApi") {
+    if (storeKey == "usingQueryString") {
       continue
     }
 
@@ -247,7 +244,7 @@ export function generateQueryString() {
   const store = useOilFieldStore()
   const pieces = []
   for (const [storeKey, storeValue] of getEntries(store.$state)) {
-    if (storeKey == "usingQueryString" || storeKey == "useStagingApi") {
+    if (storeKey == "usingQueryString") {
       continue
     }
 

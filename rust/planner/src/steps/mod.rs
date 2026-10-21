@@ -3,6 +3,7 @@
 pub mod add_electric_poles;
 pub mod add_heat_pipes;
 pub mod add_pipe_entities;
+pub mod add_pipes;
 pub mod add_pipes_connected_centers;
 pub mod add_pipes_connected_centers_dt;
 pub mod add_pipes_connected_centers_flute;

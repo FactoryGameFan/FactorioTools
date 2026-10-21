@@ -344,3 +344,10 @@ jobs:
       # The port ships to the browser as WASM, so every crate has to build there.
       - name: Build for wasm32
         run: cargo build --workspace --target wasm32-unknown-unknown
+
+      # The port's end-to-end gate: the Rust planner must reproduce every committed
+      # Verify snapshot (2,747 planner files) and the Score scoreboard byte for byte,
+      # with no .NET involved. In release it takes about a minute; the full set is
+      # #[ignore]d in debug because it is slow there.
+      - name: Check every planner snapshot (release)
+        run: cargo test --release -p snapshots -- --include-ignored

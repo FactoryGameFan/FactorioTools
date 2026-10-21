@@ -2,7 +2,7 @@
 # which stays the live planner until the port matches every snapshot.
 [workspace]
 resolver = "3"
-members = ["dotnet-compat", "planner", "delaunator-net", "flute"]
+members = ["dotnet-compat", "planner", "delaunator-net", "flute", "blueprint", "snapshots"]
 
 [workspace.package]
 edition = "2024"

@@ -295,32 +295,23 @@ jobs:
           fi
           echo "No Verify snapshots drifted."
 
-      # The Rust port (#138) copies .NET's tie-breaking behavior, and its tests
-      # check that copy against fixtures recorded from .NET. They are committed so
-      # the Rust job needs no .NET. This reruns the recorder on the pinned SDK and
-      # fails if the committed fixtures no longer match what .NET does.
-      - name: Check the dotnet-compat fixtures still match .NET
+      # The Rust port (#138) is checked against fixtures recorded from .NET: the
+      # BCL's tie-breaking (dotnet-compat), DelaunatorSharp, FluteSharp and the C#
+      # planner itself. They are committed so the Rust job needs no .NET. This
+      # reruns every recorder on the pinned SDK and fails if any committed fixture
+      # changes - an SDK bump that changes .NET's behavior, or a C# planner change
+      # that has not been mirrored in the Rust port (see CLAUDE.md, "Rust port").
+      - name: Check the Rust port's fixtures still match .NET
         run: |
-          dotnet run --project rust/dotnet-compat/oracle --configuration Release -- rust/dotnet-compat/fixtures
-          if [ -n "$(git status --porcelain -- rust/dotnet-compat/fixtures)" ]; then
-            echo "::error::rust/dotnet-compat/fixtures no longer match what .NET records. If the SDK changed behavior, the Rust copy must change with it. Rerun the recorder (see rust/dotnet-compat/FIXTURES.md), commit, and fix the Rust tests."
-            git status --porcelain -- rust/dotnet-compat/fixtures
+          for crate in dotnet-compat delaunator-net flute planner; do
+            dotnet run --project "rust/$crate/oracle" --configuration Release -- "rust/$crate/fixtures"
+          done
+          if [ -n "$(git status --porcelain -- 'rust/*/fixtures/*')" ]; then
+            echo "::error::Recorded fixtures under rust/ no longer match what .NET produces. Rerun the recorder named in that crate's FIXTURES.md, commit the result, and make the Rust tests pass against it."
+            git status --porcelain -- 'rust/*/fixtures/*'
             exit 1
           fi
-          echo "dotnet-compat fixtures match .NET."
-
-      # Same idea for the planner itself: rust/planner/fixtures are recorded from
-      # the C# planner, and a C# planner change that is not mirrored in the Rust
-      # port shows up here as drift.
-      - name: Check the planner fixtures still match the C# planner
-        run: |
-          dotnet run --project rust/planner/oracle --configuration Release -- rust/planner/fixtures
-          if [ -n "$(git status --porcelain -- rust/planner/fixtures)" ]; then
-            echo "::error::rust/planner/fixtures no longer match what the C# planner records. A C# planner change has to land in the Rust port too (see CLAUDE.md, 'Rust port'). Rerun the recorder (see rust/planner/FIXTURES.md), commit, and fix the Rust tests."
-            git status --porcelain -- rust/planner/fixtures
-            exit 1
-          fi
-          echo "planner fixtures match the C# planner."
+          echo "All Rust port fixtures match .NET."
 
       - name: Publish
         run: dotnet publish src/WebApp --configuration Release --output src/WebApp/bin/publish --runtime linux-x64 --no-self-contained /p:PublishReadyToRun=true

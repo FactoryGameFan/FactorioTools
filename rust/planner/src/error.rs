@@ -31,6 +31,10 @@ pub struct FactorioToolsError {
     /// `BadInput`: the input blueprint or options are at fault, not the planner.
     pub bad_input: bool,
     pub kind: ErrorKind,
+    /// The messages of `InnerException` and its inner exceptions, outermost first. The C#
+    /// wraps a decoding failure in a `FactorioToolsException`, and the contract's error
+    /// envelope lists the inner messages after the outer one.
+    pub inner_messages: Vec<String>,
 }
 
 impl FactorioToolsError {
@@ -40,6 +44,7 @@ impl FactorioToolsError {
             message: message.into(),
             bad_input: false,
             kind: ErrorKind::General,
+            inner_messages: Vec::new(),
         }
     }
 
@@ -49,6 +54,7 @@ impl FactorioToolsError {
             message: message.into(),
             bad_input,
             kind: ErrorKind::General,
+            inner_messages: Vec::new(),
         }
     }
 
@@ -58,7 +64,15 @@ impl FactorioToolsError {
             message: "One pumpjack terminal has no path to another terminal. This is likely due to the oil field having an area completed surrounded by pumpjacks.".to_string(),
             bad_input: true,
             kind: ErrorKind::NoPathBetweenTerminals { a, b },
+            inner_messages: Vec::new(),
         }
+    }
+
+    /// `new FactorioToolsException(message, innerException, badInput)`: adds the inner
+    /// exception's message.
+    pub fn with_inner_message(mut self, message: impl Into<String>) -> Self {
+        self.inner_messages.push(message.into());
+        self
     }
 
     /// `exception is NoPathBetweenTerminalsException`.

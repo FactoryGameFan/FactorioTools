@@ -4,19 +4,9 @@ import path from 'path'
 import { execSync } from 'child_process'
 import { readFileSync } from 'fs'
 
-if (process.env.VERCEL) {
-  console.log("fetching full Git commit history")
-  execSync('git remote add --fetch --tags origin https://github.com/joelverhagen/FactorioTools.git')
-  execSync('git fetch --depth 1000000')
-  execSync('git fetch --all --tags')
-}
-
 const buildDate = new Date().toISOString().slice(0, 10);
 
-let branch = execSync('git rev-parse --abbrev-ref HEAD').toString().trim()
-if (process.env.VERCEL_GIT_COMMIT_REF) {
-  branch = process.env.VERCEL_GIT_COMMIT_REF.trim()
-}
+const branch = execSync('git rev-parse --abbrev-ref HEAD').toString().trim()
 
 const commit = execSync('git rev-parse --short HEAD').toString().trim()
 const shortVersion = execSync('git describe --abbrev=0').toString().trim()

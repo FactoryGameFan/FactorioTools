@@ -71,11 +71,31 @@ A full-solution `dotnet build` also builds `BrowserWasm`/`BlazorWebApp`, which n
 
 ### Devcontainer
 
-`.devcontainer/` builds a Linux container carrying every toolchain this repo needs, which is more than the SDK: **dotnet 10.0.402 plus wasm-tools, Node 24.21.0, PowerShell 7.6.5, Lua 5.2.4 and python3**. Before it, a full local loop meant five separate host installs, one of which (`tools/check-lua.sh`) started a second container of its own.
+`.devcontainer/` builds a Linux container carrying every toolchain this repo needs, which is more than the SDK: **Rust 1.98.1 (rustup 1.29.1, with rustfmt, clippy, rust-src and the wasm32 target), Node 24.21.0 and python3, plus dotnet 10.0.402 with wasm-tools, PowerShell 7.6.5 and Lua 5.2.4** for the C#, until it is removed. Before it, a full local loop meant separate host installs of each, one of which (`tools/check-lua.sh`) started a second container of its own.
 
 It is not a replacement for `docker-build.sh`. That script is the quick way to run one `dotnet` command in the pinned SDK; this is the whole environment, with an editor attached.
 
 **The Dockerfile pins the SDK from `global.json` by digest**, which is the point. `rollForward: latestMajor` only rolls forward, so a host whose package manager trails the pin cannot build the repo at all - that is what happened on 2026-09-21 when the pin moved to 10.0.401 and Homebrew still shipped 10.0.400. **When `global.json` moves, the `FROM` line must move with it.** The Devcontainer CI job compares `dotnet --version` against `global.json` and fails if they disagree, so a forgotten re-pin is a red check rather than a container that quietly contradicts the repo.
+
+**Rust is pre-installed, and `rust/rust-toolchain.toml` still decides.** The image installs the toolchain named by `RUST_VERSION` in the Dockerfile, so creating the container downloads no compiler. Inside `rust/`, rustup reads the toolchain file as it does anywhere else. A stale `RUST_VERSION` therefore breaks nothing - rustup just installs the new pin on first use (about 10 s, measured) - which is exactly why nobody would notice. So the Devcontainer CI job compares `RUST_VERSION` with the toolchain file, checks that `rustc` and `cargo` in `rust/` report that version, and checks that the wasm32 target is installed. **When `rust/rust-toolchain.toml` moves, move `RUST_VERSION` with it.** The toolchain file is in that job's paths filter for this reason.
+
+The container keeps its own `rust/target`, cargo registry and cargo git cache in named volumes, for the same reason as `node_modules`: Linux build output in the bind mount would fight a Mac host's own. `postCreateCommand` ends with `npm run build-wasm`, so `npm run dev` and `npm run build` work as soon as the container is up. The VS Code extension list includes rust-analyzer, pointed at `rust/Cargo.toml`.
+
+Do not try to change the pre-installed toolchain's components from inside the container. `rustup target remove` failed there with `Invalid cross-device link (os error 18)`, because the files sit in a read-only image layer. Change the Dockerfile and rebuild instead. Installing another toolchain works.
+
+Measured 2026-10-21 on tealc (Linux x86-64, 8 cores, Docker Desktop), with `@devcontainers/cli@0.89.0` running the Devcontainer job's own steps against a fresh clone with tags. Two full runs; where they differ, both times are shown:
+
+| step | result |
+| --- | --- |
+| image build with `--no-cache`, base image already pulled | 2 min 58 s; the Rust layer took 17 s of it |
+| `devcontainer up` | 45 s with the image cached, 88 s when the Rust layer had to be rebuilt. `postCreateCommand` took 34 s and 52 s, of which `build-wasm` took 17 s and 33 s and `npm ci` 10 s |
+| toolchain check | Rust 1.98.1 in the image and in the toolchain file; `rustc` and `cargo` 1.98.1 in `rust/`; wasm32 target present |
+| `cargo test --all-targets` in `rust/` | 175 passed, 7 ignored; 152 s and 188 s, of which about 11 s is compiling |
+| `npm run build-wasm && npm run build && npm run test` in `src/vue` | build OK, 51 tests passed; 12.5 s and 14 s (`build-wasm` already up to date) |
+| `dotnet test` on the test project | 4302 passed; 307 s and 241 s |
+| Lua transpile step | reproduced the committed `src/lua`, parses and runs under 5.2; 41 s and 29 s |
+
+The release gates (`cargo test --release -p snapshots -p contract -- --include-ignored`) also pass in the container, in 96 s. The Devcontainer job leaves them to `ci.yml`'s Rust job: they test the planner, not the container.
 
 Measured 2026-09-21 in the built image on macOS arm64 (OrbStack), against a real clone with tags:
 
@@ -87,7 +107,7 @@ Measured 2026-09-21 in the built image on macOS arm64 (OrbStack), against a real
 | `luac5.2 -p` over the generated Lua | all 127 files parse |
 | `lua5.2 sample.lua` | runs, prints the grid |
 | `npm ci && npm run build && npm test` in `src/vue` | build OK, 51 tests passed |
-| `npm run build-wasm` | Release publish OK, bundle lands at `public/framework/dotnet.js` |
+| `npm run build-wasm` | Release publish OK, bundle lands at `public/framework/dotnet.js` (the .NET planner; `build-wasm` has built the Rust planner since stage 12b) |
 
 Two notes on why specific things are the way they are:
 

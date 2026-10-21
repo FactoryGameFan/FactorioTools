@@ -6,11 +6,17 @@ on:
       - '.devcontainer/**'
       - '.github/workflows/devcontainer.yml'
       - 'global.json'
-  # Weekly, because two of this image's pins rot without anything under
-  # .devcontainer/ changing, so the paths filter above cannot catch either:
-  #   - the Node tarball and its two checksums, if a release is ever re-cut
-  #   - the SDK digest, once global.json moves (that one IS covered by the
-  #     paths filter now, but only if the bump goes through a pull request)
+      # Not all of rust/: ci.yml's Rust job already builds and tests every Rust
+      # change. What this job adds is the container, and the only Rust file the
+      # container has to agree with is the toolchain pin.
+      - 'rust/rust-toolchain.toml'
+  # Weekly, because some of this image's pins rot without anything under
+  # .devcontainer/ changing, so the paths filter above cannot catch them:
+  #   - the Node tarball and the rustup-init binaries, and their checksums, if
+  #     a release is ever re-cut
+  #   - the SDK digest and RUST_VERSION, once global.json or
+  #     rust/rust-toolchain.toml moves (both ARE covered by the paths filter
+  #     now, but only if the bump goes through a pull request)
   # A rotted pin fails the build for everyone who opens the container, so it is
   # better found here.
   schedule:
@@ -35,7 +41,7 @@ jobs:
       - name: Create the development container
         run: npx --yes @devcontainers/cli@0.89.0 up --workspace-folder "$GITHUB_WORKSPACE"
 
-      - name: Every toolchain resolves, and the SDK matches global.json
+      - name: Every toolchain resolves, and the SDK and Rust match their pins
         run: |
           npx --yes @devcontainers/cli@0.89.0 exec --workspace-folder "$GITHUB_WORKSPACE" bash -ec '
             # The check that matters: global.json pins an exact SDK and
@@ -62,6 +68,40 @@ jobs:
               echo "::error::wasm-tools workload missing - BrowserWasm cannot publish."
               exit 1
             }
+
+            # The same idea for Rust, with one difference. A stale RUST_VERSION
+            # in the Dockerfile does not fail anything: rustup reads
+            # rust/rust-toolchain.toml and downloads the pin on first use. So
+            # checking what rustc resolves to proves nothing on its own; compare
+            # what the image pre-installed against what the file asks for.
+            rust_pinned=$(python3 -c "import tomllib;print(tomllib.load(open(\"rust/rust-toolchain.toml\",\"rb\"))[\"toolchain\"][\"channel\"])")
+            echo "rust-toolchain.toml pins $rust_pinned, the image pre-installs $RUST_VERSION"
+            [ "$rust_pinned" = "$RUST_VERSION" ] || {
+              echo "::error::The devcontainer pre-installs Rust $RUST_VERSION but rust/rust-toolchain.toml pins $rust_pinned. Update RUST_VERSION in .devcontainer/Dockerfile."
+              exit 1
+            }
+            rustup --version
+            rustup toolchain list
+            # Run inside rust/, so these resolve through the toolchain file the
+            # way cargo does there.
+            rustc_version=$(cd rust && rustc --version)
+            cargo_version=$(cd rust && cargo --version)
+            echo "$rustc_version"
+            echo "$cargo_version"
+            case "$rustc_version" in "rustc $rust_pinned "*) ;; *)
+              echo "::error::rustc in rust/ is not $rust_pinned."
+              exit 1 ;;
+            esac
+            case "$cargo_version" in "cargo $rust_pinned "*) ;; *)
+              echo "::error::cargo in rust/ is not $rust_pinned."
+              exit 1 ;;
+            esac
+            # build-wasm needs this target, and the planner the site loads is
+            # built with it.
+            rustup target list --installed --toolchain "$rust_pinned" | grep -qx wasm32-unknown-unknown || {
+              echo "::error::The wasm32-unknown-unknown target is missing - npm run build-wasm cannot build the planner."
+              exit 1
+            }
           '
 
       - name: The core dev loop runs
@@ -83,23 +123,25 @@ jobs:
             echo "Transpile reproduced the committed output, and it parses and runs under 5.2."
           '
 
-      # The site now loads the Rust planner (rust/planner-wasm), and the Vite build
-      # imports it from src/vue/src/lib/planner-wasm. The devcontainer image has no
-      # Rust toolchain yet (adding one belongs with stage 13 of #138, when .NET
-      # leaves the image), so build it on the runner, whose rustup honours
-      # rust/rust-toolchain.toml. The checkout is mounted into the container, so the
-      # copied files are visible there. This is what `npm run build-wasm` does,
-      # minus shx, which the runner does not have outside the container.
-      - name: Build the Rust planner on the runner
-        working-directory: rust
+      # Debug only. The release gates (every planner snapshot, the contract
+      # replay) stay in ci.yml's Rust job: they test the planner, not the
+      # container, and would add their release build to this job's time.
+      - name: The Rust tests pass
         run: |
-          cargo build --release -p planner-wasm --target wasm32-unknown-unknown
-          cp target/wasm32-unknown-unknown/release/planner_wasm.wasm planner-wasm/js/planner.js ../src/vue/src/lib/planner-wasm/
+          npx --yes @devcontainers/cli@0.89.0 exec --workspace-folder "$GITHUB_WORKSPACE" bash -ec '
+            cd rust
+            cargo test --all-targets
+          '
 
+      # The site loads the Rust planner (rust/planner-wasm), and the Vite build
+      # imports it from src/vue/src/lib/planner-wasm, so build-wasm comes first.
+      # postCreateCommand already ran it, so here it only confirms the output is
+      # up to date, and keeps this step honest if postCreate ever stops running it.
       - name: The front-end builds and tests
         run: |
           npx --yes @devcontainers/cli@0.89.0 exec --workspace-folder "$GITHUB_WORKSPACE" bash -ec '
             cd src/vue
+            npm run build-wasm
             npm run build
             npm run test
           '

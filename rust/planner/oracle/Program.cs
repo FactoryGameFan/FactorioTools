@@ -73,6 +73,7 @@ Console.WriteLine("entity kinds: " + string.Join(", ", kindCounts.Select(x => $"
 InitializeContextRecorder.Record(outputDir, repoRoot, smallList);
 HelpersRecorder.Record(outputDir, smallList);
 PipesRecorder.Record(outputDir, repoRoot, smallList);
+FbePipesRecorder.Record(outputDir, smallList, bigList);
 if (checkSnapshots)
 {
     Console.WriteLine($"snapshots: {snapshotMatches} match, {snapshotMismatches} differ");

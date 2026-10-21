@@ -342,3 +342,54 @@ counted; none were.
   `duplicate_beacon` (the plan's first beacon twice; left out when the plan has none) and
   `pipe_on_pumpjack` (the pipes plus the first pumpjack center). With validation off the check
   does nothing, so those pass too.
+## `fbe_pipes.jsonl` (stage 6)
+
+Calls to `AddPipesFbe.Execute(context, strategy)` (`OilField/Steps/AddPipes.1.FBE.cs`), the
+`FbeOriginal` and `Fbe` pipe strategies, made by `oracle/FbePipesRecorder.cs` through the public
+method. Each line is one call: every case below runs once per strategy, on a fresh context.
+
+The context is the one `AddPipes.GetSolutionGroups` hands FBE: `InitializeContext.Execute`'s
+output with both terminal maps cloned the way `GetSolutionGroups` clones them (`AddPipes.0.cs`
+~:443, a new dictionary sized to the count, pairs added in enumeration order, each list
+copied). Contexts with a single pumpjack are skipped, as the planner handles those without a
+strategy.
+
+| Cases | Blueprints | Options |
+|---|---|---|
+| `small-NNNN_medium_b`, `small-NNNN_medium` | all 61 in `small-list.txt` | medium pole, beacons on and off |
+| `small-NNNN_substation_b` / `small-NNNN_big` | even / odd indexes | substation with beacons / big pole without |
+| `small-NNNN_medium_poles-first` | every third | medium pole, no beacons, with `AddElectricPoles.Execute` run first and the terminals the poles cover removed, as `Planner.cs` does in its poles-first mode |
+| `small-NNNN_medium_walled` | every fourth | medium pole, no beacons, with every empty non-terminal cell next to the last pumpjack's terminals blocked by a `TemporaryEntity`. Not a real input: it drives the failure paths |
+| `big-NNNN_medium_b` | every 20th in `big-list.txt` | medium pole, beacons |
+| `PlannerTest.AllowsLocationsToBeAvoided` | as in `PlannerTest.cs` | as in `PlannerTest.cs` |
+
+The grid's size and middle (which FBE measures distances from) depend on `AddBeacons` and the
+pole's footprint, which is why both appear.
+
+```json
+{
+  "name": "small-0005_medium_b_FbeOriginal",
+  "strategy": 0, "width": 40, "height": 31, "middle": [20, 15],
+  "occupied": [x0, y0, ...],
+  "centers": [x0, y0, ...],
+  "center_to_terminals": [[x, y, [cx, cy, tx, ty, direction, ...]], ...],
+  "location_to_terminals": [...],
+  "final_strategy": 0, "pipes": [x0, y0, ...],
+  "center_to_terminals_after": [...], "location_to_terminals_after": [...]
+}
+```
+
+- `strategy` and `final_strategy` are `PipeStrategy` values (`FbeOriginal` = 0, `Fbe` = 1).
+  `FbeOriginal` falls back to `Fbe` when it cannot connect everything, and then reports `Fbe`.
+- `occupied` is every grid entity's cell, in `EntityLocations` order. FBE only asks whether a
+  cell is empty, so the Rust test places a `TemporaryEntity` on each.
+- `pipes` is `FbeResult.Pipes` in enumeration order.
+- A failure has `"error": {"type", "message", "thrown", "bad_input", "no_path"}` instead of
+  `final_strategy` and `pipes`. `thrown` says whether the C# threw or returned the exception in
+  its `Result`; the port returns both as `Err`. `no_path` is `[ax, ay, bx, by]` for a
+  `NoPathBetweenTerminalsException`.
+- The `_after` maps are the terminal maps once `Execute` returns: reduced by
+  `EliminateOtherTerminals` on success, unchanged on failure. Same encoding as the inputs.
+
+On 2026-10-21: 558 cases, 28 of them failures (24 no-path results, 4 thrown "A goal should have
+been reached."), 2 `FbeOriginal` fallbacks to `Fbe`.

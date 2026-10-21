@@ -1,25 +1,15 @@
 // A Linux container for the whole dev loop: the Rust planner (cargo build and
-// test in rust/, and the WASM build the site loads), the Vue front-end, and,
-// until the C# is removed, dotnet build/test and the Lua transpile with its 5.2
-// checks. CLAUDE.md's "Devcontainer" section says what it covers and what still
-// needs the host - benchmarks and the Factorio oracle capture.
+// test in rust/, and the WASM build the site loads) and the Vue front-end.
+// CLAUDE.md's "Devcontainer" section says what it covers and what still needs
+// the host - the Factorio oracle capture.
 //
-// The Dockerfile pins the SDK from global.json by digest. That is the reason
-// this exists: `rollForward: latestMajor` only rolls forward, so a host whose
-// package manager trails the pin cannot build the repo at all. It also carries
-// the Rust toolchain rust/rust-toolchain.toml pins, already installed.
+// The Dockerfile carries the Rust toolchain rust/rust-toolchain.toml pins,
+// already installed, and an exact, checksummed Node.
 {
     "name": "FactorioTools",
     "build": { "dockerfile": "Dockerfile" },
     // uid 1000 in the base image, so bind-mounted files are not root-owned.
     "remoteUser": "ubuntu",
-    "containerEnv": {
-        // Outside the bind mount, so a Linux restore never fights the host's
-        // own NuGet cache. docker-build.sh puts this on the host at
-        // ~/.cache/factorio-nuget; here it is a named volume instead, so it
-        // survives a rebuild without being shared with the host's SDK.
-        "NUGET_PACKAGES": "/home/ubuntu/.cache/nuget"
-    },
     "mounts": [
         // src/vue/node_modules holds platform-native binaries - esbuild,
         // @parcel/watcher, fsevents on a Mac. Sharing the host's copy would
@@ -28,11 +18,6 @@
         {
             "source": "factoriotools-vue-node-modules-${devcontainerId}",
             "target": "${containerWorkspaceFolder}/src/vue/node_modules",
-            "type": "volume"
-        },
-        {
-            "source": "factoriotools-nuget-${devcontainerId}",
-            "target": "/home/ubuntu/.cache/nuget",
             "type": "volume"
         },
         // rust/target is the same problem as node_modules: Linux build output
@@ -66,9 +51,7 @@
     "portsAttributes": {
         "5173": { "label": "Vite (needs --host)" }
     },
-    // A new volume is root-owned, hence the chown. Submodules are required to
-    // build the C# - FluteSharp and delaunator-sharp are referenced by the core
-    // library, CSharp.lua by the transpile - and a fresh clone has none of them.
+    // A new volume is root-owned, hence the chown.
     // The safe.directory line is a no-op under OrbStack, where the mount already
     // appears owned by uid 1000; it is insurance on a Linux host whose own uid
     // is not 1000, where git otherwise refuses with "dubious ownership" and
@@ -77,16 +60,10 @@
     // planner it produces, and fail without it. It is a release build of the
     // planner and its dependencies, so it is the slow step here; the
     // Devcontainer section in CLAUDE.md has the measured time.
-    "postCreateCommand": "sudo chown ubuntu:ubuntu src/vue/node_modules /home/ubuntu/.cache/nuget rust/target /home/ubuntu/.cargo/registry /home/ubuntu/.cargo/git && git config --global --add safe.directory \"${containerWorkspaceFolder}\" && git submodule update --init --recursive && npm --prefix src/vue ci && npm --prefix src/vue run build-wasm",
+    "postCreateCommand": "sudo chown ubuntu:ubuntu src/vue/node_modules rust/target /home/ubuntu/.cargo/registry /home/ubuntu/.cargo/git && git config --global --add safe.directory \"${containerWorkspaceFolder}\" && npm --prefix src/vue ci && npm --prefix src/vue run build-wasm",
     "customizations": {
         "vscode": {
-            "extensions": [
-                "rust-lang.rust-analyzer",
-                "Vue.volar",
-                "ms-dotnettools.csdevkit",
-                "ms-vscode.powershell",
-                "sumneko.lua"
-            ],
+            "extensions": ["rust-lang.rust-analyzer", "Vue.volar"],
             "settings": {
                 // The Cargo workspace is in rust/, not at the repository root.
                 "rust-analyzer.linkedProjects": ["rust/Cargo.toml"]

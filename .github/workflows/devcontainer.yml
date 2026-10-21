@@ -5,7 +5,6 @@ on:
     paths:
       - '.devcontainer/**'
       - '.github/workflows/devcontainer.yml'
-      - 'global.json'
       # Not all of rust/: ci.yml's Rust job already builds and tests every Rust
       # change. What this job adds is the container, and the only Rust file the
       # container has to agree with is the toolchain pin.
@@ -14,9 +13,8 @@ on:
   # .devcontainer/ changing, so the paths filter above cannot catch them:
   #   - the Node tarball and the rustup-init binaries, and their checksums, if
   #     a release is ever re-cut
-  #   - the SDK digest and RUST_VERSION, once global.json or
-  #     rust/rust-toolchain.toml moves (both ARE covered by the paths filter
-  #     now, but only if the bump goes through a pull request)
+  #   - RUST_VERSION, once rust/rust-toolchain.toml moves (it IS covered by the
+  #     paths filter, but only if the bump goes through a pull request)
   # A rotted pin fails the build for everyone who opens the container, so it is
   # better found here.
   schedule:
@@ -33,7 +31,6 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
-          submodules: recursive
           # vite.config.ts stamps the build with `git describe`, so the Vue
           # build needs tags and real history, not a shallow checkout.
           fetch-depth: 0
@@ -41,39 +38,22 @@ jobs:
       - name: Create the development container
         run: npx --yes @devcontainers/cli@0.89.0 up --workspace-folder "$GITHUB_WORKSPACE"
 
-      - name: Every toolchain resolves, and the SDK and Rust match their pins
+      - name: Every toolchain resolves, and Rust matches its pin
         run: |
           npx --yes @devcontainers/cli@0.89.0 exec --workspace-folder "$GITHUB_WORKSPACE" bash -ec '
-            # The check that matters: global.json pins an exact SDK and
-            # rollForward only rolls forward, so a Dockerfile left behind after
-            # a global.json bump fails right here rather than confusing someone
-            # later. Compare what dotnet resolves against what the file asks for.
-            pinned=$(python3 -c "import json;print(json.load(open(\"global.json\"))[\"sdk\"][\"version\"])")
-            actual=$(dotnet --version)
-            echo "global.json pins $pinned, container resolves $actual"
-            [ "$pinned" = "$actual" ] || {
-              echo "::error::The devcontainer SDK ($actual) does not match global.json ($pinned). Re-pin .devcontainer/Dockerfile."
-              exit 1
-            }
             node --version
             npm --version
-            pwsh --version
             python3 --version
-            # CI installs the apt package "lua5.2" and calls these two names;
-            # the container has to agree, or tools/check-lua.sh and the
-            # transpile-lua job diverge.
-            luac5.2 -v
-            lua5.2 -v
-            dotnet workload list | grep -q wasm-tools || {
-              echo "::error::wasm-tools workload missing - BrowserWasm cannot publish."
-              exit 1
-            }
+            git --version
+            # cargo links build scripts, proc macros and the test binaries
+            # with cc.
+            cc --version | head -n 1
 
-            # The same idea for Rust, with one difference. A stale RUST_VERSION
-            # in the Dockerfile does not fail anything: rustup reads
-            # rust/rust-toolchain.toml and downloads the pin on first use. So
-            # checking what rustc resolves to proves nothing on its own; compare
-            # what the image pre-installed against what the file asks for.
+            # A stale RUST_VERSION in the Dockerfile does not fail anything:
+            # rustup reads rust/rust-toolchain.toml and downloads the pin on
+            # first use. So checking what rustc resolves to proves nothing on
+            # its own; compare what the image pre-installed against what the
+            # file asks for.
             rust_pinned=$(python3 -c "import tomllib;print(tomllib.load(open(\"rust/rust-toolchain.toml\",\"rb\"))[\"toolchain\"][\"channel\"])")
             echo "rust-toolchain.toml pins $rust_pinned, the image pre-installs $RUST_VERSION"
             [ "$rust_pinned" = "$RUST_VERSION" ] || {
@@ -102,25 +82,6 @@ jobs:
               echo "::error::The wasm32-unknown-unknown target is missing - npm run build-wasm cannot build the planner."
               exit 1
             }
-          '
-
-      - name: The core dev loop runs
-        run: |
-          npx --yes @devcontainers/cli@0.89.0 exec --workspace-folder "$GITHUB_WORKSPACE" \
-            dotnet test test/FactorioTools.Test/FactorioTools.Test.csproj -c Release
-
-      - name: The Lua transpile reproduces the committed output
-        run: |
-          npx --yes @devcontainers/cli@0.89.0 exec --workspace-folder "$GITHUB_WORKSPACE" bash -ec '
-            pwsh -File src/lua/Invoke-LuaBuild.ps1
-            if [ -n "$(git status --porcelain -- src/lua)" ]; then
-              echo "::error::src/lua drifted when transpiled inside the container."
-              git status --porcelain -- src/lua
-              exit 1
-            fi
-            find src/lua -name "*.lua" -print0 | xargs -0 -n1 luac5.2 -p
-            cd src/lua && lua5.2 sample.lua > /dev/null
-            echo "Transpile reproduced the committed output, and it parses and runs under 5.2."
           '
 
       # Debug only. The release gates (every planner snapshot, the contract

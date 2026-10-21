@@ -25,6 +25,7 @@ cargo test -p planner --test factorio_oracle  # one test file
 cargo test --release -p snapshots -p contract -- --include-ignored   # release gate, about 1.5 min
 cargo build --workspace --target wasm32-unknown-unknown
 cargo run --release -p snapshots --bin normalize-lists   # re-normalize the test blueprint lists
+cargo run --release -p bench                    # time the planner on the small list (see "Benchmark" below)
 
 # Vue front-end (from src/vue)
 npm ci
@@ -34,7 +35,7 @@ npm run build          # type-checks (vue-tsc), builds
 npm test               # vitest
 ```
 
-CI (`.github/workflows/ci.yml`) runs all five Rust commands above except `normalize-lists`, plus a check that the WebAssembly build gives the same bytes as the native build (below), and builds and tests the front-end.
+CI (`.github/workflows/ci.yml`) runs the five Rust check and build commands above, a three-field smoke run of the benchmark, plus a check that the WebAssembly build gives the same bytes as the native build (below), and builds and tests the front-end.
 
 - The Vue app plans in-browser with the **Rust planner** (`rust/planner-wasm`), compiled to
   WebAssembly. `npm run build-wasm` in `src/vue` builds it (`cargo build --release -p
@@ -87,7 +88,7 @@ cd src/vue && npm run dev -- --host
 
 ### The Rust workspace: `rust/`
 
-Eight crates, in `rust/Cargo.toml`. All of them build for `wasm32-unknown-unknown` as well as natively.
+Nine crates, in `rust/Cargo.toml`. All of them build for `wasm32-unknown-unknown` as well as natively.
 
 | crate | what it is |
 | --- | --- |
@@ -99,6 +100,7 @@ Eight crates, in `rust/Cargo.toml`. All of them build for `wasm32-unknown-unknow
 | `contract` | The JSON the site sends and gets back: `plan_json` and `normalize_json`, plus the error envelope. |
 | `planner-wasm` | `contract` as a WebAssembly module with plain-number exports, so no binding generator is needed. `planner-wasm/js/planner.js` wraps it in `plan(json)` and `normalize(json)`. This is what the site loads. |
 | `snapshots` | The end-to-end gate: plans every test case and compares the output with the committed snapshots in `testdata/oil-field/`, byte for byte. Also holds the `normalize-lists` binary. |
+| `bench` | Times the planner on the test blueprint lists through `contract::plan_json`, the call the site makes (see "Benchmark" below). |
 
 Inside `rust/planner/src`:
 
@@ -109,6 +111,21 @@ Inside `rust/planner/src`:
 - `grid/` - the `SquareGrid` and its entity kinds (pumpjacks, pipes, beacons, poles, terminals); `location.rs` is a hot type.
 - `containers/` - hand-rolled sets, dictionaries and bit arrays keyed by `Location`, and the sorted batches that pole placement uses.
 - `data.rs` - entity names, item names and sizes, which the Factorio oracle checks (see below).
+
+### Benchmark
+
+`cargo run --release -p bench` (from `rust/`) plans each small-list blueprint 5 times through `contract::plan_json` with the site's default options, natively, and keeps each field's median. It prints the list's total, median, 90th percentile and maximum, and the five slowest fields. `--list big` or `--list all` adds the 1,147-field big list (about a minute per run), `--runs N` sets the runs per field, and `--limit N` plans only the first N fields of each list.
+
+To measure a change, save a run before it and compare after:
+
+```bash
+cargo run --release -p bench -- --json /tmp/before.json   # on the old code
+cargo run --release -p bench -- --baseline /tmp/before.json   # on the new code
+```
+
+The comparison gives the speed-up of the list's total and the per-field geometric mean, and says how many responses changed. Each field's input and response are stored as hashes, so a change meant to keep the output identical must report `all N identical`. Times depend on the machine and its load, so compare runs from the same machine only. Two back-to-back small-list runs on tealc agreed within about 1%. CI only smoke-tests the benchmark; it never checks timing. These are native times. The site runs the same code as WebAssembly in a browser, so its times differ.
+
+Measured on tealc (8 cores, Linux), 2026-10-21, at the end of the port: small list 1.46 s total for 61 fields (median of 5 runs per field; field median 20 ms, slowest 229 ms for 58 pumpjacks); big list 58.0 s for 1,147 fields (one run each; field median 27 ms, slowest 5.4 s for 134 pumpjacks).
 
 ### Ordering rules
 

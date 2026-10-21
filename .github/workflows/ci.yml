@@ -105,3 +105,8 @@ jobs:
           cargo build --release -p planner-wasm --target wasm32-unknown-unknown
           cargo run --release -p contract --example replay -- contract/fixtures/contract.jsonl "$RUNNER_TEMP/native.jsonl"
           node planner-wasm/tests/node-replay.mjs contract/fixtures/contract.jsonl "$RUNNER_TEMP/native.jsonl" target/wasm32-unknown-unknown/release/planner_wasm.wasm
+
+      # Keeps the benchmark runnable: three small-list fields, one run each. Its
+      # times are not checked; shared runners are too noisy for that.
+      - name: Smoke-test the benchmark
+        run: cargo run --release -p bench -- --runs 1 --limit 3

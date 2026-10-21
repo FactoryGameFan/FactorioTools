@@ -2,7 +2,7 @@
 # site runs its WASM build, and stage 13b removed the C#.
 [workspace]
 resolver = "3"
-members = ["dotnet-compat", "planner", "delaunator-net", "flute", "blueprint", "snapshots", "contract", "planner-wasm"]
+members = ["dotnet-compat", "planner", "delaunator-net", "flute", "blueprint", "snapshots", "contract", "planner-wasm", "bench"]
 
 [workspace.package]
 edition = "2024"

@@ -19,3 +19,11 @@ pump_2.2.0.zip
 # Subagent-driven-development scratch: per-plan ledgers, task briefs, review
 # packages. Working state for an in-flight plan, not a record - git history is.
 .superpowers/
+
+# Local secrets: Wrangler's .dev.vars, env files, and the certificate and
+# publish-profile files the old Visual Studio template ignored
+.dev.vars*
+.env
+.env.*
+*.pfx
+*.publishsettings

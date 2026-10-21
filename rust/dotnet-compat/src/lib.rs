@@ -13,8 +13,10 @@
 //! - [`net_sort`] and [`net_sort_range`]: `ArraySortHelper<T>.IntrospectiveSort`, the
 //!   unstable sort behind `List<T>.Sort`, `Array.Sort` and `MemoryExtensions.Sort`.
 //! - [`round_half_even`] and [`round_to_i32`]: `Math.Round(x, 0)` and `(int)` conversions.
+//! - [`FastHasher`]: a fixed, fast hasher for lookups whose order is never observed.
 
 mod compare;
+mod fast_hash;
 mod hash_helpers;
 mod hash_table;
 mod math;
@@ -22,6 +24,7 @@ mod priority_queue;
 mod sort;
 
 pub use compare::NetCompare;
+pub use fast_hash::{FastBuildHasher, FastHasher};
 pub use hash_helpers::{expand_prime, get_prime};
 pub use hash_table::{NetDictionary, NetHashSet};
 pub use math::{round_half_even, round_to_i32, truncate_to_i32};

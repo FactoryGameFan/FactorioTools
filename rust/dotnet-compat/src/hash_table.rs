@@ -12,6 +12,8 @@
 use std::collections::HashMap;
 use std::hash::Hash;
 
+use crate::fast_hash::FastBuildHasher;
+
 use crate::hash_helpers::{expand_prime, get_prime};
 
 /// .NET marks the end of the free list with -1, and stores a freed entry's link as
@@ -30,8 +32,9 @@ enum Slot<K, V> {
 struct Table<K, V> {
     /// `_entries[0.._count]`. Its length is .NET's `_count`, the high-water mark.
     slots: Vec<Slot<K, V>>,
-    /// Key to entry index, standing in for `_buckets`.
-    index: HashMap<K, usize>,
+    /// Key to entry index, standing in for `_buckets`. Only looked up, so its hasher is
+    /// free to be fast (see [`crate::fast_hash`]).
+    index: HashMap<K, usize, FastBuildHasher>,
     /// `_entries.Length` (equal to `_buckets.Length`), or 0 while `_buckets` is null.
     capacity: usize,
     /// `_freeList`.
@@ -44,7 +47,7 @@ impl<K: Copy + Eq + Hash, V> Table<K, V> {
     fn new() -> Self {
         Table {
             slots: Vec::new(),
-            index: HashMap::new(),
+            index: HashMap::default(),
             capacity: 0,
             free_list: END_OF_FREE_LIST,
             free_count: 0,
@@ -64,7 +67,7 @@ impl<K: Copy + Eq + Hash, V> Table<K, V> {
     fn initialize(&mut self, capacity: usize) -> usize {
         let size = get_prime(capacity);
         self.slots = Vec::with_capacity(size);
-        self.index = HashMap::with_capacity(size);
+        self.index = HashMap::with_capacity_and_hasher(size, FastBuildHasher::default());
         self.capacity = size;
         self.free_list = END_OF_FREE_LIST;
         self.free_count = 0;

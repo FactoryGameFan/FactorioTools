@@ -86,7 +86,7 @@ const RECORD_FIELDS = new Set(["pumpjackModules", "beaconModules"])
 // Fields the contract may write as null.
 const NULLABLE_FIELDS = new Set(["beaconStrategy"])
 
-// The C# echoes a quality integer it has no name for as that integer, and the Rust port
+// The C# echoed a quality integer it had no name for as that integer, and the Rust port
 // matches it. The site only ever sends names, so the type stays Quality and this one
 // recorded case may hold a number there.
 const NUMBER_QUALITY = { name: "read_quality-undefined-integer", path: ".request.pumpjackQuality" }

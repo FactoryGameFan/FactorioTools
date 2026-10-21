@@ -1,7 +1,8 @@
 //! Replays `fixtures/beacons.jsonl` (recorded from the C# by `oracle/BeaconsRecorder.cs`,
-//! format in `FIXTURES.md`): each `PlanBeacons.Execute` call, on a context rebuilt from its
-//! recorded snapshot the same way the recorder rebuilt it, must give the recorded solutions
-//! (or error), and leave the grid's entity order and next id where the C# left them.
+//! removed in stage 13b; format in `FIXTURES.md`): each `PlanBeacons.Execute` call, on a
+//! context rebuilt from its recorded snapshot the same way the recorder rebuilt it, must
+//! give the recorded solutions (or error), and leave the grid's entity order and next id
+//! where the C# left them.
 
 use std::path::PathBuf;
 

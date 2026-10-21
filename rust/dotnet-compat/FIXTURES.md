@@ -2,16 +2,12 @@
 
 The planner's output depends on how .NET orders sets, dictionaries, priority queues and
 sorts when there are ties (#138). This crate copies that behavior. The fixtures here are
-recorded from real .NET by `oracle/`, so the Rust tests can check the copy without .NET.
+recorded from real .NET by a recorder in `oracle/`, so the Rust tests can check the copy
+without .NET. Every scenario came from a fixed seed.
 
-**Regenerate** (needs the .NET SDK, or `./docker-build.sh` from the repo root):
-
-```bash
-./docker-build.sh run --project rust/dotnet-compat/oracle -c Release -- rust/dotnet-compat/fixtures
-```
-
-The output is deterministic: every scenario comes from a fixed seed, so a rerun on the
-same SDK gives the same bytes. CI reruns it and fails if the committed files drift.
+**These fixtures are frozen inputs.** They were recorded with the .NET SDK the C# planner
+pinned at commit `0532d923`. Stage 13b (#138) deleted the C# and the recorder with it, so
+nothing can regenerate them now. To see the recorder, check out that commit.
 
 ## Format
 

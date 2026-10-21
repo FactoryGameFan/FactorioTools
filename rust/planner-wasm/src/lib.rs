@@ -1,5 +1,5 @@
-//! The planner as a WebAssembly module (#138): the Rust counterpart of `src/BrowserWasm`'s
-//! two `[JSExport]` methods, `Plan` and `Normalize`.
+//! The planner as a WebAssembly module (#138). It replaced the .NET build in `src/BrowserWasm`
+//! (removed in stage 13b) and its two `[JSExport]` methods, `Plan` and `Normalize`.
 //!
 //! The exports use plain numbers, so no binding generator is needed. `js/planner.js` wraps
 //! them in the same `plan(requestJson)` / `normalize(requestJson)` functions as

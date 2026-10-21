@@ -22,4 +22,4 @@ Only what the planner uses: the degree 6 lookup table and the default accuracy o
 
 ## How it is checked
 
-`oracle/` records FluteSharp's trees for 1,346 inputs, and `tests/fixtures.rs` checks this port gives the same tree, branch for branch, for every one. See `FIXTURES.md`.
+`fixtures/flute.jsonl` holds FluteSharp's trees for 1,346 inputs, and `tests/fixtures.rs` checks this port gives the same tree, branch for branch, for every one. The trees were recorded from the C# before stage 13b removed it, so the file is frozen. See `FIXTURES.md`.

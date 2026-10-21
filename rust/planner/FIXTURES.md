@@ -111,3 +111,59 @@ those ints, so most calls can be checked without writing every cell.
 On 2026-10-21 the file held 1,672 A* calls (244 of them on an `ExistingPipeGrid`), 479 Dijkstra
 calls (122 on an `ExistingPipeGrid`), 714 BFS calls, 474 Prim's calls and 400 Bresenham lines,
 in 3.1 MB.
+
+## `initialize_context.jsonl` (stage 3)
+
+`InitializeContext.Execute(options, blueprint, avoid, minWidth, minHeight)`: the input and the
+whole `Context` it builds, or the `FactorioToolsException` it throws. The recorder is
+`oracle/InitializeContextRecorder.cs`.
+
+Lines come in two kinds, told apart by `kind`:
+
+- **`"preset"`** (6 lines, first): `new OilFieldOptions()` and every `OilFieldOptions.For*`
+  preset, as `{"kind", "name", "options"}`. The Rust test checks its own defaults and presets
+  against these field by field.
+- **`"case"`**: one `Execute` call.
+
+| Cases | Blueprints | Options |
+|---|---|---|
+| `small-NNNN_medium` | all 61 in `small-list.txt` | `ForMediumElectricPole` |
+| `small-NNNN_small`, `_big`, `_substation` | every third, from index 0, 1 and 2 | the matching preset |
+| `small-NNNN_medium-no-beacons`, `_medium-non-standard-beacon` | every third, from index 1 and 2 | no beacons; a 2x4 beacon with a 4x6 supply area |
+| `small-NNNN_medium-legendary-pole`, `_big-rare-everything` | every sixth, from index 0 and 3 | electric pole quality, plus the output-only qualities |
+| `big-NNNN_medium` | every 20th in `big-list.txt` | `ForMediumElectricPole` |
+| `test-*`, `avoid-only`, `planner-test-avoid` | the inputs from `InitializeContextTest` and `PlannerTest.AllowsLocationsToBeAvoided`, plus odd min-size padding and an avoid-only blueprint | as in those tests |
+| `mixed-entities-and-directions` | pumpjacks facing every way, one with no direction, one mirrored, plus a pipe and a beacon (ignored) | `ForMediumElectricPole` |
+| `error-*` | one for each exception `Execute` can throw: more than 150 pumpjacks, a non-whole grid width or height, a non-whole pumpjack or avoid X or Y, a grid over 1000 wide or over 250,000 cells, an avoid on a pumpjack, the same avoid twice, overlapping pumpjacks, and a pumpjack with no free terminal | `ForMediumElectricPole` |
+
+A case line:
+
+```json
+{
+  "kind": "case", "name": "small-0005_medium",
+  "options": { ...every OilFieldOptions property... },
+  "entities": [ [entity_number, name, x_bits, y_bits, direction or null, mirror or null], ... ],
+  "avoid": [ [x_bits, y_bits], ... ],
+  "min": [minWidth, minHeight],
+  "context": { ... }            // or "error": {"message": "...", "bad_input": false}
+}
+```
+
+**Floats are written as their bits** (`BitConverter.SingleToInt32Bits`, and
+`DoubleToInt64Bits` for doubles, in fields ending `_bits`), so they read back exactly. The
+options use the C# property names in snake case; strategies and qualities are their enum
+integers, and module dictionaries are `[name, count]` pairs in dictionary order.
+
+`context` holds:
+
+| Field | C# |
+|---|---|
+| `delta_x_bits`, `delta_y_bits` | `DeltaX`, `DeltaY` (`float`) |
+| `width`, `height`, `middle` | the grid's |
+| `entities` | every grid entity in `EntityLocations` order, encoded as in `grids.jsonl`. Only `PumpjackCenter` (with its direction, always `Up` at this point), `PumpjackSide` and `AvoidEntity` appear |
+| `next_id` | what the grid's next `GetId()` returns |
+| `centers` | `Centers`, in order (sorted by Y, then X) |
+| `center_to_terminals`, `location_to_terminals` | `[x, y, [[center_x, center_y, terminal_x, terminal_y, direction], ...]]` per key, in dictionary order |
+| `center_to_original_direction` | `[x, y, direction]` per key, in dictionary order |
+| `adjacent_count_length`, `adjacent_counts` | `LocationToAdjacentCount`: its length, then `[index, count]` for each non-zero cell |
+| `electric_pole_*_with_quality` | the four quality-scaled pole fields |

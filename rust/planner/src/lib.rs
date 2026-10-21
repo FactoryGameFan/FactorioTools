@@ -5,10 +5,16 @@
 pub mod algorithms;
 pub mod collection_ext;
 pub mod containers;
+pub mod context;
 pub mod data;
 pub mod error;
 pub mod grid;
+pub mod helpers;
 pub mod location;
+pub mod models;
+pub mod options;
+pub mod quality;
+pub mod steps;
 
 pub use error::{FactorioToolsError, FtResult};
 pub use location::Location;

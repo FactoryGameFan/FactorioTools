@@ -70,6 +70,7 @@ Console.WriteLine($"grids.jsonl: {cases.Count} cases, {new FileInfo(gridsPath).L
 var bigList = ParseBlueprint.ReadBlueprintFile(Path.Combine(oilFieldTestDir, "big-list.txt"));
 AlgorithmCases.Write(outputDir, smallList, bigList);
 Console.WriteLine("entity kinds: " + string.Join(", ", kindCounts.Select(x => $"{x.Key}={x.Value}")));
+InitializeContextRecorder.Record(outputDir, repoRoot, smallList);
 if (checkSnapshots)
 {
     Console.WriteLine($"snapshots: {snapshotMatches} match, {snapshotMismatches} differ");

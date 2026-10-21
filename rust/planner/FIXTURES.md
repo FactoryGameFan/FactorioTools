@@ -540,3 +540,46 @@ a list in Snug. A failed call has `"error": "<message>"` instead of `solutions`.
 the grid's `EntityLocations` order and next id afterwards: the pass adds the pipes as temporary
 entities and removes them again, which uses up ids and, through the entity set's free list, changes
 the order the remaining entities are listed in.
+## `poles_and_heat.jsonl` (stage 10)
+
+`AddElectricPoles.Execute` and `AddHeatPipes` (`Execute`, `Route`, `ExtendToBeacons`), written
+by `oracle/PolesAndHeatRecorder.cs`. As in `helpers.jsonl`, each case runs on a context rebuilt
+from a recorded snapshot (entities added in the recorded order, the recorded next id set by
+reflection), so the C# and the Rust test start from the same container state. The snapshots
+are the states the planner hands these steps, cut from finished plans of `small-list.txt`
+blueprints:
+
+| Snapshot | Used by |
+|---|---|
+| the finished grid without its poles (`_no-poles`) | `poles`, as `Planner` runs it with `AddLast`. Replanning the poles there reproduces the plan's poles in 105 of 106 cases |
+| only the pumpjacks (`_pumpjacks`) | `poles` with every initial terminal avoided, retries off and on (the poles-first path); `heat_route` |
+| the finished grid without poles, beacons and heat pipes (`_pipes`) | `heat_execute` |
+| that grid with a heat network routed by `Execute` and the plan's beacons that still fit (`_beacons`) | `heat_extend` |
+| `_no-poles` plus dense random avoided cells, or every free cell around one pumpjack and/or beacon (`_blocked`) | `poles` with retries off (40 return null) and on, which walks every retry strategy |
+
+The option sets cover every pole preset, beacons with and without overlap, pole quality
+(`Rare`, `Legendary`), heat pipes with and without beacons, `PlannerTest`'s two heat cases and
+the sample. `ValidateSolution` is on.
+
+Lines are `{"kind": "context", ...}` snapshots and `{"kind": "case", "op", "ctx", ..., "out"}`
+cases. A snapshot holds `sizes` (beacon width and height, pole width and height, pole supply
+width and height with quality), `wire_reach` (reach and its square with quality, as doubles),
+`validate_solution`, `add_heat_pipes`, `width`, `height`, `next_id`, `entities`, `centers` and
+`heat_pipes` (null when not routed). An entity is `[x, y, kind, id, extra?]` with the kind as a
+number: 0 `PumpjackCenter` (extra: direction), 1 `PumpjackSide` (center id), 2 `BeaconCenter`,
+3 `BeaconSide` (center id), 4 `ElectricPoleCenter` (neighbor ids in order), 5
+`ElectricPoleSide` (center id), 6 `Pipe`, 7 `Terminal`, 8 `UndergroundPipe` (direction), 9
+`HeatPipe`, 10 `TemporaryEntity`, 11 `AvoidEntity`. Points are flat `[x0, y0, x1, y1, ...]`
+arrays, in enumeration order.
+
+| `op` | Inputs | `out` |
+|---|---|---|
+| `poles` | `avoid` (an enumerable set built in this order; empty means `EmptyLocationSet`), `allow_retries`, and for `_no-poles` the plan's own `plan_poles` | `returned` (null, or its `count` and the grid's pole centers it contains), `poles` (`[x, y, id, [neighbors]]` in grid order) |
+| `heat_execute` | - | `heat_pipes` (`context.HeatPipes` in order) |
+| `heat_route` | `pipe_tiles` | `chosen`, `uncovered_pipes`, `uncovered_centers` |
+| `heat_extend` | `beacons` | `heated`, `heat_pipes` |
+
+Every `out` also has `error` (a `FactorioToolsException` message, or null), `exception` (the
+type name of any other exception; absent when none) and `grid`: the FNV hash of the grid after
+the step, every entity in enumeration order with its id and state, then the next id, defined in
+`HashGrid`.

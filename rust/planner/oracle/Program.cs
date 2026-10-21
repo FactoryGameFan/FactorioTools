@@ -77,6 +77,7 @@ FbePipesRecorder.Record(outputDir, smallList, bigList);
 ConnectedCentersRecorder.Record(outputDir, smallList, bigList);
 RotateOptimizeRecorder.Record(outputDir, smallList, bigList);
 BeaconsRecorder.Record(outputDir, smallList, bigList);
+PolesAndHeatRecorder.Record(outputDir, smallList);
 if (checkSnapshots)
 {
     Console.WriteLine($"snapshots: {snapshotMatches} match, {snapshotMismatches} differ");

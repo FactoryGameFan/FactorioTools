@@ -5,12 +5,11 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "npm run swagger-gen && vue-tsc && vite build && cd dist && shx cp index.html 404.html",
+    "build": "vue-tsc && vite build && cd dist && shx cp index.html 404.html",
     "build-all": "npm run build-wasm && npm run build",
     "preview": "vite preview",
     "lint": "eslint . --fix",
     "format": "prettier --write src/",
-    "swagger-gen": "swagger-typescript-api generate --path ../WebApp/swagger.json --output src/lib --name FactorioToolsApi",
     "build-wasm": "cd ../../rust && cargo build --release -p planner-wasm --target wasm32-unknown-unknown && shx cp target/wasm32-unknown-unknown/release/planner_wasm.wasm planner-wasm/js/planner.js ../src/vue/src/lib/planner-wasm/",
     "test": "vitest run",
     "test:watch": "vitest"
@@ -34,7 +33,6 @@
     "prettier": "^3.9.6",
     "sass": "^1.102.0",
     "shx": "^0.4.0",
-    "swagger-typescript-api": "^13.12.6",
     "typescript": "^6.0.3",
     "vite": "^8.1.5",
     "vitest": "^5.0.0",

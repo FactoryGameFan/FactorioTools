@@ -149,6 +149,22 @@ pub mod entity_names {
         pub const BEACON: &str = "beacon";
         pub const HEAT_PIPE: &str = "heat-pipe";
         pub const WALL: &str = "stone-wall";
+
+        /// Every constant above, for the tests that check each name against Factorio. The
+        /// C# gets this list by reflection. `all_arrays_match_their_constants` fails if a
+        /// constant is added here and not to this array.
+        pub const ALL: [&str; 10] = [
+            PUMPJACK,
+            PIPE,
+            PIPE_TO_GROUND,
+            SMALL_ELECTRIC_POLE,
+            MEDIUM_ELECTRIC_POLE,
+            BIG_ELECTRIC_POLE,
+            SUBSTATION,
+            BEACON,
+            HEAT_PIPE,
+            WALL,
+        ];
     }
 
     pub mod aai_industry {
@@ -164,6 +180,14 @@ pub mod item_names {
         pub const PRODUCTIVITY_MODULE_3: &str = "productivity-module-3";
         pub const SPEED_MODULE_3: &str = "speed-module-3";
         pub const BLUEPRINT: &str = "blueprint";
+
+        /// Every constant above, as `entity_names::vanilla::ALL` is.
+        pub const ALL: [&str; 4] = [
+            EFFICIENCY_MODULE_3,
+            PRODUCTIVITY_MODULE_3,
+            SPEED_MODULE_3,
+            BLUEPRINT,
+        ];
     }
 }
 
@@ -187,5 +211,45 @@ mod tests {
         assert_eq!(Direction::from_value(1), None);
         assert_eq!(Direction::default(), Direction::Up);
         assert_eq!(Direction::Right.to_string(), "Right");
+    }
+
+    /// The source text inside the `pub mod vanilla {` block that follows `parent` in this
+    /// file. These blocks hold no nested braces, so the first `}` closes them.
+    fn vanilla_source(parent: &str) -> &'static str {
+        let source = include_str!("data.rs");
+        let open = "pub mod vanilla {";
+        let start = source.find(parent).expect("parent module");
+        let start = start + source[start..].find(open).expect("vanilla module") + open.len();
+        let end = start + source[start..].find('}').expect("closing brace");
+        &source[start..end]
+    }
+
+    /// Rust has no reflection, so the `ALL` arrays are kept by hand. This counts the
+    /// constants declared in each block's source and checks that every array value is
+    /// declared there exactly once. A constant left out of `ALL`, or one listed twice, fails.
+    #[test]
+    fn all_arrays_match_their_constants() {
+        let cases: [(&str, &[&str]); 2] = [
+            ("pub mod entity_names {", &entity_names::vanilla::ALL),
+            ("pub mod item_names {", &item_names::vanilla::ALL),
+        ];
+        for (parent, all) in cases {
+            let block = vanilla_source(parent);
+            // Every `pub const` except `ALL` itself.
+            let declared = block.matches("pub const ").count() - 1;
+            assert_eq!(
+                declared,
+                all.len(),
+                "{parent}: a constant is missing from ALL"
+            );
+            for name in all {
+                let literal = format!("\"{name}\"");
+                assert_eq!(
+                    block.matches(&literal).count(),
+                    1,
+                    "{parent}: {name} is not declared exactly once"
+                );
+            }
+        }
     }
 }

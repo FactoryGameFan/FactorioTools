@@ -1,5 +1,6 @@
 # A Linux container carrying every toolchain this repo's dev loop needs: the
-# pinned .NET SDK plus wasm-tools, Node, PowerShell, Lua 5.2 and python3.
+# pinned Rust toolchain, Node and python3, plus (until the C# is removed) the
+# pinned .NET SDK with wasm-tools, PowerShell and Lua 5.2.
 # CLAUDE.md's "Devcontainer" section says what it covers and what still needs
 # the host (benchmarks and the Factorio oracle capture).
 #
@@ -28,11 +29,17 @@ FROM mcr.microsoft.com/dotnet/sdk:10.0.402@sha256:0d99ebf1ccad15037b5c98c9fe8979
 #
 # python3 is only for trim-factorio-oracle.py. The capture itself cannot run in
 # here - it needs a real Factorio install - but the trim half is worth having.
+#
+# gcc and libc6-dev are for Rust: cargo links native code (build scripts, proc
+# macros, the test binaries) with `cc`. Nothing in rust/Cargo.lock compiles C,
+# so the rest of build-essential (g++, make) is not needed.
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
         ca-certificates \
         curl \
+        gcc \
         git \
+        libc6-dev \
         lua5.2 \
         python3 \
         sudo \
@@ -94,3 +101,51 @@ ENV DOTNET_CLI_TELEMETRY_OPTOUT=1 \
     DOTNET_NOLOGO=1
 
 USER ubuntu
+
+# Rust, for rust/ and for `npm run build-wasm` in src/vue, which builds the
+# planner the site loads. Installed as ubuntu into its home, so cargo can write
+# its caches and rustup can add a toolchain without sudo.
+#
+# rustup-init is pinned and checksummed the same way Node is above. The
+# checksums are the .sha256 files published beside each binary, and match a
+# download of both. Self-update is off so the pin holds: otherwise
+# `rustup toolchain install` checks for a newer rustup and installs it.
+#
+# rust/rust-toolchain.toml is the authority on the compiler: rustup reads it
+# inside rust/, and installs whatever it names on first use. RUST_VERSION only
+# decides what is ALREADY in the image, so that creating the container, and
+# every run of the CI job, does not download a toolchain. rustfmt, clippy and
+# the wasm32 target are what the toolchain file asks for; rust-src is extra,
+# for rust-analyzer, which cannot index std without it.
+#
+# WHEN rust-toolchain.toml MOVES, RUST_VERSION SHOULD MOVE WITH IT. A stale one
+# still works - rustup just downloads the new pin on first use - which is
+# exactly why nobody would notice. The Devcontainer CI job checks the two agree.
+ARG RUSTUP_VERSION=1.29.1
+ARG RUSTUP_SHA256_ARM64=15f6e4ce9f583b929c996c91562bad6d4454f3281de858b02cdfdef615fac433
+ARG RUSTUP_SHA256_AMD64=dda7234360b7f578ca8b0ddcb80145646fa61a67c1720a5abc7051b35c9fcb71
+ENV RUST_VERSION=1.98.1 \
+    CARGO_HOME=/home/ubuntu/.cargo \
+    RUSTUP_HOME=/home/ubuntu/.rustup
+ENV PATH=${CARGO_HOME}/bin:${PATH}
+RUN set -eux; \
+    case "$(dpkg --print-architecture)" in \
+        arm64) rust_triple=aarch64-unknown-linux-gnu; rustup_sha="${RUSTUP_SHA256_ARM64}" ;; \
+        amd64) rust_triple=x86_64-unknown-linux-gnu;  rustup_sha="${RUSTUP_SHA256_AMD64}" ;; \
+        *) echo "unsupported architecture: $(dpkg --print-architecture)" >&2; exit 1 ;; \
+    esac; \
+    curl -fsSLo /tmp/rustup-init \
+        "https://static.rust-lang.org/rustup/archive/${RUSTUP_VERSION}/${rust_triple}/rustup-init"; \
+    echo "${rustup_sha}  /tmp/rustup-init" | sha256sum -c -; \
+    chmod +x /tmp/rustup-init; \
+    /tmp/rustup-init -y --no-modify-path \
+        --profile minimal \
+        --default-toolchain "${RUST_VERSION}" \
+        --component rustfmt,clippy,rust-src \
+        --target wasm32-unknown-unknown; \
+    rm /tmp/rustup-init; \
+    rustup set auto-self-update disable; \
+    mkdir -p "${CARGO_HOME}/registry" "${CARGO_HOME}/git"; \
+    rustup --version; \
+    rustc --version; \
+    cargo --version

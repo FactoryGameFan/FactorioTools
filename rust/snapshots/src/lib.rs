@@ -4,8 +4,17 @@
 //!
 //! It lives in its own crate because it needs both the planner and the blueprint parser,
 //! and because the full set is slow enough to want a release build of its own.
+//!
+//! [`normalize`] and the `normalize-lists` binary keep the two blueprint lists those tests
+//! read normalized, in place of the C# CLI's `oil-field normalize`.
+//!
+//! With `UPDATE_SNAPSHOTS=1` the tests write the snapshots instead of comparing them: they
+//! create missing files, rewrite changed ones and delete files no case produces any more.
+//! The bytes are what Verify writes: a UTF-8 byte order mark, then the text, LF line ends.
+//! See [`UPDATE_COMMAND`].
 
 pub mod issue_cases;
+pub mod normalize;
 
 use std::path::{Path, PathBuf};
 use std::sync::Mutex;
@@ -30,6 +39,29 @@ pub fn repo_root() -> PathBuf {
 /// `test/FactorioTools.Test/OilField`.
 pub fn oil_field_test_dir() -> PathBuf {
     repo_root().join("test/FactorioTools.Test/OilField")
+}
+
+/// Set to `1` to write the snapshots rather than compare against them.
+pub const UPDATE_ENV: &str = "UPDATE_SNAPSHOTS";
+
+/// The command that rewrites every snapshot, run from `rust/`.
+pub const UPDATE_COMMAND: &str =
+    "UPDATE_SNAPSHOTS=1 cargo test --release -p snapshots -- --include-ignored";
+
+/// The scoreboard snapshot `tests/score.rs` checks, relative to [`oil_field_test_dir`].
+pub const SCORE_SNAPSHOT: &str = "Score.HasExpectedScore.verified.txt";
+
+/// Whether [`UPDATE_ENV`] is `1`. Any other value, or none, compares.
+pub fn update_mode() -> bool {
+    std::env::var(UPDATE_ENV).is_ok_and(|value| value == "1")
+}
+
+/// What a failure message ends with: how to accept the Rust output instead.
+pub fn update_hint() -> String {
+    format!(
+        "If the new output is right, rewrite the snapshots from it, then review and commit the \
+         diff. From rust/:\n  {UPDATE_COMMAND}"
+    )
 }
 
 /// `BasePlannerTest.SmallListBlueprintStrings`.
@@ -380,6 +412,61 @@ pub fn read_snapshot(relative: &str) -> std::io::Result<String> {
     Ok(text.strip_prefix('\u{feff}').unwrap_or(&text).to_string())
 }
 
+/// What [`write_snapshot`] did.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Written {
+    /// The file already held exactly these bytes, so it was left alone.
+    Unchanged,
+    Created,
+    Updated,
+}
+
+/// The bytes Verify writes for a snapshot: a UTF-8 byte order mark, then the text as it
+/// is. The text's own `\n` line ends are kept, which is what `*.verified.txt eol=lf` checks
+/// out on every platform.
+pub fn snapshot_bytes(text: &str) -> Vec<u8> {
+    let mut bytes = "\u{feff}".as_bytes().to_vec();
+    bytes.extend_from_slice(text.as_bytes());
+    bytes
+}
+
+/// Writes a snapshot, relative to [`oil_field_test_dir`], unless it already holds exactly
+/// [`snapshot_bytes`]. A file with the same text but no byte order mark is rewritten.
+pub fn write_snapshot(relative: &str, text: &str) -> std::io::Result<Written> {
+    let path = oil_field_test_dir().join(relative);
+    let bytes = snapshot_bytes(text);
+    let written = match std::fs::read(&path) {
+        Ok(existing) if existing == bytes => return Ok(Written::Unchanged),
+        Ok(_) => Written::Updated,
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => Written::Created,
+        Err(error) => return Err(error),
+    };
+    if let Some(parent) = path.parent() {
+        std::fs::create_dir_all(parent)?;
+    }
+    std::fs::write(&path, bytes)?;
+    Ok(written)
+}
+
+/// Compares a case's output with its snapshot, or in [`update_mode`] writes it. Two tests
+/// run the `PlannerTest` cases at once, so both can write one of those files, but always
+/// with the same bytes, so the file ends up whole either way.
+fn compare_or_write(relative: &str, actual: &str) -> Outcome {
+    if update_mode() {
+        return match write_snapshot(relative, actual) {
+            Ok(Written::Unchanged) => Outcome::Matched,
+            Ok(written) => Outcome::Written(written),
+            Err(error) => Outcome::Error(format!("snapshot unwritable: {error}")),
+        };
+    }
+
+    match read_snapshot(relative) {
+        Err(error) => Outcome::Error(format!("snapshot unreadable: {error}")),
+        Ok(expected) if expected == actual => Outcome::Matched,
+        Ok(expected) => Outcome::Mismatch(first_difference(&expected, actual)),
+    }
+}
+
 /// The first lines where two texts differ, for a failure message.
 pub fn first_difference(expected: &str, actual: &str) -> String {
     let expected_lines: Vec<&str> = expected.split('\n').collect();
@@ -407,6 +494,8 @@ pub enum Outcome {
     Matched,
     Mismatch(String),
     Error(String),
+    /// In [`update_mode`], the snapshot was created or rewritten.
+    Written(Written),
 }
 
 /// Runs cases on all cores, returning each case's outcome in case order. Each case is
@@ -441,18 +530,7 @@ pub fn run_cases(cases: &[SnapshotCase]) -> Vec<Outcome> {
                         Ok(Err(error)) => {
                             Outcome::Error(format!("planner error: {}", error.message))
                         }
-                        Ok(Ok(result)) => {
-                            let actual = grid_string(&result);
-                            match read_snapshot(&case.snapshot) {
-                                Err(error) => {
-                                    Outcome::Error(format!("snapshot unreadable: {error}"))
-                                }
-                                Ok(expected) if expected == actual => Outcome::Matched,
-                                Ok(expected) => {
-                                    Outcome::Mismatch(first_difference(&expected, &actual))
-                                }
-                            }
-                        }
+                        Ok(Ok(result)) => compare_or_write(&case.snapshot, &grid_string(&result)),
                     };
                     outcomes.lock().unwrap()[i] = Some(outcome);
                 }
@@ -468,11 +546,13 @@ pub fn run_cases(cases: &[SnapshotCase]) -> Vec<Outcome> {
         .collect()
 }
 
-/// Runs cases and returns a report grouped by snapshot folder, plus how many failed.
+/// Runs cases and returns a report grouped by snapshot folder, plus how many failed. In
+/// [`update_mode`] a written snapshot is not a failure, and the report lists it.
 pub fn check(cases: &[SnapshotCase]) -> (String, usize) {
     let outcomes = run_cases(cases);
     let mut groups: Vec<(String, usize, usize)> = Vec::new();
     let mut failures = Vec::new();
+    let mut written = Vec::new();
     for (case, outcome) in cases.iter().zip(&outcomes) {
         let group = case.snapshot.split_once('/').map_or_else(
             || case.snapshot.split('.').next().unwrap().to_string(),
@@ -492,6 +572,7 @@ pub fn check(cases: &[SnapshotCase]) -> (String, usize) {
                 failures.push(format!("{}: mismatch\n{diff}", case.snapshot))
             }
             Outcome::Error(error) => failures.push(format!("{}: {error}", case.snapshot)),
+            Outcome::Written(how) => written.push(format!("{how:?}: {}", case.snapshot)),
         }
     }
 
@@ -499,12 +580,29 @@ pub fn check(cases: &[SnapshotCase]) -> (String, usize) {
     for (group, matched, total) in &groups {
         report.push_str(&format!("{group}: {matched}/{total} matched\n"));
     }
+    if update_mode() {
+        report.push_str(&format!(
+            "{UPDATE_ENV}=1: wrote {} snapshots\n",
+            written.len()
+        ));
+        for line in written.iter().take(20) {
+            report.push_str(line);
+            report.push('\n');
+        }
+        if written.len() > 20 {
+            report.push_str(&format!("... and {} more\n", written.len() - 20));
+        }
+    }
     for failure in failures.iter().take(10) {
         report.push_str(failure);
         report.push('\n');
     }
     if failures.len() > 10 {
         report.push_str(&format!("... and {} more failures\n", failures.len() - 10));
+    }
+    if !failures.is_empty() && !update_mode() {
+        report.push_str(&update_hint());
+        report.push('\n');
     }
     (report, failures.len())
 }

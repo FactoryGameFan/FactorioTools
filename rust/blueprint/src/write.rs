@@ -429,3 +429,57 @@ pub fn encode_blueprint_json(json: &str) -> String {
     let compressed = encoder.finish().expect("writing to memory cannot fail");
     format!("0{}", STANDARD.encode(compressed))
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// The Factorio oracle (`tools/capture-factorio-oracle.sh`). The planner crate's
+    /// `tests/factorio_oracle.rs` checks the rest of it.
+    fn factorio_oracle_path() -> std::path::PathBuf {
+        std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../../test/FactorioTools.Test/OilField/factorio-oracle.json")
+    }
+
+    /// `FactorioOracleTest.EntityNameToSizeMatchesTheDerivedCollisionBoxFootprint`: each
+    /// footprint is the collision box rounded up to whole tiles, as the game derives it.
+    /// Names absent from the fixture are skipped, which covers the AAI Industry pole: the
+    /// oracle is captured with mods disabled on purpose.
+    #[test]
+    fn entity_size_matches_the_derived_collision_box_footprint() {
+        let text = std::fs::read_to_string(factorio_oracle_path()).unwrap();
+        let oracle: serde_json::Value = serde_json::from_str(&text).unwrap();
+        let names = entity_names::vanilla::ALL
+            .into_iter()
+            .chain([entity_names::aai_industry::SMALL_IRON_ELECTRIC_POLE]);
+
+        let mut mismatches = Vec::new();
+        for name in names {
+            let Some(entity) = oracle["entities"].get(name) else {
+                continue;
+            };
+            let corner = |i: usize| {
+                let point = &entity["collision_box"][i];
+                (point[0].as_f64().unwrap(), point[1].as_f64().unwrap())
+            };
+            let (min, max) = (corner(0), corner(1));
+            let width = (max.0 - min.0).ceil() as f32;
+            let height = (max.1 - min.1).ceil() as f32;
+
+            let size = entity_size(name);
+            if size != (width, height) {
+                mismatches.push(format!(
+                    "{name}: entity_size says {}x{}, collision_box derives {width}x{height}",
+                    size.0, size.1
+                ));
+            }
+        }
+
+        assert!(
+            mismatches.is_empty(),
+            "{}. Either Factorio changed (re-run tools/capture-factorio-oracle.sh and review \
+             the diff), or the footprint table is wrong.",
+            mismatches.join("; ")
+        );
+    }
+}

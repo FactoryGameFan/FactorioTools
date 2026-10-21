@@ -27,7 +27,7 @@ dotnet test --filter "FullyQualifiedName~PlannerTest.ExecuteSample"   # single t
 
 # Run the planner sample from the CLI (prints the grid)
 dotnet run --project src/FactorioTools.Cli -- oil-field sample
-dotnet run --project src/FactorioTools.Cli -- oil-field normalize     # re-normalize test blueprint lists
+# Re-normalize the test blueprint lists: now a Rust bin, see "Adding a test blueprint" under Testing notes
 
 # Benchmarks
 dotnet run --project src/Benchmark -c Release
@@ -35,8 +35,7 @@ dotnet run --project src/Benchmark -c Release
 # Vue front-end (from src/vue)
 npm install
 npm run dev            # vite dev server
-npm run build          # regenerates TS API client from swagger, type-checks, builds
-npm run swagger-gen    # regenerate src/lib API client from ../WebApp/swagger.json
+npm run build          # type-checks (vue-tsc), builds
 npm run build-wasm     # build the Rust planner (rust/planner-wasm) and copy it into src/lib/planner-wasm
 ```
 
@@ -71,11 +70,31 @@ A full-solution `dotnet build` also builds `BrowserWasm`/`BlazorWebApp`, which n
 
 ### Devcontainer
 
-`.devcontainer/` builds a Linux container carrying every toolchain this repo needs, which is more than the SDK: **dotnet 10.0.402 plus wasm-tools, Node 24.21.0, PowerShell 7.6.5, Lua 5.2.4 and python3**. Before it, a full local loop meant five separate host installs, one of which (`tools/check-lua.sh`) started a second container of its own.
+`.devcontainer/` builds a Linux container carrying every toolchain this repo needs, which is more than the SDK: **Rust 1.98.1 (rustup 1.29.1, with rustfmt, clippy, rust-src and the wasm32 target), Node 24.21.0 and python3, plus dotnet 10.0.402 with wasm-tools, PowerShell 7.6.5 and Lua 5.2.4** for the C#, until it is removed. Before it, a full local loop meant separate host installs of each, one of which (`tools/check-lua.sh`) started a second container of its own.
 
 It is not a replacement for `docker-build.sh`. That script is the quick way to run one `dotnet` command in the pinned SDK; this is the whole environment, with an editor attached.
 
 **The Dockerfile pins the SDK from `global.json` by digest**, which is the point. `rollForward: latestMajor` only rolls forward, so a host whose package manager trails the pin cannot build the repo at all - that is what happened on 2026-09-21 when the pin moved to 10.0.401 and Homebrew still shipped 10.0.400. **When `global.json` moves, the `FROM` line must move with it.** The Devcontainer CI job compares `dotnet --version` against `global.json` and fails if they disagree, so a forgotten re-pin is a red check rather than a container that quietly contradicts the repo.
+
+**Rust is pre-installed, and `rust/rust-toolchain.toml` still decides.** The image installs the toolchain named by `RUST_VERSION` in the Dockerfile, so creating the container downloads no compiler. Inside `rust/`, rustup reads the toolchain file as it does anywhere else. A stale `RUST_VERSION` therefore breaks nothing - rustup just installs the new pin on first use (about 10 s, measured) - which is exactly why nobody would notice. So the Devcontainer CI job compares `RUST_VERSION` with the toolchain file, checks that `rustc` and `cargo` in `rust/` report that version, and checks that the wasm32 target is installed. **When `rust/rust-toolchain.toml` moves, move `RUST_VERSION` with it.** The toolchain file is in that job's paths filter for this reason.
+
+The container keeps its own `rust/target`, cargo registry and cargo git cache in named volumes, for the same reason as `node_modules`: Linux build output in the bind mount would fight a Mac host's own. `postCreateCommand` ends with `npm run build-wasm`, so `npm run dev` and `npm run build` work as soon as the container is up. The VS Code extension list includes rust-analyzer, pointed at `rust/Cargo.toml`.
+
+Do not try to change the pre-installed toolchain's components from inside the container. `rustup target remove` failed there with `Invalid cross-device link (os error 18)`, because the files sit in a read-only image layer. Change the Dockerfile and rebuild instead. Installing another toolchain works.
+
+Measured 2026-10-21 on tealc (Linux x86-64, 8 cores, Docker Desktop), with `@devcontainers/cli@0.89.0` running the Devcontainer job's own steps against a fresh clone with tags. Two full runs; where they differ, both times are shown:
+
+| step | result |
+| --- | --- |
+| image build with `--no-cache`, base image already pulled | 2 min 58 s; the Rust layer took 17 s of it |
+| `devcontainer up` | 45 s with the image cached, 88 s when the Rust layer had to be rebuilt. `postCreateCommand` took 34 s and 52 s, of which `build-wasm` took 17 s and 33 s and `npm ci` 10 s |
+| toolchain check | Rust 1.98.1 in the image and in the toolchain file; `rustc` and `cargo` 1.98.1 in `rust/`; wasm32 target present |
+| `cargo test --all-targets` in `rust/` | 175 passed, 7 ignored; 152 s and 188 s, of which about 11 s is compiling |
+| `npm run build-wasm && npm run build && npm run test` in `src/vue` | build OK, 51 tests passed; 12.5 s and 14 s (`build-wasm` already up to date) |
+| `dotnet test` on the test project | 4302 passed; 307 s and 241 s |
+| Lua transpile step | reproduced the committed `src/lua`, parses and runs under 5.2; 41 s and 29 s |
+
+The release gates (`cargo test --release -p snapshots -p contract -- --include-ignored`) also pass in the container, in 96 s. The Devcontainer job leaves them to `ci.yml`'s Rust job: they test the planner, not the container.
 
 Measured 2026-09-21 in the built image on macOS arm64 (OrbStack), against a real clone with tags:
 
@@ -87,7 +106,7 @@ Measured 2026-09-21 in the built image on macOS arm64 (OrbStack), against a real
 | `luac5.2 -p` over the generated Lua | all 127 files parse |
 | `lua5.2 sample.lua` | runs, prints the grid |
 | `npm ci && npm run build && npm test` in `src/vue` | build OK, 51 tests passed |
-| `npm run build-wasm` | Release publish OK, bundle lands at `public/framework/dotnet.js` |
+| `npm run build-wasm` | Release publish OK, bundle lands at `public/framework/dotnet.js` (the .NET planner; `build-wasm` has built the Rust planner since stage 12b) |
 
 Two notes on why specific things are the way they are:
 
@@ -120,8 +139,10 @@ Pure planning logic with **no JSON/serialization dependencies** - this is intent
 Blueprint string parsing and emitting live here, separate from the core lib: `ParseBlueprint`, `GridToBlueprintString`, `NormalizeBlueprints`, plus the `System.Text.Json` source-gen context. Front-ends and the CLI reference this project, not just the core.
 
 ### Front-ends and hosts
-- `src/WebApp` - ASP.NET Core API (`OilFieldController`, routes under `api/v1/oil-field`: `normalize`, `plan`; the actions delegate to `PlanOrchestrator`). Produces `swagger.json` consumed by the Vue client's `swagger-gen`. No longer deployed (the Azure target was retired when the front-end moved to in-browser WASM); kept for local API use, swagger generation, and the `Dockerfile` if self-hosting is wanted.
-- `src/vue` - the primary front-end (Vue 3 + Vite + Pinia, persisted settings). This is what's deployed, as a Cloudflare Worker with static assets (see "Deployment" below); it plans in-browser via the WASM bundle and no longer calls a hosted API. Planner constants (pole presets, geometry defaults, strategy defaults, quality levels) are not retyped in TypeScript - they come from `src/vue/src/lib/plannerDefaults.verified.json`, which `PlannerDefaultsTest` generates from `OilFieldOptions` (most fields) and the `Quality` enum (`qualityLevels`). Change a default in the C# and `dotnet test` rewrites that file; commit it with your change.
+- `src/WebApp` - ASP.NET Core API (`OilFieldController`, routes under `api/v1/oil-field`: `normalize`, `plan`; the actions delegate to `PlanOrchestrator`). Produces `swagger.json`, which the front-end no longer uses (its API types are hand-maintained since stage 13a). No longer deployed (the Azure target was retired when the front-end moved to in-browser WASM); kept for local API use, swagger generation, and the `Dockerfile` if self-hosting is wanted.
+- `src/vue` - the primary front-end (Vue 3 + Vite + Pinia, persisted settings). This is what's deployed, as a Cloudflare Worker with static assets (see "Deployment" below); it plans in-browser via the WASM bundle and no longer calls a hosted API. Planner constants (pole presets, geometry defaults, strategy defaults, quality levels) are not retyped in TypeScript - they come from `src/vue/src/lib/plannerDefaults.verified.json`, which the Rust test `rust/contract/tests/planner_defaults.rs` generates from `OilFieldOptions` and `Quality`, byte for byte the same as the C# `PlannerDefaultsTest` (both exist until stage 13b removes the C#). The test fails when the file is stale. After changing a default, run `UPDATE_PLANNER_DEFAULTS=1 cargo test -p contract --test planner_defaults` from `rust/` and commit the rewritten file. Adding a field to `OilFieldOptions` without emitting it fails to compile.
+
+  `src/vue/src/lib/FactorioToolsApi.ts` holds the request and response types for the planner. It began as a client generated from `WebApp/swagger.json` and is hand-maintained since stage 13a. `FactorioToolsApi.test.ts` checks it against the plan and normalize responses in `rust/contract/fixtures/contract.jsonl`: key shape, value types, and every strategy and quality name. When the contract changes, update the types and the test's samples together.
 
   **Keep the FLUTE credit in the footer of `src/vue/src/App.vue`.** FLUTE (the `ConnectedCentersFlute` strategy, via the FluteSharp submodule) is under Chris Chu's Attribution Assurance License, `submodules/FluteSharp/flute-c/license.txt`. It requires a prominent display of "Dr. Chris C. N. Chu", "Iowa State University" and `http://home.engineering.iastate.edu/~cnchu/` every time the program launches. The footer shows on every page, which is what meets that. A Rust port of FLUTE would be under the same terms (#138).
 - `src/BrowserWasm` - the planner as .NET WASM (trimmed). **The site no longer loads it**: it loads `rust/planner-wasm` instead (see the Rust port section). It stays until stage 13 of #138 removes the .NET projects, and the notes below describe how it was built.
@@ -145,7 +166,7 @@ The planner is being ported to Rust/WASM, one stage per PR, following the plan o
 - **The port must reproduce the C# output exactly**, including how ties are broken. That depends on .NET details: `HashSet`/`Dictionary` enumeration order (insertion order, with freed slots reused last-in first-out), the 4-ary `PriorityQueue`, the unstable introsort behind `List.Sort`, and `Math.Round` rounding half to even. `rust/dotnet-compat` holds Rust copies of these. Use them, not std's `HashMap`, `BinaryHeap` or `sort_by`, wherever the C# result depends on order.
 - **Those copies are tested against fixtures recorded from real .NET** (`rust/dotnet-compat/fixtures`, format in `rust/dotnet-compat/FIXTURES.md`). The `test-default` CI job reruns the recorder on the pinned SDK and fails if the fixtures drift, so an SDK bump that changes .NET's behavior shows up as a red check.
 - **`rust/delaunator-net` and `rust/flute` are ports of the two submodules**, DelaunatorSharp and FluteSharp, kept byte-for-byte compatible with them. Do not swap in the `delaunator` crate: it is a newer algorithm whose tie-breaking differs, which changes the planner's pipes. `rust/flute` is under FLUTE's Attribution Assurance License (`rust/flute/LICENSE-FLUTE`), the same terms as the C#, so the site's footer credit covers it too.
-- **`rust/snapshots` is the end-to-end gate.** It plans every case the C# Verify tests plan, from the same `small-list.txt` and `big-list.txt`, and compares the output with the committed `*.verified.txt` files byte for byte, plus `Score.HasExpectedScore`. It also fails if a snapshot file exists that no Rust case checks. Run it in release: `cargo test --release -p snapshots -- --include-ignored` (about a minute). `rust/blueprint` parses blueprint strings for it.
+- **`rust/snapshots` is the end-to-end gate.** It plans every case the C# Verify tests plan, from the same `small-list.txt` and `big-list.txt`, and compares the output with the committed `*.verified.txt` files byte for byte, plus `Score.HasExpectedScore`. It also fails if a snapshot file exists that no Rust case checks. Run it in release: `cargo test --release -p snapshots -- --include-ignored` (about a minute). `rust/blueprint` parses blueprint strings for it. Since stage 13a it can also write the snapshots: see "Changing planner output on purpose" under Testing notes.
 - **`rust/contract` and `rust/planner-wasm` are what the site loads.** `contract` is the JSON the site sends and gets back (`PlanOrchestrator`'s `Plan` and `Normalize`, the error envelope), checked against responses recorded from the C# (`rust/contract/fixtures`). `planner-wasm` builds it to WebAssembly with no extra toolchain, and `planner-wasm/js/planner.js` exposes `plan(json)` and `normalize(json)` with the same signatures as `src/vue/src/lib/wasmPlanner.ts`. CI checks the WebAssembly build's output against the native contract byte for byte. **The site loads this module** (stage 12b of #138), through `src/vue/src/lib/wasmPlanner.ts` and a Web Worker.
 - **Commands**, from `rust/`: `cargo fmt --all`, `cargo clippy --all-targets -- -D warnings`, `cargo test --all-targets`, and `cargo build --workspace --target wasm32-unknown-unknown`. The toolchain is pinned in `rust/rust-toolchain.toml`; rustup installs it on first use.
 - **A change to the C# planner during the port** has to land in the Rust version too, or wait for it. `rust/planner/fixtures` are recorded from the C# planner (format and the command to regenerate them in `rust/planner/FIXTURES.md`), and the `test-default` CI job reruns every recorder under `rust/`. So a C# change that alters planner output turns CI red until the fixtures are regenerated and the Rust port matches them.
@@ -241,7 +262,7 @@ Two more sources are *reference* rather than authoritative. They say **why** som
 
   Worked example: the pumpjack change behind issue #81 shows up in a dump as `output_fluid_box` pipe connections going from `[[1,-1],[1,-1],[-1,1],[-1,1]]` to `[[1,-1],[1,1],[-1,1],[-1,-1]]`. The dump does not say why. FFF #442, "Flip, Flow, and Fresh Paint", does, and the same release added `use_mirroring` and `migrate_horizontal_mirroring` to that prototype - which is how you learn the change is about entity mirroring rather than a typo fix.
 
-`tools/capture-factorio-oracle.sh` pulls those three into `test/FactorioTools.Test/OilField/factorio-oracle.json`:
+`tools/capture-factorio-oracle.sh` pulls those three into `test/FactorioTools.Test/OilField/factorio-oracle.json`. Two tests read it: the C# `FactorioOracleTest`, and its Rust port, `rust/planner/tests/factorio_oracle.rs`, plus an entity-size check in the tests module of `rust/blueprint/src/write.rs`. Rust has no reflection, so `entity_names::vanilla::ALL` and `item_names::vanilla::ALL` in `rust/planner/src/data.rs` list the names by hand, and `data::tests::all_arrays_match_their_constants` fails if a name constant is added without adding it to `ALL`.
 
 ```bash
 tools/capture-factorio-oracle.sh                        # auto-detects a Steam or /Applications install
@@ -252,7 +273,7 @@ tools/capture-factorio-oracle.sh --factorio /path/to/factorio.app
 Notes on using it:
 
 - **The committed fixture targets the experimental branch**, currently 2.1.14, not stable. That is deliberate: the bug reports come from 2.1 and that is where the game is heading. `captureInfo.factorioVersion` in the fixture records which build it came from.
-- **Stable and experimental are not identical.** Comparing 2.0.77 stable against 2.1.14 experimental, everything the planner reads is byte-identical except one thing: the pumpjack's output fluid box went from 2 distinct corners to 4, one per rotation (FFF #442). That difference did mean the hardcoded terminal offsets in `Helpers.cs` were wrong for 2.1 on east and west, which is issue #81, now fixed. A probe mod settled it by reading `PipeConnection.target_position` out of both running games rather than deriving it; `FactorioOracleTest.TerminalOffsetsMatchTheFactorioOutputCorners` now pins the offsets to the fixture so the next corner move fails a test. Capture any second version with `--factorio <path>` and `--out <path>` to compare.
+- **Stable and experimental are not identical.** Comparing 2.0.77 stable against 2.1.14 experimental, everything the planner reads is byte-identical except one thing: the pumpjack's output fluid box went from 2 distinct corners to 4, one per rotation (FFF #442). That difference did mean the hardcoded terminal offsets in `Helpers.cs` were wrong for 2.1 on east and west, which is issue #81, now fixed. A probe mod settled it by reading `PipeConnection.target_position` out of both running games rather than deriving it; `FactorioOracleTest.TerminalOffsetsMatchTheFactorioOutputCorners` (and its Rust port, `terminal_offsets_match_the_factorio_output_corners` in `rust/planner/tests/factorio_oracle.rs`) now pins the offsets to the fixture so the next corner move fails a test. Capture any second version with `--factorio <path>` and `--out <path>` to compare.
 - **Re-capture after every Factorio update and commit the diff.** A changed fixture is the signal that a hardcoded constant needs review. `--check` answers "has the game moved past what we committed?" without dirtying the tree.
 - **The installed binary is the authority** on which version gets captured. Steam updates it without asking, so it decides and everything else follows. Same convention as `scripts/sync-factorio-refs.sh` in FactorioMapWebUI.
 - **It runs with user mods disabled** (`--mod-directory` pointed at an empty directory). Mods rewrite prototypes freely, so a capture that loads them describes one person's modded game rather than Factorio. The script prints which mods loaded; expect only `core base elevated-rails quality recycler space-age`.
@@ -290,7 +311,16 @@ Two related sources, for when the game binary is not the easiest thing to reach:
 
 - Tests use **xUnit v3 + Verify** (`xunit.v3` + `Verify.XunitV3`). Many tests assert against committed `*.verified.txt` snapshots under `test/FactorioTools.Test/OilField`. When behavior legitimately changes, update snapshots via Verify's accept workflow (received vs verified) rather than editing expected files by hand. A stale committed snapshot **does** fail on CI: `AutoVerify` is off there, so the test itself throws `VerifyException` with the diff (confirmed on a real runner, not just inferred - note that setting `CI`/`GITHUB_ACTIONS` locally does *not* reproduce the build-server detection, so local simulation of this is misleading). A "Check no Verify snapshots drifted" step backs that up by failing if `dotnet test` leaves any `*.verified.*` file dirty, in case the detection ever regresses. Commit regenerated snapshots with your change.
 - `Score.HasExpectedScore.verified.txt` is the planner-quality scoreboard across the 61 blueprints in `small-list.txt` (the file also holds 11 `#` comment lines, so do not read its line count as the blueprint count). `small-list.txt` / `big-list.txt` hold the blueprint corpus; `big-list.txt` is 1147 blueprints and is not scored.
-- Test data blueprints are normalized via the CLI `oil-field normalize` command.
+- **Adding a test blueprint.** Paste the blueprint string as a new line at the end of `small-list.txt` (scored, may hold `#` comments), or in `big-list.txt` (not scored, blueprints only). Then, from `rust/`:
+
+  ```bash
+  cargo run --release -p snapshots --bin normalize-lists
+  UPDATE_SNAPSHOTS=1 cargo test --release -p snapshots -- --include-ignored
+  cargo test --release -p snapshots -p contract -- --include-ignored
+  ```
+
+  The first command cleans each blueprint down to its pumpjacks, drops repeats, and moves a blueprint found in both lists to the small list only. It compares blueprints by their decoded JSON, not the compressed string, and leaves a line that is already normalized exactly as written, so the diff shows only real changes. A line that does not parse stops it with the file and line number; fix or remove the line, or pass `--keep-invalid`. (It replaces the C# `oil-field normalize`, which on .NET 10 would rewrite all 1,208 lines because the committed strings came from an older zlib.) The second command writes the new snapshots, and the third checks everything in compare mode. A new small-list blueprint at index N creates 26 files: 24 `PlannerWithAllOptions/Theory.E_<N>_<pole>{_b}{_o}{_u}.verified.txt`, plus `AllStrategiesOnSmallList/Theory.E_<N>.verified.txt` and `NonStandardBeacon/Theory.E_<N>.verified.txt`. It also changes `Score.HasExpectedScore.verified.txt`. If the blueprint came out of `big-list.txt` at index M, every `AllStrategiesOnBigList/Theory.E_<n>` from M on shifts down one and the last is deleted. No test has a count to edit. Commit the lists and every new, changed and deleted snapshot together.
+- **Changing planner output on purpose.** From `rust/`, `UPDATE_SNAPSHOTS=1 cargo test --release -p snapshots -- --include-ignored` rewrites every snapshot and the scoreboard from the Rust output: it creates missing files, overwrites changed ones, and deletes any `*.verified.txt` no case produces. Only the value `1` turns it on, and CI never sets it, so a stale snapshot fails there. Run it in release and with `--include-ignored`, or only the quick `PlannerTest` snapshots are written. The bytes are what Verify writes (UTF-8 BOM, LF); stage 13a checked that Rust regenerates all 2,748 files byte for byte and that Verify accepts files Rust writes. Read the diff before committing: it is the only record of what the change did to real plans.
 
 ## Dependency automation
 

@@ -2,6 +2,23 @@
   font-size: 90%;
 }
 
+// The "width x height" number pairs are about 39px wide at desktop sizes, which
+// leaves 13px for text after Bootstrap's padding. The browser's spin buttons
+// filled that and hid the value, so drop them (arrow keys still step the value)
+// and trim the padding so two digits fit.
+.input-group input[type="number"] {
+  appearance: textfield;
+  -moz-appearance: textfield;
+  padding-left: 0.5rem;
+  padding-right: 0.5rem;
+
+  &::-webkit-inner-spin-button,
+  &::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+}
+
 // scss-docs-start import-stack
 // Configuration
 @import "~bootstrap/scss/functions";
@@ -32,7 +49,7 @@
 // @import "~bootstrap/scss/pagination";
 @import "~bootstrap/scss/badge";
 @import "~bootstrap/scss/alert";
-// @import "~bootstrap/scss/progress";
+@import "~bootstrap/scss/progress";
 @import "~bootstrap/scss/list-group";
 // @import "~bootstrap/scss/close";
 // @import "~bootstrap/scss/toasts";

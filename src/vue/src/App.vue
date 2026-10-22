@@ -27,7 +27,7 @@
       <!-- Required by FLUTE's Attribution Assurance License (rust/flute/LICENSE-FLUTE). Keep all three parts. -->
       <p class="text-muted pb-3">
         Pipe planning uses FLUTE by Dr. Chris C. N. Chu, Iowa State University,
-        <a class="link-body-emphasis" href="http://home.engineering.iastate.edu/~cnchu/"
+        <a class="link-body-emphasis text-break" href="http://home.engineering.iastate.edu/~cnchu/"
           >http://home.engineering.iastate.edu/~cnchu/</a
         >.
       </p>

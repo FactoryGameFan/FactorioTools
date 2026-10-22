@@ -137,7 +137,7 @@
   </form>
   <div class="row">
     <div class="col p-3">
-      <h3>About this tool</h3>
+      <h2 class="h3">About this tool</h2>
       <p>
         This tool finds a near-optimal oil field layout for a blueprint that contains pumpjacks.
       </p>
@@ -180,7 +180,7 @@
         tracking this possible enhancement.
       </p>
       <p>For more details about the various steps performed, see the table below.</p>
-      <h6 class="mt-2">Possible planner steps</h6>
+      <h3 class="h6 mt-2">Possible planner steps</h3>
       <table class="table table-sm">
         <tbody>
           <template v-for="(s, i) of allSteps" :key="i">

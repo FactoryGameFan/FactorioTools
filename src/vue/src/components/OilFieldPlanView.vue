@@ -34,7 +34,13 @@
         dropping pumpjacks.
       </div>
     </div>
-    <template v-if="allPlans.length > 0">
+    <div
+      v-if="allPlans.length > 0"
+      class="table-responsive"
+      tabindex="0"
+      role="region"
+      aria-label="Plans compared"
+    >
       <table class="table">
         <thead>
           <tr>
@@ -92,8 +98,8 @@
           </tr>
         </tbody>
       </table>
-    </template>
-    <h6>Oil field blueprint</h6>
+    </div>
+    <h2 class="h6">Oil field blueprint</h2>
     <code>{{ plan.data.blueprint }}</code>
   </div>
 </template>

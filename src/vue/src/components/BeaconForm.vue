@@ -17,7 +17,7 @@
       :showProductivityModules="isCustom"
     />
     <div class="row" v-show="showAdvancedOptions && addBeacons">
-      <div class="col-lg-3 mt-3">
+      <div class="col-lg-6 col-xl-3 mt-3">
         <label for="beacon-entity-name" class="form-label"
           >Entity internal name (<a href="#" @click.prevent="reset">reset</a>)</label
         >
@@ -29,7 +29,7 @@
           autocomplete="off"
         />
       </div>
-      <div class="col-lg-3 mt-3">
+      <div class="col-lg-6 col-xl-3 mt-3">
         <label for="beacon-module-slots" class="form-label">Module slots</label>
         <input
           type="number"
@@ -41,7 +41,7 @@
           required
         />
       </div>
-      <div class="col-lg-3 mt-3">
+      <div class="col-lg-6 col-xl-3 mt-3">
         <p class="form-label">
           Entity size (<label for="beacon-width">width</label> x
           <label for="beacon-height">height</label>)
@@ -68,7 +68,7 @@
           />
         </div>
       </div>
-      <div class="col-lg-3 mt-3">
+      <div class="col-lg-6 col-xl-3 mt-3">
         <p class="form-label">
           Supply area (<label for="beacon-supply-width">width</label> x
           <label for="beacon-supply-height">height</label>)

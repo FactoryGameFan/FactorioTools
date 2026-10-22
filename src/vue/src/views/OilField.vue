@@ -3,7 +3,6 @@
     <div class="col-md-auto">
       Factorio oil field planner
       <span v-if="useAdvancedOptions">🧙‍♂️</span>
-      <span v-else>🐣</span>
     </div>
     <div class="col-md-auto">
       <small

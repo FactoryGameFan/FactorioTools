@@ -4,7 +4,7 @@
       <router-view></router-view>
     </div>
   </main>
-  <footer class="footer bg-light">
+  <footer class="footer bg-body-tertiary">
     <div class="container">
       <p class="text-muted py-3">
         Site originally by

@@ -5,6 +5,11 @@
 // scss-docs-start import-stack
 // Configuration
 @import "~bootstrap/scss/functions";
+
+// Follow the OS light/dark setting with prefers-color-scheme instead of a
+// data-bs-theme attribute, so dark mode needs no script and nothing stored.
+$color-mode-type: media-query;
+
 @import "~bootstrap/scss/variables";
 @import "~bootstrap/scss/variables-dark";
 @import "~bootstrap/scss/maps";
@@ -50,3 +55,18 @@
 // Utilities
 @import "~bootstrap/scss/utilities/api";
 // scss-docs-end import-stack
+
+// Bootstrap's dark mode does not adapt these. Outline buttons keep their light
+// theme text color, which is under 4.5:1 on the dark body (#6c757d is 3.28:1,
+// #dc3545 is 3.40:1), and table rows stay light blue. Use Bootstrap's own dark
+// tokens instead.
+@include color-mode(dark) {
+  .btn-outline-secondary {
+    @include button-outline-variant($secondary-text-emphasis-dark);
+  }
+  .btn-outline-danger {
+    @include button-outline-variant($danger-text-emphasis-dark);
+  }
+  @include table-variant("primary", $primary-bg-subtle-dark);
+  @include table-variant("info", $info-bg-subtle-dark);
+}

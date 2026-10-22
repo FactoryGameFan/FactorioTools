@@ -7,22 +7,27 @@
   <footer class="footer bg-light">
     <div class="container">
       <p class="text-muted py-3">
-        Site originally by <a href="https://joelverhagen.com/">Joel Verhagen</a>, version
+        Site originally by
+        <a class="link-body-emphasis" href="https://joelverhagen.com/">Joel Verhagen</a>, version
         {{ gitVersion }}, commit
-        <a :href="`https://github.com/FactoryGameFan/FactorioTools/tree/${gitCommit}`">{{
-          gitCommit
-        }}</a
+        <a
+          class="link-body-emphasis"
+          :href="`https://github.com/FactoryGameFan/FactorioTools/tree/${gitCommit}`"
+          >{{ gitCommit }}</a
         >, branch
-        <a :href="`https://github.com/FactoryGameFan/FactorioTools/tree/${gitBranch}`">{{
-          gitBranch
-        }}</a
+        <a
+          class="link-body-emphasis"
+          :href="`https://github.com/FactoryGameFan/FactorioTools/tree/${gitBranch}`"
+          >{{ gitBranch }}</a
         >, built on {{ buildDate }}. Report bugs at the
-        <a href="https://github.com/FactoryGameFan/FactorioTools">GitHub repository</a>.
+        <a class="link-body-emphasis" href="https://github.com/FactoryGameFan/FactorioTools"
+          >GitHub repository</a
+        >.
       </p>
       <!-- Required by FLUTE's Attribution Assurance License (rust/flute/LICENSE-FLUTE). Keep all three parts. -->
       <p class="text-muted pb-3">
         Pipe planning uses FLUTE by Dr. Chris C. N. Chu, Iowa State University,
-        <a href="http://home.engineering.iastate.edu/~cnchu/"
+        <a class="link-body-emphasis text-break" href="http://home.engineering.iastate.edu/~cnchu/"
           >http://home.engineering.iastate.edu/~cnchu/</a
         >.
       </p>

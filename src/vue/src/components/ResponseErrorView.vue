@@ -1,8 +1,8 @@
 <template>
   <div class="card my-3 rounded-0">
-    <h4 class="card-header bg-danger bg-opacity-10">
+    <h2 class="h4 card-header bg-danger bg-opacity-10">
       {{ error.title }}
-    </h4>
+    </h2>
     <template v-if="error.errors">
       <ul
         class="list-group list-group-flush"

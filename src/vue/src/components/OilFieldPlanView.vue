@@ -2,7 +2,7 @@
   <div class="border p-3 mt-3">
     <div class="row row-cols-lg-auto g-2 mb-3">
       <div class="col-12">
-        <CopyButton class="btn btn-info" :value="plan.data.blueprint">Copy blueprint</CopyButton>
+        <CopyButton class="btn btn-primary" :value="plan.data.blueprint">Copy blueprint</CopyButton>
       </div>
       <div class="col-12">
         <a class="btn btn-link" :href="fbeUrl" target="_blank" rel="noopener noreferrer"
@@ -34,7 +34,13 @@
         dropping pumpjacks.
       </div>
     </div>
-    <template v-if="allPlans.length > 0">
+    <div
+      v-if="allPlans.length > 0"
+      class="table-responsive"
+      tabindex="0"
+      role="region"
+      aria-label="Plans compared"
+    >
       <table class="table">
         <thead>
           <tr>
@@ -92,8 +98,8 @@
           </tr>
         </tbody>
       </table>
-    </template>
-    <h6>Oil field blueprint</h6>
+    </div>
+    <h2 class="h6">Oil field blueprint</h2>
     <code>{{ plan.data.blueprint }}</code>
   </div>
 </template>

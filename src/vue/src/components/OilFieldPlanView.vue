@@ -2,7 +2,7 @@
   <div class="border p-3 mt-3">
     <div class="row row-cols-lg-auto g-2 mb-3">
       <div class="col-12">
-        <CopyButton class="btn btn-info" :value="plan.data.blueprint">Copy blueprint</CopyButton>
+        <CopyButton class="btn btn-primary" :value="plan.data.blueprint">Copy blueprint</CopyButton>
       </div>
       <div class="col-12">
         <a class="btn btn-link" :href="fbeUrl" target="_blank" rel="noopener noreferrer"

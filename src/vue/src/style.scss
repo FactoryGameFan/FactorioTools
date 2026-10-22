@@ -5,6 +5,47 @@
 // scss-docs-start import-stack
 // Configuration
 @import "~bootstrap/scss/functions";
+
+// Colors modeled on PrimeVue's Aura theme: emerald primary, slate greys.
+// These override Bootstrap's !default variables, so they must come before
+// variables.scss. Aura's own emerald-500 (#10b981) has only 2.54:1 contrast
+// with white text, so buttons and links use emerald-700 (5.48:1) instead.
+$gray-100: #f1f5f9;
+$gray-200: #e2e8f0;
+$gray-300: #cbd5e1;
+$gray-400: #94a3b8;
+$gray-500: #64748b;
+$gray-600: #475569;
+$gray-700: #334155;
+$gray-800: #1e293b;
+$gray-900: #0f172a;
+
+$primary: #047857;
+$secondary: $gray-600;
+$success: #047857;
+$info: #0369a1;
+$warning: #f59e0b;
+$danger: #dc2626;
+$light: #f8fafc;
+$dark: $gray-800;
+
+$body-color: $gray-700;
+$body-secondary-color: $gray-500;
+$link-hover-color: #065f46;
+$border-color: $gray-200;
+
+$info-text-emphasis: #075985;
+$info-bg-subtle: #f0f9ff;
+$info-border-subtle: #bae6fd;
+$warning-text-emphasis: #92400e;
+$warning-bg-subtle: #fffbeb;
+$warning-border-subtle: #fde68a;
+$danger-text-emphasis: #991b1b;
+$danger-bg-subtle: #fef2f2;
+$danger-border-subtle: #fecaca;
+
+$border-radius-lg: 0.75rem;
+
 @import "~bootstrap/scss/variables";
 @import "~bootstrap/scss/variables-dark";
 @import "~bootstrap/scss/maps";
@@ -32,7 +73,7 @@
 // @import "~bootstrap/scss/pagination";
 @import "~bootstrap/scss/badge";
 @import "~bootstrap/scss/alert";
-// @import "~bootstrap/scss/progress";
+@import "~bootstrap/scss/progress";
 @import "~bootstrap/scss/list-group";
 // @import "~bootstrap/scss/close";
 // @import "~bootstrap/scss/toasts";

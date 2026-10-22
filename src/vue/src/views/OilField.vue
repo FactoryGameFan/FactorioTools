@@ -17,20 +17,20 @@
   <form>
     <div class="row row-cols-md-auto g-2 mb-3">
       <div class="col-12">
-        <button type="button" class="btn btn-info" @click="toggleAdvancedOptions">
+        <button type="button" class="btn btn-outline-secondary" @click="toggleAdvancedOptions">
           Use {{ useAdvancedOptions ? "simple" : "advanced" }} options
         </button>
       </div>
       <div class="col-12">
-        <CopyButton class="btn btn-info" :value="shareUrl">Copy share URL</CopyButton>
+        <CopyButton class="btn btn-outline-secondary" :value="shareUrl">Copy share URL</CopyButton>
       </div>
       <div class="col-12">
-        <button type="button" class="btn btn-warning" @click="reset">Reset</button>
+        <button type="button" class="btn btn-outline-danger" @click="reset">Reset</button>
       </div>
       <div class="col-12">
         <button
           type="button"
-          class="btn btn-warning"
+          class="btn btn-outline-danger"
           v-if="usingQueryString"
           @click="overrideLocalSettings"
         >
@@ -49,7 +49,7 @@
       >
       <button
         type="button"
-        class="btn btn-info btn-sm mb-2 me-2"
+        class="btn btn-outline-secondary btn-sm mb-2 me-2"
         @click="normalize"
         :disabled="recentlyNormalized || cannotSubmit"
         title="Remove all entities except pumpjacks, sort and rotate pumpjacks"
@@ -59,7 +59,7 @@
       </button>
       <button
         type="button"
-        class="btn btn-warning btn-sm mb-2"
+        class="btn btn-outline-secondary btn-sm mb-2"
         @click="addSampleBlueprint"
         title="Replace the current blueprint with a sample blueprint"
       >

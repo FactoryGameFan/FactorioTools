@@ -10,7 +10,7 @@ The planner is written in Rust, in `rust/` (core logic in `rust/planner`). The s
 
 ## Prerequisites
 
-- **Rust, through rustup.** `rust/rust-toolchain.toml` pins the toolchain (1.98.1, with rustfmt, clippy and the `wasm32-unknown-unknown` target). Inside `rust/`, rustup reads that file and installs the pin on first use, so there is nothing to choose. The pin is deliberate: the planner's whole job is exact, repeatable output, and a compiler change is a codegen change.
+- **Rust, through rustup.** `rust/rust-toolchain.toml` pins the toolchain (1.99.1, with rustfmt, clippy and the `wasm32-unknown-unknown` target). Inside `rust/`, rustup reads that file and installs the pin on first use, so there is nothing to choose. The pin is deliberate: the planner's whole job is exact, repeatable output, and a compiler change is a codegen change.
 - **Node 24 (Active LTS) and npm** for the front-end in `src/vue`. It uses npm, not pnpm: `package-lock.json` is the lockfile, and CI deploys with the `wrangler` pinned there.
 - That is all for building and testing. There are no submodules and no .NET. `python3` and a real Factorio install are needed only to capture the Factorio oracle (see below).
 
@@ -56,7 +56,7 @@ CI (`.github/workflows/ci.yml`) runs the five Rust check and build commands abov
 
 ### Devcontainer
 
-`.devcontainer/` builds a Linux container carrying every toolchain this repo needs: **Rust 1.98.1 through rustup (with rustfmt, clippy, rust-src and the wasm32 target), Node 24.21.0, python3, git and gcc** (cargo's linker), on plain `ubuntu:24.04` pinned by digest. Node is pinned exactly and checksummed. The base already has user `ubuntu` at uid 1000, which is the container's `remoteUser`. Before stage 13b the image was built on the .NET SDK and also carried dotnet, PowerShell and Lua 5.2; those are gone with the C#.
+`.devcontainer/` builds a Linux container carrying every toolchain this repo needs: **Rust 1.99.1 through rustup (with rustfmt, clippy, rust-src and the wasm32 target), Node 24.21.0, python3, git and gcc** (cargo's linker), on plain `ubuntu:24.04` pinned by digest. Node is pinned exactly and checksummed. The base already has user `ubuntu` at uid 1000, which is the container's `remoteUser`. Before stage 13b the image was built on the .NET SDK and also carried dotnet, PowerShell and Lua 5.2; those are gone with the C#.
 
 **Rust is pre-installed, and `rust/rust-toolchain.toml` still decides.** The image installs the toolchain named by `RUST_VERSION` in the Dockerfile, so creating the container downloads no compiler. Inside `rust/`, rustup reads the toolchain file as it does anywhere else. A stale `RUST_VERSION` therefore breaks nothing - rustup just installs the new pin on first use (about 10 s, measured) - which is exactly why nobody would notice. So the Devcontainer CI job compares `RUST_VERSION` with the toolchain file, checks that `rustc` and `cargo` in `rust/` report that version, and checks that the wasm32 target is installed. **When `rust/rust-toolchain.toml` moves, move `RUST_VERSION` with it.** The toolchain file is in that job's paths filter for this reason.
 

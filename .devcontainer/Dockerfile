@@ -8,7 +8,7 @@
 # image is itself noble, so the apt packages below did not change.
 # Re-pin with:
 #   docker buildx imagetools inspect ubuntu:24.04
-FROM ubuntu:24.04@sha256:68ee22004a9109b44973313b02ff7b1de250f1de0f5ecb628d73f579aaff33ac
+FROM ubuntu:26.04@sha256:c098726dd9b9733f3e885f8de0ef375206a311b0a317eadc40d347b1115fb944
 
 # The base image already has a `ubuntu` user at uid 1000, so there is no user
 # to create - only sudo to add, for the postCreate chown of the named volumes.

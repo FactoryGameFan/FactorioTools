@@ -2,7 +2,7 @@
 # whole job is identical output, and a compiler change is a codegen change, so a
 # contributor's rustup default must not decide which compiler runs.
 [toolchain]
-channel = "1.98.1"
+channel = "1.99.1"
 components = ["rustfmt", "clippy"]
 targets = ["wasm32-unknown-unknown"]
 profile = "minimal"

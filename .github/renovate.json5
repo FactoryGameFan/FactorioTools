@@ -32,9 +32,10 @@
 
   // The org preset supplies what used to be spelled out here: config:recommended,
   // helpers:pinGitHubActionDigests, the America/Los_Angeles timezone, the
-  // weekly Monday batch, automerge:false, prConcurrentLimit/prHourlyLimit,
-  // dependencyDashboard, osvVulnerabilityAlerts, the rule that security fixes skip
-  // the weekly window, and the github-actions grouping.
+  // weekly batch from noon Sunday to noon Monday, automerge:false,
+  // prConcurrentLimit/prHourlyLimit, dependencyDashboard, osvVulnerabilityAlerts,
+  // the rule that security fixes skip the weekly window, and the github-actions
+  // grouping.
   // Source: https://github.com/FactoryGameFan/.github/blob/main/renovate-config.json
   //
   // Renovate cannot read a preset it has no access to, so FactoryGameFan/.github
@@ -131,14 +132,19 @@
   // a re-resolve PR is exactly the kind whose diff deserves reading. If one of
   // these ever breaks the build in a way a targeted bump would not have, that is
   // the evidence to flip it, and this comment is where to record it.
+  //
+  // The schedule is the preset's own window, noon Sunday to noon Monday, so the
+  // lockfile PR arrives with the rest of the weekly batch. It has to be written
+  // out here because `lockFileMaintenance` brings a schedule of its own and does
+  // not inherit the preset's.
   lockFileMaintenance: {
     enabled: true,
-    schedule: ["before 5am on monday"],
+    schedule: ["* 12-23 * * 0", "* 0-11 * * 1"],
   },
 
   // The preset already clears the weekly window for security PRs, so a CVE fix does
-  // not sit up to 7 days waiting for Monday. What is set here is the AGE FLOOR,
-  // which is repo-specific and deliberately not zero.
+  // not sit up to 7 days waiting for the next batch. What is set here is the AGE
+  // FLOOR, which is repo-specific and deliberately not zero.
   //
   // (`vulnerabilityAlerts` is one of Renovate's mergeable options, so adding
   // `minimumReleaseAge` here keeps the preset's schedule override rather than

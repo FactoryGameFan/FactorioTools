@@ -12,7 +12,7 @@ workspace = true
 
 [dependencies]
 # normalize-lists reads a line's own compressed data strictly, beside blueprint's reader.
-base64 = "0.22"
+base64 = "0.23"
 blueprint = { path = "../blueprint" }
 flate2 = "1"
 planner = { path = "../planner" }

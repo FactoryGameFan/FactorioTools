@@ -11,7 +11,7 @@ repository.workspace = true
 workspace = true
 
 [dependencies]
-base64 = "0.22"
+base64 = "0.23"
 dotnet-compat = { path = "../dotnet-compat" }
 flate2 = "1"
 planner = { path = "../planner" }

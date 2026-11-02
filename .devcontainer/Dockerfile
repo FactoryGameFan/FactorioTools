@@ -40,16 +40,17 @@ RUN apt-get update \
     && chmod 0440 /etc/sudoers.d/ubuntu
 
 # Node for src/vue. Pinned exactly and checksummed, rather than tracking a
-# floating major the way ci.yml's `node-version: 24` does. The container is the
+# floating major the way ci.yml's `node-version: 26` does. The container is the
 # place to be reproducible; CI tracking the major is a separate, deliberate
-# choice, and the two are allowed to differ. v24.21.0 is the current 24 LTS
-# (Krypton) and what this repo's contributors have on the host today.
+# choice, and the two are allowed to differ. v26.13.0 is the first 26 LTS
+# (Lithium), released 2026-10-28.
 #
 # Both checksums are here because this image has to build on arm64 (a Mac) and
-# amd64 (CI, and the Windows PC's WSL). `dpkg --print-architecture` picks.
-ARG NODE_VERSION=v24.21.0
-ARG NODE_SHA256_ARM64=6ad1325edbdb5649c379b75a237147a666c95d4f9ae8d340fef2d1575d289ad2
-ARG NODE_SHA256_AMD64=fd8e59d5a511510f6a298afb548f18c7d2b1be404d8b4a27d94fbe49f56cb2d6
+# amd64 (CI, and the Windows PC's WSL). `dpkg --print-architecture` picks. They
+# come from https://nodejs.org/dist/v26.13.0/SHASUMS256.txt.
+ARG NODE_VERSION=v26.13.0
+ARG NODE_SHA256_ARM64=406fe3fbde1c054adff8b297c16fdb5af6659db327c1ac8acd46b56ef1af9a92
+ARG NODE_SHA256_AMD64=d28a96af6c38596f6d9d97c0ee531c13d238d757742387d1928de822d959e997
 RUN set -eux; \
     case "$(dpkg --print-architecture)" in \
         arm64) node_arch=arm64; node_sha="${NODE_SHA256_ARM64}" ;; \

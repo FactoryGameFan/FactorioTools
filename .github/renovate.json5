@@ -233,12 +233,12 @@
       // No tracking issue by design - this is not a deferred upgrade. It tracks
       // whatever Node CI runs on, so it moves when that moves and never on its own.
       description:
-        "HOLD @types/node on 24.x to match the Node 24 used by CI and the Cloudflare deploy. It should track the runtime, not the registry. Raise this and the workflows' node-version together.",
+        "HOLD @types/node on 26.x to match the Node 26 used by CI and the Cloudflare deploy. It should track the runtime, not the registry. Raise this and the workflows' node-version together.",
       matchManagers: ["npm"],
       matchPackageNames: ["@types/node"],
-      allowedVersions: "<25.0.0",
+      allowedVersions: "<27.0.0",
       prBodyNotes: [
-        "`node-version: 24` is hardcoded in both .github/workflows/ci.yml and .github/workflows/deploy-cloudflare.yml - there is no .node-version or .nvmrc file for Renovate to bump instead. If this ceiling is ever raised, those two workflows must move in the same PR, or the types will describe a runtime CI is not using.",
+        "`node-version: 26` is hardcoded in both .github/workflows/ci.yml and .github/workflows/deploy-cloudflare.yml - there is no .node-version or .nvmrc file for Renovate to bump instead. If this ceiling is ever raised, those two workflows must move in the same PR, or the types will describe a runtime CI is not using.",
       ],
     },
     {

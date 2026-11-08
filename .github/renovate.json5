@@ -84,15 +84,17 @@
   // rather than as an obvious failure.
   //
   // IF THIS IS EVER REVISITED, automerge has two prerequisites that are easy to
-  // miss and neither is satisfied today:
+  // miss and neither is fully satisfied today:
   //   1. A rule on `main` with CI checks REQUIRED, `bypass_actors` empty, and
   //      `strict_required_status_checks_policy: true`. Without all three a PR can
   //      merge red, or merge having been tested against a different `main` than
-  //      the one it lands on. Today nothing is required: the only ruleset,
-  //      ProtectMain, blocks deletion and force pushes and has no status-check
-  //      rule (checked 2026-10-21). This repo's CI is TWO separate checks from
-  //      ci.yml ("Build front-end" and "Rust port"), so both have to be required,
-  //      not just one.
+  //      the one it lands on. Today only the first holds. The only ruleset,
+  //      ProtectMain (id 18139941), blocks deletion and force pushes, requires a
+  //      pull request, and requires both of ci.yml's checks, "Build front-end"
+  //      and "Rust port". But `strict_required_status_checks_policy` is false,
+  //      and the repository Admin role is a bypass actor (checked 2026-11-02 with
+  //      `gh api repos/FactoryGameFan/FactorioTools/rulesets/18139941`). Both
+  //      checks have to stay required, not just one.
   //
   //      There is also "Build and deploy" from deploy-cloudflare.yml, and
   //      "smoke" from devcontainer.yml. Both run on pull requests behind a
@@ -141,6 +143,15 @@
     enabled: true,
     schedule: ["* 12-23 * * 0", "* 0-11 * * 1"],
   },
+
+  // Rebase bot PRs as soon as `main` moves, not only on a conflict. The default,
+  // `auto`, only does that when automerge is on or the ruleset demands an
+  // up-to-date branch, and ProtectMain's strict policy is off (see above). So
+  // Renovate only rebased PRs that had a CONFLICT, and #205 sat 3 commits behind
+  // `main` for more than 2.5 hours on 2026-11-02, its green checks run against an
+  // old base. The cost is one extra CI run per open bot PR after each merge, and
+  // there are at most 3 open at once (`prConcurrentLimit` in the org preset).
+  rebaseWhen: "behind-base-branch",
 
   // The preset already clears the weekly window for security PRs, so a CVE fix does
   // not sit up to 7 days waiting for the next batch. What is set here is the AGE

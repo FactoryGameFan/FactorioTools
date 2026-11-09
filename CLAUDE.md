@@ -292,7 +292,7 @@ Two related sources, for when the game binary is not the easiest thing to reach:
 
 Dependency updates are handled by **Renovate**, configured in `.github/renovate.json5`. It is JSON5 so the reasoning lives in comments beside each rule - the comments are load-bearing, not decoration.
 
-- **Updates arrive as one weekly batch**, Monday morning `America/Los_Angeles`. Security fixes deliberately skip that window. To pull a run forward, tick the "trigger a request for Renovate to run again" checkbox on the dependency dashboard.
+- **Updates arrive as one weekly batch.** Renovate may open them any time on Thursday or Friday, `America/Los_Angeles` - that is the window it is allowed to open PRs in, not a promised delivery time. A Claude run reads and merges the safe ones on Saturday. Security fixes deliberately skip that window. To pull a run forward, tick the "trigger a request for Renovate to run again" checkbox on the dependency dashboard.
 - **Nothing automerges.** `automerge: false` is global with no exceptions. A green CI run proves the repo is *consistent*, not that a bump is *correct* - and planner correctness lives in the snapshots, where a subtle output change surfaces as a snapshot diff to review rather than an obvious failure.
 - **There are deliberate holds.** Before "fixing" a version that looks stale, read the rule that holds it. Each carries its reason and the condition under which to revisit.
 - **The dependency dashboard issue is the live inventory** of everything held back, everything queued, and everything detected. It is a better place to look than reading manifests by hand.

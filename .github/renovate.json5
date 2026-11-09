@@ -32,7 +32,7 @@
 
   // The org preset supplies what used to be spelled out here: config:recommended,
   // helpers:pinGitHubActionDigests, the America/Los_Angeles timezone, the
-  // weekly batch from noon Sunday to noon Monday, automerge:false,
+  // weekly batch on Thursday and Friday, automerge:false,
   // prConcurrentLimit/prHourlyLimit, dependencyDashboard, osvVulnerabilityAlerts,
   // the rule that security fixes skip the weekly window, and the github-actions
   // grouping.
@@ -135,13 +135,13 @@
   // these ever breaks the build in a way a targeted bump would not have, that is
   // the evidence to flip it, and this comment is where to record it.
   //
-  // The schedule is the preset's own window, noon Sunday to noon Monday, so the
+  // The schedule is the preset's own window, all of Thursday and Friday, so the
   // lockfile PR arrives with the rest of the weekly batch. It has to be written
   // out here because `lockFileMaintenance` brings a schedule of its own and does
   // not inherit the preset's.
   lockFileMaintenance: {
     enabled: true,
-    schedule: ["* 12-23 * * 0", "* 0-11 * * 1"],
+    schedule: ["* * * * 4,5"],
   },
 
   // Rebase bot PRs as soon as `main` moves, not only on a conflict. The default,

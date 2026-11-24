@@ -9,7 +9,9 @@
     "build-all": "npm run build-wasm && npm run build",
     "preview": "vite preview",
     "lint": "eslint . --fix",
+    "lint:check": "eslint .",
     "format": "prettier --write src/",
+    "format:check": "prettier --check src/",
     "build-wasm": "cd ../../rust && cargo build --release -p planner-wasm --target wasm32-unknown-unknown && shx cp target/wasm32-unknown-unknown/release/planner_wasm.wasm planner-wasm/js/planner.js ../src/vue/src/lib/planner-wasm/",
     "test": "vitest run",
     "test:watch": "vitest"

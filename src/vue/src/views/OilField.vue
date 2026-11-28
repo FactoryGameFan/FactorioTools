@@ -214,10 +214,11 @@ import PumpjacksForm from "../components/PumpjacksForm.vue"
 import { pick } from "../lib/helpers"
 import { storeToRefs } from "pinia"
 import {
-  generateQueryString,
+  generateShareUrl,
   hasMatchingQueryString,
   initializeOilFieldStore,
   persistStore,
+  queryFromFragment,
   useOilFieldStore,
 } from "../stores/OilFieldStore"
 import ResponseErrorView from "../components/ResponseErrorView.vue"
@@ -286,11 +287,12 @@ export default {
       return !this.inputBlueprint.trim() || this.submitting
     },
     shareUrl() {
-      const queryString = generateQueryString()
-      return `${location.protocol}//${location.host}${location.pathname}?${queryString}`
+      return generateShareUrl(`${location.protocol}//${location.host}${location.pathname}`)
     },
     fbeUrl() {
-      return `https://fbe.factorygamefan.com/?source=${this.inputBlueprint}`
+      // The fragment keeps the blueprint out of FBE's request logs. FBE reads
+      // #source= as it is, "+" included (its sourceParams.ts).
+      return `https://fbe.factorygamefan.com/#source=${this.inputBlueprint}`
     },
   },
   watch: {
@@ -362,6 +364,20 @@ export default {
       ) {
         try {
           const url = new URL(plainText)
+          // A share URL keeps its settings in the fragment (generateShareUrl). Load
+          // them without moving them into the query string, and put the same raw
+          // fragment in the address bar, so a reload loads them again.
+          const fromFragment = queryFromFragment(url.hash)
+          if (fromFragment) {
+            event.preventDefault()
+            await this.$router.replace({ query: {} })
+            history.replaceState(history.state, "", `${location.pathname}${url.hash}`)
+            initializeOilFieldStore(fromFragment)
+            if (this.autoPlan) {
+              await this.submit()
+            }
+            return
+          }
           params = url.searchParams
         } catch {
           // ignore

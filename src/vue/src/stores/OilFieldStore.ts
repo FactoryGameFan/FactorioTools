@@ -325,6 +325,16 @@ export function generateQueryString() {
   return pieces.join("&")
 }
 
+/**
+ * The link "Copy share URL" copies: `base` plus the settings in the fragment.
+ * The fragment, not the query string, so opening the link sends no blueprint to
+ * the server; queryFromFragment reads it back. Links made before this used
+ * `?source=...`, and the query string is still read, so they keep working.
+ */
+export function generateShareUrl(base: string) {
+  return `${base}#${generateQueryString()}`
+}
+
 export function persistStore() {
   const store = getStore()
   if (!store.usingQueryString) {

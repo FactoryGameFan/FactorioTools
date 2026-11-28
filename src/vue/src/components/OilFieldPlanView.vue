@@ -157,7 +157,9 @@ export default {
   },
   computed: {
     fbeUrl() {
-      return `https://fbe.factorygamefan.com/?source=${this.plan.data.blueprint}`
+      // The fragment keeps the blueprint out of FBE's request logs. FBE reads
+      // #source= as it is, "+" included (its sourceParams.ts).
+      return `https://fbe.factorygamefan.com/#source=${this.plan.data.blueprint}`
     },
     allPlans(): SelectedOilFieldPlan[] {
       const allPlans = []

@@ -194,6 +194,12 @@ export function hasMatchingQueryString(
  * Editor's G key links here like that. The fragment also has no server-side
  * length limit, where Cloudflare refuses a URL over 16 KB.
  *
+ * `hash` must be the raw fragment, still percent-encoded. A blueprint is base64,
+ * so its `+` arrives as `%2B`, and decoding it before `URLSearchParams` does would
+ * leave a bare `+` that it reads as a space. A key given twice comes back as an
+ * array, the shape Vue Router gives a repeated query key, so the first one wins
+ * in either place.
+ *
  * Returns undefined when the fragment names none of the store's keys, so an
  * ordinary `#anchor` is ignored and the query string is read as before.
  */
@@ -205,11 +211,28 @@ export function queryFromFragment(hash: string): LocationQuery | undefined {
   if (!hasMatchingQueryString(params, false)) {
     return undefined
   }
-  const query: Record<string, string> = {}
-  for (const [key, value] of params.entries()) {
-    query[key] = value
+  const query: LocationQuery = {}
+  for (const key of new Set(params.keys())) {
+    const values = params.getAll(key)
+    query[key] = values.length === 1 ? values[0] : values
   }
   return query
+}
+
+/**
+ * The settings to start the oil field page with: the fragment's when it carries
+ * any (see queryFromFragment), otherwise the query string's.
+ *
+ * Vue Router has already decoded `to.hash`, which turns a blueprint's `%2B` into
+ * `+` and so into a space. The raw fragment is read from the address bar
+ * (`locationHash`) instead. The two agree on the navigation that matters, the
+ * page load a link starts; `to.hash` only says whether there is one.
+ */
+export function initialQuery(
+  to: { hash: string; query: LocationQuery },
+  locationHash: string = globalThis.location?.hash ?? "",
+): LocationQuery {
+  return (to.hash ? queryFromFragment(locationHash) : undefined) ?? to.query
 }
 
 function populateStoreFromQuery(query: LocationQuery) {

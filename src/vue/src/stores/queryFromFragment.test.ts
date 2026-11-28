@@ -7,6 +7,12 @@ import { initialQuery, queryFromFragment } from "./OilFieldStore"
 const BLUEPRINT = "0eJyVkcuK+g0AQRf+lrmu+/+/=="
 const fromFbe = `#source=${encodeURIComponent(BLUEPRINT)}`
 
+// A real router, so the tests see a query or hash exactly as the route guard does.
+const router = createRouter({
+  history: createMemoryHistory(),
+  routes: [{ path: "/oil-field", component: {} }],
+})
+
 describe("queryFromFragment", () => {
   it("reads the blueprint FBE puts in the fragment, byte for byte", () => {
     expect(fromFbe).toContain("%2B")
@@ -21,8 +27,24 @@ describe("queryFromFragment", () => {
     })
   })
 
-  it("keeps a repeated key as an array, as Vue Router does for the query", () => {
-    expect(queryFromFragment("#adv=1&adv=0")).toEqual({ adv: ["1", "0"] })
+  // The next three are what a real router gives for the same text as a query string,
+  // so a fragment link and a query link load the same settings.
+  it.each([
+    ["a repeated key, as an array in order", "source=abc&adv=1&adv=0"],
+    ["a bare key as null, an empty value as an empty string", "source=abc&beaconModSlots&adv="],
+    ["a malformed escape as written, and + as a space", "source=a%E0%A4%A&pumpMod=a+b"],
+  ])("reads %s, as Vue Router reads the query", (_, text) => {
+    const asQuery = router.resolve(`/oil-field?${text}`).query
+    expect(queryFromFragment(`#${text}`)).toEqual(asQuery)
+  })
+
+  it("spells out what the router gives for those cases", () => {
+    expect(queryFromFragment("#source=abc&adv=1&adv=0")).toEqual({ source: "abc", adv: ["1", "0"] })
+    expect(queryFromFragment("#source=abc&beaconModSlots&adv=")).toEqual({
+      source: "abc",
+      beaconModSlots: null,
+      adv: "",
+    })
   })
 
   it("ignores a fragment that names none of the store's keys", () => {
@@ -37,12 +59,6 @@ describe("queryFromFragment", () => {
 })
 
 describe("initialQuery", () => {
-  // A real router, so the test sees the hash exactly as the route guard does.
-  const router = createRouter({
-    history: createMemoryHistory(),
-    routes: [{ path: "/oil-field", component: {} }],
-  })
-
   it("reads the raw fragment, so a + in the blueprint survives the router", () => {
     const to = router.resolve(`/oil-field${fromFbe}`)
     // the router has decoded %2B, which is why to.hash itself cannot be used

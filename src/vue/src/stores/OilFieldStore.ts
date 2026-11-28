@@ -196,9 +196,7 @@ export function hasMatchingQueryString(
  *
  * `hash` must be the raw fragment, still percent-encoded. A blueprint is base64,
  * so its `+` arrives as `%2B`, and decoding it before `URLSearchParams` does would
- * leave a bare `+` that it reads as a space. A key given twice comes back as an
- * array, the shape Vue Router gives a repeated query key, so the first one wins
- * in either place.
+ * leave a bare `+` that it reads as a space.
  *
  * Returns undefined when the fragment names none of the store's keys, so an
  * ordinary `#anchor` is ignored and the query string is read as before.
@@ -207,16 +205,33 @@ export function queryFromFragment(hash: string): LocationQuery | undefined {
   if (!hash.startsWith("#") || hash.length < 2) {
     return undefined
   }
-  const params = new URLSearchParams(hash.slice(1))
-  if (!hasMatchingQueryString(params, false)) {
-    return undefined
+  // Parsed the way Vue Router parses a query, so a fragment link and a query link
+  // load the same settings: "+" is a space, a key with no "=" is null rather than
+  // "", a repeated key is an array in its original order, and a malformed escape
+  // is kept as written.
+  const decode = (text: string): string => {
+    try {
+      return decodeURIComponent(text.replace(/\+/g, " "))
+    } catch {
+      return text
+    }
   }
   const query: LocationQuery = {}
-  for (const key of new Set(params.keys())) {
-    const values = params.getAll(key)
-    query[key] = values.length === 1 ? values[0] : values
+  for (const piece of hash.slice(1).split("&")) {
+    if (piece === "") {
+      continue
+    }
+    const eq = piece.indexOf("=")
+    const key = decode(eq === -1 ? piece : piece.slice(0, eq))
+    const value = eq === -1 ? null : decode(piece.slice(eq + 1))
+    const existing = query[key]
+    if (existing === undefined) {
+      query[key] = value
+    } else {
+      query[key] = Array.isArray(existing) ? [...existing, value] : [existing, value]
+    }
   }
-  return query
+  return hasMatchingQueryString(query, false) ? query : undefined
 }
 
 /**

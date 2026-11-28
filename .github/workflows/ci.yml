@@ -58,6 +58,14 @@ jobs:
         run: npm run test
         working-directory: ${{ env.BUILD_PATH }}
 
+      - name: Lint
+        run: npm run lint:check
+        working-directory: ${{ env.BUILD_PATH }}
+
+      - name: Check formatting
+        run: npm run format:check
+        working-directory: ${{ env.BUILD_PATH }}
+
   rust:
     name: Rust port
     runs-on: ubuntu-latest

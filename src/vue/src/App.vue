@@ -13,13 +13,11 @@
         <a
           class="link-body-emphasis"
           :href="`https://github.com/FactoryGameFan/FactorioTools/tree/${gitCommit}`"
-          >{{ gitCommit }}</a
-        >, branch
+          >{{ gitCommit }}</a>, branch
         <a
           class="link-body-emphasis"
           :href="`https://github.com/FactoryGameFan/FactorioTools/tree/${gitBranch}`"
-          >{{ gitBranch }}</a
-        >, built on {{ buildDate }}. Report bugs at the
+          >{{ gitBranch }}</a>, built on {{ buildDate }}. Report bugs at the
         <a class="link-body-emphasis" href="https://github.com/FactoryGameFan/FactorioTools"
           >GitHub repository</a
         >.

@@ -1,6 +1,15 @@
 import { describe, expect, it } from "vitest"
 import { createMemoryHistory, createRouter } from "vue-router"
-import { initialQuery, queryFromFragment } from "./OilFieldStore"
+import { createPinia, setActivePinia } from "pinia"
+import { beforeEach, vi } from "vitest"
+import {
+  generateShareUrl,
+  initialQuery,
+  initializeOilFieldStore,
+  queryFromFragment,
+  setReadOnly,
+  useOilFieldStore,
+} from "./OilFieldStore"
 
 // What Factorio Blueprint Editor's G key sends: the blueprint string run through
 // encodeURIComponent. The "+" and "/" are the base64 characters that can break.
@@ -74,5 +83,33 @@ describe("initialQuery", () => {
   it("falls back to the query string when the fragment carries no settings", () => {
     const to = router.resolve("/oil-field?source=abc#top")
     expect(initialQuery(to, "#top")).toEqual({ source: "abc" })
+  })
+})
+
+describe("generateShareUrl", () => {
+  beforeEach(() => {
+    vi.stubGlobal("localStorage", { getItem: () => null, setItem: () => {}, removeItem: () => {} })
+    setActivePinia(createPinia())
+    setReadOnly(false)
+    vi.spyOn(console, "log").mockImplementation(() => {})
+  })
+
+  it("puts the settings in the fragment, with no query string", () => {
+    const url = new URL(generateShareUrl("https://planner.test/oil-field"))
+    expect(url.search).toBe("")
+    expect(url.hash.startsWith("#source=")).toBe(true)
+  })
+
+  it("loads back the same settings, a blueprint with + in it included", () => {
+    useOilFieldStore().inputBlueprint = BLUEPRINT
+    useOilFieldStore().addBeacons = false
+    const before = { ...useOilFieldStore().$state }
+    const url = new URL(generateShareUrl("https://planner.test/oil-field"))
+
+    setActivePinia(createPinia())
+    initializeOilFieldStore(initialQuery(router.resolve(`/oil-field${url.hash}`), url.hash))
+    const after = { ...useOilFieldStore().$state }
+    expect(after.usingQueryString).toBe(true)
+    expect({ ...after, usingQueryString: false }).toEqual({ ...before, usingQueryString: false })
   })
 })

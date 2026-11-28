@@ -6,7 +6,7 @@ import App from "./App.vue"
 import OilField from "./views/OilField.vue"
 import NotFound from "./views/NotFound.vue"
 import piniaPluginPersistedstate from "pinia-plugin-persistedstate"
-import { initializeOilFieldStore } from "./stores/OilFieldStore"
+import { initializeOilFieldStore, queryFromFragment } from "./stores/OilFieldStore"
 
 const pinia = createPinia().use(piniaPluginPersistedstate)
 
@@ -22,7 +22,8 @@ const router = createRouter({
       component: OilField,
       meta: { title: "Oil field generator" },
       beforeEnter(to) {
-        initializeOilFieldStore(to.query)
+        // A fragment that carries settings wins over the query string; see queryFromFragment.
+        initializeOilFieldStore(queryFromFragment(to.hash) ?? to.query)
       },
     },
     {

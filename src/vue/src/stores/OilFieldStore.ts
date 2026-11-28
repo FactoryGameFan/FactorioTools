@@ -186,6 +186,32 @@ export function hasMatchingQueryString(
   return matching > 0
 }
 
+/**
+ * The settings the query string carries (`source`, `adv`, `pumpMod` and the rest),
+ * read from the URL fragment instead: `#source=...`. A browser never sends the
+ * fragment to the server, so a blueprint handed over this way stays on the
+ * visitor's machine, which the query string cannot promise. Factorio Blueprint
+ * Editor's G key links here like that. The fragment also has no server-side
+ * length limit, where Cloudflare refuses a URL over 16 KB.
+ *
+ * Returns undefined when the fragment names none of the store's keys, so an
+ * ordinary `#anchor` is ignored and the query string is read as before.
+ */
+export function queryFromFragment(hash: string): LocationQuery | undefined {
+  if (!hash.startsWith("#") || hash.length < 2) {
+    return undefined
+  }
+  const params = new URLSearchParams(hash.slice(1))
+  if (!hasMatchingQueryString(params, false)) {
+    return undefined
+  }
+  const query: Record<string, string> = {}
+  for (const [key, value] of params.entries()) {
+    query[key] = value
+  }
+  return query
+}
+
 function populateStoreFromQuery(query: LocationQuery) {
   const store = useOilFieldStore()
   for (const [storeKey, storeValue] of getEntries(store.$state)) {
